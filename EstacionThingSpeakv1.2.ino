@@ -8,12 +8,16 @@
 #include <vector> // Agrega la biblioteca vector para almacenar lecturas
 #include <ThingSpeak.h> // Agrega la biblioteca ThingSpeak
 
+
+char ssid[] = "SSID";
+char password[] = "PASS";
+const char* serverName = "URL de Google sheet";
 // Definir las credenciales de ThingSpeak
-char ssid[] = "ssid";
-char password[] = "pass";
-const char* serverName = "url";
-unsigned long channelID = id";
-const char *writeAPIKey = "key";
+unsigned long channelID = 00000;
+const char *writeAPIKey = "key de thinSpeak";
+
+const String LOCATION = "PlantaBaja";  // Cambia esto según la ubicación del ESP32
+const int LED_ON_DURATION_MS = 1000; // Duración en milisegundos para mantener el LED encendido
 
 const unsigned long CHANNEL_UPDATE_INTERVAL = 60 * 1000; // Intervalo de actualización del canal en milisegundos (en este caso, cada 60 segundos)
 unsigned long lastChannelUpdate = 0;
@@ -155,8 +159,8 @@ void setup() {
 
   delay(1000);
   // Define el nombre de tu código como una cadena de texto
-  String nombreCodigo = "EstacionThingSpeakV1.1";
-  String ubicacion = "Exterior";
+  String nombreCodigo = "EstacionThingSpeakV1.2";
+  String ubicacion = "Planta Baja";
   Serial.println("Nombre del código: " + nombreCodigo);
   Serial.println("Ubicacion: " + ubicacion);
   pinMode(LED_BUILTIN, OUTPUT);
@@ -410,13 +414,13 @@ void updateState(void)
 
 void googlesheet(void)
 {
-  
-  // Check if WiFi is connected
+  // Verificar si el WiFi está conectado
   if (WiFi.status() == WL_CONNECTED) {
-    // Send sensor data to Google Sheets
+    // Crear cliente HTTP
     HTTPClient http;
     String url = serverName;
-    url += "?iaq=" + String(iaqSensor.iaq);
+    url += "?location=" + LOCATION;  // Agregar la ubicación a la URL
+    url += "&iaq=" + String(iaqSensor.iaq);
     url += "&iaqAccuracy=" + String(iaqSensor.iaqAccuracy);
     url += "&staticIaq=" + String(iaqSensor.staticIaq);
     url += "&co2Equivalent=" + String(iaqSensor.co2Equivalent);
@@ -431,15 +435,50 @@ void googlesheet(void)
     url += "&humidity=" + String(iaqSensor.humidity);
     url += "&gasPercentage=" + String(iaqSensor.gasPercentage);
     
+    // Realizar la solicitud HTTP
     http.begin(url);
-    int httpCode = http.GET();
-    if (httpCode > 0) {
-      Serial.println("Data sent to Google Sheets");
-      preferences.clear(); // Clear stored data in case of successful connection
-      digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED si la conexión fue exitosa
-      delay(1000);
-      digitalWrite(LED_BUILTIN, LOW);
-    } 
+    int httpResponseCode = http.GET();
+
+    // Si hay una redirección (código 302)
+    if (httpResponseCode == 302) {
+      Serial.println("Redirección detectada");
+      // Obtener la nueva URL desde el encabezado de redirección
+      String newUrl = http.getLocation();
+      Serial.print("Nueva URL: ");
+      Serial.println(newUrl);
+
+      // Realizar la solicitud a la nueva URL
+      http.end();  // Finalizar la conexión anterior
+      http.begin(newUrl);  // Comenzar con la nueva URL
+      httpResponseCode = http.GET();  // Realizar la nueva solicitud
+    }
+
+    if (httpResponseCode > 0) {
+      Serial.print("Datos enviados al Google Sheet. Código de respuesta HTTP: ");
+      Serial.println(httpResponseCode);
+
+      // Leer la respuesta del servidor (si la hay)
+      String response = http.getString();
+      Serial.println("Respuesta del servidor:");
+      Serial.println(response);
+
+      // Limpiar datos almacenados si la conexión fue exitosa
+      preferences.clear();
+      digitalWrite(LED_BUILTIN, HIGH);  // Enciende el LED
+      delay(LED_ON_DURATION_MS);        // Mantener el LED encendido por un tiempo
+      digitalWrite(LED_BUILTIN, LOW);   // Apaga el LED
+    } else {
+      Serial.print("Error al enviar datos. Código de respuesta HTTP: ");
+      Serial.println(httpResponseCode);
+      saveAndSendData();
+    }
+
+    // Terminar la conexión HTTP
+    http.end();
+  } else {
+    Serial.println("Error: No WiFi connection");
+    // Llamar a la función para guardar los datos en caso de fallo de conexión WiFi
+    saveAndSendData(); 
   }
 }
 
