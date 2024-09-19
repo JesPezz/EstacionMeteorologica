@@ -95,13 +95,6 @@ Una vez que todo esté configurado, el ESP32 comenzará a enviar datos a la hoja
 Si deseas contribuir a este proyecto:
 
 1. Haz un **fork** del repositorio.
-2. Crea una nueva rama: 
-   ```bash
-   git checkout -b feature/nueva-funcionalidad
-``
-Si deseas contribuir a este proyecto:
-
-1. Haz un **fork** del repositorio.
 2. Crea una nueva rama:
    ```bash
    git checkout -b feature/nueva-funcionalidad
