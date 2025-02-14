@@ -1,0 +1,168 @@
+#include <Arduino.h>
+#include <Wire.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Preferences.h>
+#include <time.h>
+#include <EEPROM.h>
+#include <vector>
+#include <ThingSpeak.h>
+#include "config.h"
+#include "BME_Sensor.h"
+#include "WiFiManager.h"
+#include "GoogleSheetManager.h"
+#include "ThingSpeakManager.h"
+#include "TimeManager.h"
+#include <bme68xLibrary.h>
+#include "web_server.h"
+#include "BME_sensor.h"
+#include <bsec.h>
+#include "SensorManager.h"
+#include "ota_update.h"
+#include "esp_ota_ops.h"
+
+unsigned long lastUpdateCheck = 0;
+const unsigned long UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // Cada 6 horas
+
+void setup() {
+  EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
+  Serial.begin(115200);
+
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  Serial.printf("📌 Arrancando desde la partición: %s\n", running->label);
+
+  // Obtener el tamaño total de la Flash
+  Serial.printf("📦 Tamaño total de la Flash: %u bytes (%.2f MB)\n", ESP.getFlashChipSize(), ESP.getFlashChipSize() / (1024.0 * 1024.0));
+
+  // Obtener el tamaño de la partición OTA
+  Serial.printf("📦 Tamaño de la partición actual: %u bytes (%.2f MB)\n", ESP.getSketchSize(), ESP.getSketchSize() / (1024.0 * 1024.0));
+  Serial.printf("📦 Espacio libre para OTA: %u bytes (%.2f MB)\n", ESP.getFreeSketchSpace(), ESP.getFreeSketchSpace() / (1024.0 * 1024.0));
+
+  
+  initSPIFFS();
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  setupBsecSensor();
+
+  if (!loadConfig()) {
+    Serial.println("No hay configuración guardada. Iniciando en modo AP...");
+}
+
+// ✅ Verificar que los valores cargados sean correctos
+Serial.println("📜 CONFIGURACIÓN CARGADA DESDE settings.json:");
+Serial.println("SSID: " + config.ssid);
+Serial.println("Password: " + config.password);
+Serial.println("Google Sheet URL: " + config.googleSheetURL);
+Serial.println("ThingSpeak API Key: " + config.thingSpeakAPIKey);
+Serial.println("Update Interval: " + String(config.updateInterval / 60000) + " minutos");
+Serial.println("Channel ID: " + String(config.channelID));
+Serial.println("Location: " + config.location);
+
+connectToWiFi();
+startWebServer();
+
+printConfig();  // ✅ Ver los valores actuales de configuración
+WiFi.mode(WIFI_STA);  // Configura el ESP32 en modo cliente
+WiFi.begin(config.ssid.c_str(), config.password.c_str());
+
+Serial.print("Conectando a WiFi ");
+int attempts = 0;
+
+while (WiFi.status() != WL_CONNECTED && attempts < 10) {
+    delay(1000);
+    Serial.print(".");
+    attempts++;
+}
+
+if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✅ Conectado a WiFi.");
+    Serial.print("📡 IP del ESP32: ");
+    Serial.println(WiFi.localIP());
+} else {
+    Serial.println("\n❌ No se pudo conectar. Activando Modo AP...");
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP("ESP32_Config", "12345678");
+
+    Serial.print("🔗 Conéctate a 'ESP32_Config' y accede a: ");
+    Serial.println(WiFi.softAPIP());
+}
+  
+  // Definir el nombre del código y la ubicación
+  String nombreCodigo = "EstacionThingSpeakV1.84";
+  String ubicacion = LOCATION;
+  Serial.println("Nombre del código: " + nombreCodigo);
+  Serial.println("Ubicacion: " + ubicacion);
+  pinMode(LED_BUILTIN, OUTPUT);
+  iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
+  output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
+  Serial.println(output);
+  checkIaqSensorStatus();
+
+  loadState();
+  Serial.println("loadState() se ha cargado.");
+  
+  // Conectar a WiFi
+  WiFi.begin(ssid, password);
+  Serial.print("Conectando a ");
+  Serial.println(ssid);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.println("WiFi connected");
+
+  // Sincronizar el reloj una vez al mes
+  syncClock();
+
+  // Configurar sensores
+  bsec_virtual_sensor_t sensorList[13] = {
+    BSEC_OUTPUT_IAQ,
+    BSEC_OUTPUT_STATIC_IAQ,
+    BSEC_OUTPUT_CO2_EQUIVALENT,
+    BSEC_OUTPUT_BREATH_VOC_EQUIVALENT,
+    BSEC_OUTPUT_RAW_TEMPERATURE,
+    BSEC_OUTPUT_RAW_PRESSURE,
+    BSEC_OUTPUT_RAW_HUMIDITY,
+    BSEC_OUTPUT_RAW_GAS,
+    BSEC_OUTPUT_STABILIZATION_STATUS,
+    BSEC_OUTPUT_RUN_IN_STATUS,
+    BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_TEMPERATURE,
+    BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
+    BSEC_OUTPUT_GAS_PERCENTAGE
+  };
+
+  iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
+  checkIaqSensorStatus();
+
+  // Imprimir el encabezado
+  output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
+  Serial.println(output);
+
+  // Iniciar tarea FreeRTOS para enviar datos a ThingSpeak
+  xTaskCreatePinnedToCore(
+    taskSendToThingSpeak,   // Función que ejecutará la tarea
+    "SendToThingSpeak",     // Nombre de la tarea
+    4096,                   // Tamaño de la pila de la tarea
+    NULL,                   // Parámetros de la tarea
+    1,                      // Prioridad de la tarea
+    NULL,                   // Manejador de la tarea (no utilizado)
+    0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
+  );
+}
+
+void loop() {
+  if (millis() - lastUpdateCheck >= UPDATE_INTERVAL) {
+    checkForUpdates();
+    lastUpdateCheck = millis();
+   }
+  
+  checkWiFiConnection(); // Verificar la conexión WiFi
+  readSensorData();      // Leer datos del sensor
+  sendDataToServices();  // Enviar datos a ThingSpeak y Google Sheets
+  checkClockSync();      // Sincronizar el reloj si es necesario
+}
+
+
+

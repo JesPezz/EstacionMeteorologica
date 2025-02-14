@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración ESP32</title>
+</head>
+<body>
+    <h2>Configuración de ESP32</h2>
+    <form action="/config" method="post">
+        <label>WiFi SSID:</label>
+        <input type="text" name="ssid"><br>
+
+        <label>WiFi Password:</label>
+        <input type="password" name="password"><br>
+
+        <label>Google Sheet URL:</label>
+        <input type="text" name="googleSheetURL"><br>
+
+        <label>ThingSpeak API Key:</label>
+        <input type="text" name="thingSpeakAPIKey"><br>
+
+        <label>ThingSpeak Channel ID:</label>
+        <input type="number" name="channelID"><br>
+
+        <label>Ubicación (Google Sheets):</label>
+        <input type="text" name="location"><br>
+
+        <label>Intervalo de Actualización (minutos):</label>
+        <input type="number" name="updateInterval"><br>
+
+        <button type="submit">Guardar</button>
+    </form>
+
+    <h2>Actualización OTA</h2>
+<form id="otaForm">
+    <input type="file" id="firmwareFile">
+    <button type="button" onclick="uploadFirmware()">Subir Firmware</button>
+</form>
+<p id="status"></p>
+
+<script>
+function uploadFirmware() {
+    let fileInput = document.getElementById("firmwareFile");
+    let file = fileInput.files[0];
+    if (!file) {
+        alert("Selecciona un archivo primero.");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("firmware", file);
+
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", "/update", true);
+
+    xhr.upload.onprogress = function(event) {
+        let percent = Math.round((event.loaded / event.total) * 100);
+        document.getElementById("status").innerText = "Subiendo: " + percent + "%";
+    };
+
+    xhr.onload = function() {
+        if (xhr.status == 200) {
+            document.getElementById("status").innerText = "✅ Actualización completada. Reiniciando...";
+            setTimeout(() => {
+                location.reload();  // Recargar la página después de unos segundos
+            }, 3000);
+        } else {
+            document.getElementById("status").innerText = "❌ Error en la actualización.";
+        }
+    };
+
+    xhr.send(formData);
+}
+</script>
+
+
+</body>
+</html>
+
