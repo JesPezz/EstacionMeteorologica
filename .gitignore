@@ -1,0 +1,4 @@
+.pio/
+.bin/
+*.hex
+*.elf
