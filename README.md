@@ -1,4 +1,4 @@
-# Estación Meteorológica ThingSpeak v1.2
+# Estación Meteorológica ThingSpeak
 
 Este proyecto es una estación meteorológica basada en ESP32 que envía datos a ThingSpeak y los gestiona mediante Google Apps Script. Los datos se recogen desde sensores en varias ubicaciones y se integran en una hoja de cálculo de Google Sheets para su análisis.
 
