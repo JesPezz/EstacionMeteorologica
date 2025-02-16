@@ -1,0 +1,7 @@
+{
+    "telegramToken": "TU_TOKEN_DE_TELEGRAM",
+    "chatId": "TU_CHAT_ID",
+    "emailSender": "TU_CORREO@gmail.com",
+    "emailPassword": "TU_CONTRASEÑA",
+    "emailRecipient": "DESTINATARIO@example.com"
+}

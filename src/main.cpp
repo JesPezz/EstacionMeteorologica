@@ -20,6 +20,7 @@
 #include "SensorManager.h"
 #include "ota_update.h"
 #include "esp_ota_ops.h"
+#include "led.h"
 
 void setup() {
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);

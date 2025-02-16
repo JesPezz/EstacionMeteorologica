@@ -2,7 +2,8 @@
 #include "config.h"
 #include <Preferences.h>
 #include <EEPROM.h>
-void errLeds();
+#include "led.h"
+
 
 
 // Implementa checkIaqSensorStatus, loadState, updateState, etc. (copiar código original)
@@ -91,11 +92,3 @@ void updateState(void)
   }
 }
 
-void errLeds(void)
-{
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(100);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(100);
-}
