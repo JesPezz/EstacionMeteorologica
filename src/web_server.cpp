@@ -5,6 +5,8 @@
 #include "mbedtls/base64.h"
 #include <Update.h>
 #include "SensorManager.h"
+#include "led.h"
+#include "notifications.h"
 
 AsyncWebServer server(80);
 
@@ -20,9 +22,11 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
 
         size_t firmwareSize = request->contentLength();
         Serial.printf("📥 Iniciando OTA: %s (%d bytes)\n", filename.c_str(), firmwareSize);
+        ledInProgress();
 
         if (!Update.begin(firmwareSize, U_FLASH)) {
             Serial.println("❌ No se pudo iniciar la OTA");
+            errLeds();
             request->send(500, "text/plain", "Error al iniciar actualización");
             otaInProgress = false;
             return;
@@ -36,6 +40,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
 
     if (written != len) {
         Serial.println("❌ Error al escribir en Flash");
+        errLeds();
         request->send(500, "text/plain", "Error al escribir en Flash");
         otaInProgress = false;
         return;
@@ -46,6 +51,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
 
         if (Update.hasError()) {
             Serial.println("❌ Error en la transferencia OTA.");
+            errLeds();
             request->send(500, "text/plain", "Error en la transferencia OTA.");
             otaInProgress = false;
             return;
@@ -54,10 +60,12 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         if (Update.end(true)) {
             Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
             request->send(200, "text/plain", "✅ OTA completada. Reiniciando...");
+            ledSuccess();
             delay(1000);
             ESP.restart();
         } else {
             Serial.println("❌ Error finalizando OTA");
+            errLeds();
             request->send(500, "text/plain", "Error finalizando OTA.");
             otaInProgress = false;
         }
@@ -84,8 +92,23 @@ void startWebServer() {
         if (request->hasParam("updateInterval", true)) {
             newConfig.updateInterval = request->getParam("updateInterval", true)->value().toInt() * 60000;
         }
+        
         if (request->hasParam("channelID", true)) newConfig.channelID = request->getParam("channelID", true)->value().toInt();
         if (request->hasParam("location", true)) newConfig.location = request->getParam("location", true)->value();
+
+        if (request->hasParam("telegramToken", true) && request->hasParam("chatId", true) &&
+        request->hasParam("emailSender", true) && request->hasParam("emailPassword", true) &&
+        request->hasParam("emailRecipient", true)) {
+
+        NotificationConfig config;
+        config.telegramToken = request->getParam("telegramToken", true)->value();
+        config.chatId = request->getParam("chatId", true)->value();
+        config.emailSender = request->getParam("emailSender", true)->value();
+        config.emailPassword = request->getParam("emailPassword", true)->value();
+        config.emailRecipient = request->getParam("emailRecipient", true)->value();
+
+        // Guardar las credenciales en config.json
+        saveNotificationConfig(config);
 
         if (saveConfig(newConfig)) {
             request->send(200, "text/plain", "✅ Configuración guardada. Reiniciando ESP32...");
@@ -94,6 +117,7 @@ void startWebServer() {
             ESP.restart();
         } else {
             request->send(500, "text/plain", "❌ Error al guardar configuración.");
+            errLeds();
         }
     });
 

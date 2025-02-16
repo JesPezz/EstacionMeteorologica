@@ -8,6 +8,8 @@
 #include <Update.h>
 #include <ArduinoJson.h>
 #include "config.h"
+#include "led.h"
+#include "notifications.h"
 
 
 void checkForUpdates() {
@@ -54,21 +56,29 @@ void checkForUpdates() {
 
 void downloadAndUpdate(String firmwareURL) {
     Serial.println("📥 Descargando firmware desde GitHub...");
+    sendTelegramMessage("🔧 Actualización en progreso", config);
+    sendEmailNotification("Actualización en progreso", config);
+    ledInProgress();
 
     WiFiClientSecure client;
     client.setInsecure();
 
     HTTPClient http;
     http.begin(client, firmwareURL);
+
+    // Habilitar redirecciones
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+
     int httpCode = http.GET();
 
-    if (httpCode == 200) {
+    if (httpCode == HTTP_CODE_OK) {  // Usar HTTP_CODE_OK en lugar de 200
         int contentLength = http.getSize();
         Serial.printf("📥 Tamaño del firmware: %d bytes\n", contentLength);
 
         if (contentLength > 0 && contentLength <= ESP.getFreeSketchSpace()) {
             if (!Update.begin(contentLength)) {
                 Serial.println("❌ No hay suficiente espacio para actualizar.");
+                errLeds();
                 return;
             }
 
@@ -92,17 +102,24 @@ void downloadAndUpdate(String firmwareURL) {
             if (written == contentLength) {
                 if (Update.end(true)) {
                     Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
+                    sendTelegramMessage("✅ Actualización exitosa", config);
+                    sendEmailNotification("Actualización exitosa", config);
+                    ledSuccess();
                     ESP.restart();
                 } else {
                     Serial.println("❌ Error al finalizar la actualización.");
+                    sendTelegramMessage("❌ Error en la actualización", config);
+                    sendEmailNotification("Error en la actualización", config);
+                    errLeds();
                     Update.printError(Serial);
                 }
             } else {
                 Serial.println("❌ Error: No se recibió el firmware completo.");
-            }
+            }   errLeds();
         }
     } else {
         Serial.printf("❌ Error HTTP: %d al descargar firmware.\n", httpCode);
+        errLeds();
     }
 
     http.end();

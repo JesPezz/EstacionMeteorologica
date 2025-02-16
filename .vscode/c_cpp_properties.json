@@ -8,6 +8,8 @@
         {
             "name": "PlatformIO",
             "includePath": [
+                "${workspaceFolder}/lib/ESP-Mail-Client/src",
+                "${workspaceFolder}/.pio/libdeps/esp32doit-devkit-v1/ESP-Mail-Client/src",
                 "d:/Documentos/PlatformIO/Projects/EstacionMeteorologica/include",
                 "d:/Documentos/PlatformIO/Projects/EstacionMeteorologica/src",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src",
