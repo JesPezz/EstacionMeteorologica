@@ -38,7 +38,8 @@ void setup() {
   Serial.printf("📦 Tamaño de la partición actual: %u bytes (%.2f MB)\n", ESP.getSketchSize(), ESP.getSketchSize() / (1024.0 * 1024.0));
   Serial.printf("📦 Espacio libre para OTA: %u bytes (%.2f MB)\n", ESP.getFreeSketchSpace(), ESP.getFreeSketchSpace() / (1024.0 * 1024.0));
 
-  
+  testFlash();
+
   initSPIFFS();
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -88,7 +89,7 @@ if (WiFi.status() == WL_CONNECTED) {
 }
   
   // Definir el nombre del código y la ubicación
-  String nombreCodigo = "EstacionThingSpeakV1.84";
+  String nombreCodigo = "EstacionThingSpeakV1.85";
   String ubicacion = LOCATION;
   Serial.println("Nombre del código: " + nombreCodigo);
   Serial.println("Ubicacion: " + ubicacion);

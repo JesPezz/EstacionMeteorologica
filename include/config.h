@@ -53,5 +53,6 @@ bool loadConfig();
 bool saveConfig(const Config &newConfig);
 void initSPIFFS();
 void printConfig();
+void testFlash();
 
 #endif

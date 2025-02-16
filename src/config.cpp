@@ -109,3 +109,13 @@ void printConfig() {
     file.close();
 }
 
+void testFlash() {
+    Serial.println("🔍 Probando memoria flash...");
+    if (!SPIFFS.begin()) {
+        Serial.println("❌ Error: SPIFFS no inicializado.");
+    } else {
+        Serial.println("✅ SPIFFS funcionando correctamente.");
+    }
+}
+
+

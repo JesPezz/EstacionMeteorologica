@@ -10,9 +10,20 @@ AsyncWebServer server(80);
 // 🔹 Manejo de la subida de firmware OTA Web
 void handleOTA(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
     static size_t totalSize = 0;
+
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("❌ Error: WiFi desconectado, abortando OTA.");
+        request->send(500, "text/plain", "WiFi desconectado.");
+        return;
+    }
+    
     
     if (!index) {
         size_t firmwareSize = request->contentLength();  // 📌 Obtiene el tamaño real del archivo .bin
+        Serial.printf("📦 Tamaño esperado por ESP32 (contentLength): %u bytes\n", request->contentLength());
+        Serial.printf("📦 Tamaño esperado del firmware: %u bytes\n", firmwareSize);
+        Serial.printf("📦 Tamaño real del firmware.bin: %u bytes\n", ESP.getSketchSize());
+        Serial.printf("📦 Espacio disponible para OTA: %u bytes\n", ESP.getFreeSketchSpace());
         Serial.printf("📥 Iniciando actualización OTA: %s (%d bytes)\n", filename.c_str(), firmwareSize);
 
         size_t freeSketchSpace = ESP.getFreeSketchSpace();  // Espacio disponible para OTA
@@ -32,6 +43,7 @@ void handleOTA(AsyncWebServerRequest *request, const String& filename, size_t in
     }
 
     size_t written = Update.write(data, len);
+    delay(10);
     Serial.printf("⬇️ Recibiendo %d bytes | Escribiendo: %d bytes (Total recibido: %d/%d)\n", len, written, index + len, totalSize);
 
     if (written != len) {
@@ -42,7 +54,7 @@ void handleOTA(AsyncWebServerRequest *request, const String& filename, size_t in
 
     if (final) {
         Serial.println("🔄 Finalizando actualización...");
-    
+        delay(500);
         if (Update.end()) {
             Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
             request->send(200, "text/plain", "✅ Actualización OTA completada. Reiniciando...");
