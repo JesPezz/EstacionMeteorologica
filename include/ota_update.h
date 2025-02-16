@@ -6,7 +6,9 @@
 // 🔹 Función para verificar y aplicar actualizaciones OTA desde un servidor HTTP
 void checkForUpdates();
 
-// 🔹 Manejo de la subida de firmware
-void handleOTA(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
+// 🔹 Manejo de la subida de firmware desde la interfaz web
+void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final);
+
+void downloadAndUpdate(String firmwareURL);
 
 #endif

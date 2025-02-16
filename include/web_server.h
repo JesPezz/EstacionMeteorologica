@@ -4,8 +4,8 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 
-
 void startWebServer();
 bool isAuthenticated(AsyncWebServerRequest *request);
+extern bool otaInProgress;
 
 #endif

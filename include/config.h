@@ -10,6 +10,15 @@
 extern String webUsername;
 extern String webPassword;
 
+extern const char version[];  
+extern const char nombreCodigo[];
+extern const char* githubAPIURL;
+
+
+extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
+extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 horas)
+
+
 // ✅ Estructura de configuración
 struct Config {
     String ssid;

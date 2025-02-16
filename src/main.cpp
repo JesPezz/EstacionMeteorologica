@@ -21,12 +21,18 @@
 #include "ota_update.h"
 #include "esp_ota_ops.h"
 
-unsigned long lastUpdateCheck = 0;
-const unsigned long UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // Cada 6 horas
-
 void setup() {
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
+
+  if (!otaInProgress) {  // 🔹 Evitar iniciar procesos si hay OTA en curso
+    Serial.println("✅ Iniciando procesos después de OTA...");
+    WiFi.begin("SSID", "PASSWORD");
+    
+}
+  
+  esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
+  Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
 
   const esp_partition_t* running = esp_ota_get_running_partition();
   Serial.printf("📌 Arrancando desde la partición: %s\n", running->label);
@@ -89,10 +95,11 @@ if (WiFi.status() == WL_CONNECTED) {
 }
   
   // Definir el nombre del código y la ubicación
-  String nombreCodigo = "EstacionThingSpeakV1.85";
-  String ubicacion = LOCATION;
-  Serial.println("Nombre del código: " + nombreCodigo);
-  Serial.println("Ubicacion: " + ubicacion);
+  Serial.print("Version: ");
+  Serial.print(nombreCodigo);
+  Serial.print(" ");
+  Serial.println(version);
+  Serial.println("Ubicacion: " + LOCATION);
   pinMode(LED_BUILTIN, OUTPUT);
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
@@ -154,16 +161,23 @@ if (WiFi.status() == WL_CONNECTED) {
 }
 
 void loop() {
+
   if (millis() - lastUpdateCheck >= UPDATE_INTERVAL) {
-    checkForUpdates();
-    lastUpdateCheck = millis();
-   }
+        checkForUpdates();
+        lastUpdateCheck = millis();
+    }
+
+  if (otaInProgress) {
+    return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
+  }
   
   checkWiFiConnection(); // Verificar la conexión WiFi
   readSensorData();      // Leer datos del sensor
   sendDataToServices();  // Enviar datos a ThingSpeak y Google Sheets
   checkClockSync();      // Sincronizar el reloj si es necesario
 }
+
+
 
 
 
