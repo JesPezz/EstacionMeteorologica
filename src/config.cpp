@@ -3,7 +3,7 @@
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char version[] = "v2.1";
+const char version[] = "v2.2";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0

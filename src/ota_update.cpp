@@ -4,7 +4,6 @@
 #include "web_server.h"
 #include "ota_update.h"
 #include <WiFiClientSecure.h>
-#include <HTTPClient.h>
 #include <Update.h>
 #include <ArduinoJson.h>
 #include "config.h"
@@ -24,22 +23,23 @@ void checkForUpdates() {
 
     if (httpCode == 200) {
         String jsonResponse = http.getString();  // 📌 Guardar la respuesta en un String
-        Serial.println("📜 Respuesta JSON: " + jsonResponse);
+        String mensaje = String("📜 Respuesta JSON: ") + jsonResponse);  // ✅ Corrección
+        Serial.println(mensaje);
 
         JsonDocument doc;  // 📌 Crear el buffer JSON
-        DeserializationError error = deserializeJson(doc, jsonResponse);  // Usar 'doc' en lugar de 'json'
+        DeserializationError error = deserializeJson(doc, jsonResponse);  
         
         if (error) {
-            Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
+            Serial.println(String("❌ Error al parsear JSON: ") + String(error.c_str()));  // ✅ Corrección
             return;
         }
-
-        String newVersion = doc["tag_name"];  // 📌 Extraer versión
-        String firmwareURL = doc["assets"][0]["browser_download_url"];  // 📌 Extraer URL del firmware
-
+    
+        String newVersion = doc["tag_name"];  
+        String firmwareURL = doc["assets"][0]["browser_download_url"];  
+    
         Serial.printf("📌 Última versión en GitHub: %s\n", newVersion.c_str());
         Serial.printf("📥 URL del firmware: %s\n", firmwareURL.c_str());
-
+    
         if (newVersion == version) {
             Serial.println("✅ El ESP32 ya está actualizado.");
             return;
@@ -47,9 +47,6 @@ void checkForUpdates() {
             Serial.println("🚀 Nueva versión detectada. Iniciando OTA...");
             downloadAndUpdate(firmwareURL);
         }
-    } else {
-        Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
-    }
 
     http.end();
 }

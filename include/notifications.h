@@ -3,7 +3,13 @@
 
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
-#include <ESP-Mail-Client.h>
+#include "ESP_Mail_Client.h"
+#include <HTTPClient.h>
+#include <Arduino.h>           // Para String y funciones básicas
+#include <ArduinoJson.h>       // Para manejar JSON (en caso de enviar datos estructurados)
+#include <SPIFFS.h>            // Para manejar el sistema de archivos (si lees configuraciones)
+#include <FS.h>                // Para acceso a archivos en SPIFFS
+#include <WiFiClientSecure.h>  // Para conexiones seguras (ej. enviar correos con SSL)
 
 // Estructura para almacenar las credenciales de notificación
 struct NotificationConfig {
