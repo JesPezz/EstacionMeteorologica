@@ -33,20 +33,20 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         }
 
         totalSize = 0;
-    }
+     }
 
-    size_t written = Update.write(data, len);
-    totalSize += written;
+     size_t written = Update.write(data, len);
+     totalSize += written;
 
-    if (written != len) {
+     if (written != len) {
         Serial.println("❌ Error al escribir en Flash");
         errLeds();
         request->send(500, "text/plain", "Error al escribir en Flash");
         otaInProgress = false;
         return;
-    }
+     }
 
-    if (final) {
+     if (final) {
         Serial.println("🔄 Finalizando actualización...");
 
         if (Update.hasError()) {
@@ -69,11 +69,11 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
             request->send(500, "text/plain", "Error finalizando OTA.");
             otaInProgress = false;
         }
-    }
-}
+     }
+ }
 
-// 🔹 Iniciar el servidor web y configurar rutas
-void startWebServer() {
+ // 🔹 Iniciar el servidor web y configurar rutas
+ void startWebServer() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!isAuthenticated(request)) return;
         request->send(SPIFFS, "/index.html", "text/html");
@@ -119,37 +119,35 @@ void startWebServer() {
             request->send(500, "text/plain", "❌ Error al guardar configuración.");
             errLeds();
         }
-    });
+     });
 
-    server.on("/update", HTTP_POST, 
+     server.on("/update", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
             request->send(200, "text/plain", "📥 Subida OTA en progreso...");
         }, 
         handleOTA
-    );
+     );
 
-    server.begin();
-}
+     server.begin();
+ }
 
-// 🔹 Verificar autenticación básica
-bool isAuthenticated(AsyncWebServerRequest *request) {
+ // 🔹 Verificar autenticación básica
+ bool isAuthenticated(AsyncWebServerRequest *request) {
     if (!request->hasHeader("Authorization")) {
         AsyncWebServerResponse *response = request->beginResponse(401, "text/plain", "Unauthorized");
         response->addHeader("WWW-Authenticate", "Basic realm=\"ESP32 Config\"");
         request->send(response);
         return false;
-    }
+     }
 
-    String authHeader = request->header("Authorization");
-    authHeader.replace("Basic ", "");  
-    String expectedAuth = base64::encode(webUsername + ":" + webPassword);  
+     String authHeader = request->header("Authorization");
+     authHeader.replace("Basic ", "");  
+     String expectedAuth = base64::encode(webUsername + ":" + webPassword);  
 
-    if (authHeader != expectedAuth) {
+     if (authHeader != expectedAuth) {
         request->send(403, "text/plain", "Forbidden");
         return false;
-    }
+     }
 
-    return true;
-}
-
-
+     return true;
+ }

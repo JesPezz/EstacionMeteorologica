@@ -1,5 +1,6 @@
 #include "notifications.h"
 
+
 // Enviar mensaje por Telegram
 void sendTelegramMessage(const String& message, const NotificationConfig& config) {
     if (config.telegramToken.isEmpty() || config.chatId.isEmpty()) {
