@@ -6,13 +6,15 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 #include <bsec.h>
+#include <ESP_Mail_Client.h>
 
 extern String webUsername;
 extern String webPassword;
 
 extern const char version[];  
 extern const char nombreCodigo[];
-extern const char* githubAPIURL;
+extern MB_String githubAPIURL;
+
 
 
 extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
@@ -28,6 +30,11 @@ struct Config {
     unsigned long updateInterval;  // Ahora en milisegundos
     unsigned long channelID;  // Nuevo campo para ThingSpeak
     String location;  // Nuevo campo para Google Sheets
+    String telegramToken;
+    String chatId;
+    String emailSender;
+    String emailPassword;
+    String emailRecipient;
 };
 
 extern Config config;  // ✅ Declaramos la variable global

@@ -1,4 +1,5 @@
 #include "notifications.h"
+#include <HTTPClient.h>
 
 
 // Enviar mensaje por Telegram
@@ -8,16 +9,22 @@ void sendTelegramMessage(const String& message, const NotificationConfig& config
         return;
     }
 
-    String url = "https://api.telegram.org/bot" + config.telegramToken + "/sendMessage";
-    String payload = "chat_id=" + config.chatId + "&text=" + message;
+    MB_String url = "https://api.telegram.org/bot";
+    url += config.telegramToken;
+    url += "/sendMessage";
+
+    MB_String payload = "chat_id=";
+    payload += config.chatId;
+    payload += "&text=";
+    payload += message;
 
     WiFiClientSecure client;
     client.setInsecure();
 
     HTTPClient http;
-    http.begin(client, url);
+    http.begin(client, url.c_str());  // Usar `client` con `WiFiClientSecure`
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-    int httpCode = http.POST(payload);
+    int httpCode = http.POST(payload.c_str());
 
     if (httpCode == 200) {
         Serial.println("✅ Notificación enviada por Telegram.");
@@ -80,4 +87,14 @@ void saveNotificationConfig(const NotificationConfig& config) {
 
     serializeJson(doc, file);
     file.close();
+}
+
+NotificationConfig convertToNotificationConfig(const Config& config) {
+    NotificationConfig notificationConfig;
+    notificationConfig.telegramToken = config.telegramToken;
+    notificationConfig.chatId = config.chatId;
+    notificationConfig.emailSender = config.emailSender;
+    notificationConfig.emailPassword = config.emailPassword;
+    notificationConfig.emailRecipient = config.emailRecipient;
+    return notificationConfig;
 }

@@ -9,16 +9,15 @@
 #include "notifications.h"
 
 AsyncWebServer server(80);
+bool otaInProgress = false;  // 🔹 Indica si una OTA está en proceso
 
 // 🔹 Manejo de la subida de firmware OTA Web
-bool otaInProgress = false;  // 🔹 Variable global para indicar OTA en proceso
-
 void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {
     static size_t totalSize = 0;
 
     if (!index) {
         Serial.println("🚨 🔄 Suspendiendo procesos...");
-        otaInProgress = true;  // 🔹 Indica que OTA está activa
+        otaInProgress = true;
 
         size_t firmwareSize = request->contentLength();
         Serial.printf("📥 Iniciando OTA: %s (%d bytes)\n", filename.c_str(), firmwareSize);
@@ -33,20 +32,20 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         }
 
         totalSize = 0;
-     }
+    }
 
-     size_t written = Update.write(data, len);
-     totalSize += written;
+    size_t written = Update.write(data, len);
+    totalSize += written;
 
-     if (written != len) {
+    if (written != len) {
         Serial.println("❌ Error al escribir en Flash");
         errLeds();
         request->send(500, "text/plain", "Error al escribir en Flash");
         otaInProgress = false;
         return;
-     }
+    }
 
-     if (final) {
+    if (final) {
         Serial.println("🔄 Finalizando actualización...");
 
         if (Update.hasError()) {
@@ -69,11 +68,11 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
             request->send(500, "text/plain", "Error finalizando OTA.");
             otaInProgress = false;
         }
-     }
- }
+    }
+}
 
- // 🔹 Iniciar el servidor web y configurar rutas
- void startWebServer() {
+// 🔹 Iniciar el servidor web y configurar rutas
+void startWebServer() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!isAuthenticated(request)) return;
         request->send(SPIFFS, "/index.html", "text/html");
@@ -97,18 +96,18 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         if (request->hasParam("location", true)) newConfig.location = request->getParam("location", true)->value();
 
         if (request->hasParam("telegramToken", true) && request->hasParam("chatId", true) &&
-        request->hasParam("emailSender", true) && request->hasParam("emailPassword", true) &&
-        request->hasParam("emailRecipient", true)) {
+            request->hasParam("emailSender", true) && request->hasParam("emailPassword", true) &&
+            request->hasParam("emailRecipient", true)) {
 
-        NotificationConfig config;
-        config.telegramToken = request->getParam("telegramToken", true)->value();
-        config.chatId = request->getParam("chatId", true)->value();
-        config.emailSender = request->getParam("emailSender", true)->value();
-        config.emailPassword = request->getParam("emailPassword", true)->value();
-        config.emailRecipient = request->getParam("emailRecipient", true)->value();
+            NotificationConfig config;
+            config.telegramToken = request->getParam("telegramToken", true)->value();
+            config.chatId = request->getParam("chatId", true)->value();
+            config.emailSender = request->getParam("emailSender", true)->value();
+            config.emailPassword = request->getParam("emailPassword", true)->value();
+            config.emailRecipient = request->getParam("emailRecipient", true)->value();
 
-        // Guardar las credenciales en config.json
-        saveNotificationConfig(config);
+            saveNotificationConfig(config);
+        }
 
         if (saveConfig(newConfig)) {
             request->send(200, "text/plain", "✅ Configuración guardada. Reiniciando ESP32...");
@@ -119,35 +118,41 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
             request->send(500, "text/plain", "❌ Error al guardar configuración.");
             errLeds();
         }
-     });
+    });
 
-     server.on("/update", HTTP_POST, 
+    // 🔹 Ruta para subir firmware OTA
+    server.on("/update", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
             request->send(200, "text/plain", "📥 Subida OTA en progreso...");
         }, 
         handleOTA
-     );
+    );
 
-     server.begin();
- }
+    server.begin(); // ✅ Se mueve fuera de cualquier `server.on()`
+}
 
- // 🔹 Verificar autenticación básica
- bool isAuthenticated(AsyncWebServerRequest *request) {
+// 🔹 Verificar autenticación básica
+bool isAuthenticated(AsyncWebServerRequest *request) {
     if (!request->hasHeader("Authorization")) {
         AsyncWebServerResponse *response = request->beginResponse(401, "text/plain", "Unauthorized");
         response->addHeader("WWW-Authenticate", "Basic realm=\"ESP32 Config\"");
         request->send(response);
         return false;
-     }
+    }
 
-     String authHeader = request->header("Authorization");
-     authHeader.replace("Basic ", "");  
-     String expectedAuth = base64::encode(webUsername + ":" + webPassword);  
+    String authHeader = request->header("Authorization");
+authHeader.replace("Basic ", "");  
 
-     if (authHeader != expectedAuth) {
-        request->send(403, "text/plain", "Forbidden");
-        return false;
-     }
+String expectedAuth = base64::encode(webUsername + ":" + webPassword);
 
-     return true;
- }
+Serial.println("🔍 authHeader: " + authHeader);
+Serial.println("🔍 expectedAuth: " + expectedAuth);
+
+if (authHeader != expectedAuth) {
+    Serial.println("❌ Autenticación fallida");
+    request->send(403, "text/plain", "Forbidden");
+    return false;
+}
+
+    return true;
+}
