@@ -10,6 +10,7 @@
 #include <SPIFFS.h>            // Para manejar el sistema de archivos (si lees configuraciones)
 #include <FS.h>                // Para acceso a archivos en SPIFFS
 #include <WiFiClientSecure.h>  // Para conexiones seguras (ej. enviar correos con SSL)
+#include "config.h"
 
 // Estructura para almacenar las credenciales de notificación
 struct NotificationConfig {
@@ -24,5 +25,5 @@ struct NotificationConfig {
 void sendTelegramMessage(const String& message, const NotificationConfig& config);
 void sendEmailNotification(const String& message, const NotificationConfig& config);
 void saveNotificationConfig(const NotificationConfig& config);
-
+NotificationConfig convertToNotificationConfig(const Config& config);
 #endif

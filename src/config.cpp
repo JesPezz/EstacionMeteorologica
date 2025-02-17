@@ -9,7 +9,7 @@ const char nombreCodigo[] = "EstacionThingSpeak";
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
 const unsigned long UPDATE_INTERVAL = 1 * 60 * 1000;  // 6 horas en milisegundos
 
-const char* githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest";
+MB_String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest";
 
 Config config;
 String serverName;

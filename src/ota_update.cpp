@@ -4,71 +4,75 @@
 #include "web_server.h"
 #include "ota_update.h"
 #include <WiFiClientSecure.h>
-#include <Update.h>
 #include <ArduinoJson.h>
 #include "config.h"
 #include "led.h"
 #include "notifications.h"
-
+#include "extras/MB_String.h"
 
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
-
+    String githubAPIURLString = githubAPIURL.c_str();
     WiFiClientSecure client;
     client.setInsecure();
 
     HTTPClient http;
-    http.begin(client, githubAPIURL);
+    http.begin(client, githubAPIURLString);
     int httpCode = http.GET();
 
     if (httpCode == 200) {
-        String jsonResponse = http.getString();  // 📌 Guardar la respuesta en un String
-        String mensaje = String("📜 Respuesta JSON: ") + jsonResponse);  // ✅ Corrección
-        Serial.println(mensaje);
+        MB_String jsonResponse = http.getString();
+        MB_String mensaje = "📜 Respuesta JSON: ";
+        mensaje += jsonResponse;
+        Serial.println(mensaje.c_str());
 
-        JsonDocument doc;  // 📌 Crear el buffer JSON
-        DeserializationError error = deserializeJson(doc, jsonResponse);  
-        
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, jsonResponse.c_str());
+
         if (error) {
-            Serial.println(String("❌ Error al parsear JSON: ") + String(error.c_str()));  // ✅ Corrección
+            Serial.print("❌ Error al parsear JSON: ");
+            Serial.println(error.c_str());
             return;
         }
-    
-        String newVersion = doc["tag_name"];  
-        String firmwareURL = doc["assets"][0]["browser_download_url"];  
-    
-        Serial.printf("📌 Última versión en GitHub: %s\n", newVersion.c_str());
-        Serial.printf("📥 URL del firmware: %s\n", firmwareURL.c_str());
-    
+
+        MB_String newVersion = doc["tag_name"].as<MB_String>();
+        MB_String githubAPIURL = doc["assets"][0]["browser_download_url"].as<MB_String>();
+
+        Serial.print("📌 Última versión en GitHub: ");
+        Serial.println(newVersion.c_str());
+        Serial.print("📥 URL del firmware: ");
+        Serial.println(githubAPIURL.c_str());
+
         if (newVersion == version) {
             Serial.println("✅ El ESP32 ya está actualizado.");
             return;
         } else {
             Serial.println("🚀 Nueva versión detectada. Iniciando OTA...");
-            downloadAndUpdate(firmwareURL);
+            NotificationConfig notificationConfig = convertToNotificationConfig(config);  // Convertir Config a NotificationConfig
+            downloadAndUpdate(githubAPIURL, notificationConfig);  // Pasar NotificationConfig
         }
+    } else {
+        Serial.printf("❌ Error HTTP: %d al verificar actualizaciones.\n", httpCode);
+    }
 
     http.end();
 }
 
-void downloadAndUpdate(String firmwareURL) {
+void downloadAndUpdate(MB_String githubAPIURL, const NotificationConfig& notificationConfig) {
     Serial.println("📥 Descargando firmware desde GitHub...");
-    sendTelegramMessage("🔧 Actualización en progreso", config);
-    sendEmailNotification("Actualización en progreso", config);
+    sendTelegramMessage("🔧 Actualización en progreso", notificationConfig);
+    sendEmailNotification("Actualización en progreso", notificationConfig);
     ledInProgress();
 
     WiFiClientSecure client;
     client.setInsecure();
 
     HTTPClient http;
-    http.begin(client, firmwareURL);
-
-    // Habilitar redirecciones
+    http.begin(client, githubAPIURL.c_str());
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-
     int httpCode = http.GET();
 
-    if (httpCode == HTTP_CODE_OK) {  // Usar HTTP_CODE_OK en lugar de 200
+    if (httpCode == HTTP_CODE_OK) {
         int contentLength = http.getSize();
         Serial.printf("📥 Tamaño del firmware: %d bytes\n", contentLength);
 
@@ -99,20 +103,21 @@ void downloadAndUpdate(String firmwareURL) {
             if (written == contentLength) {
                 if (Update.end(true)) {
                     Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
-                    sendTelegramMessage("✅ Actualización exitosa", config);
-                    sendEmailNotification("Actualización exitosa", config);
+                    sendTelegramMessage("✅ Actualización exitosa", notificationConfig);
+                    sendEmailNotification("Actualización exitosa", notificationConfig);
                     ledSuccess();
                     ESP.restart();
                 } else {
                     Serial.println("❌ Error al finalizar la actualización.");
-                    sendTelegramMessage("❌ Error en la actualización", config);
-                    sendEmailNotification("Error en la actualización", config);
+                    sendTelegramMessage("❌ Error en la actualización", notificationConfig);
+                    sendEmailNotification("Error en la actualización", notificationConfig);
                     errLeds();
                     Update.printError(Serial);
                 }
             } else {
                 Serial.println("❌ Error: No se recibió el firmware completo.");
-            }   errLeds();
+                errLeds();
+            }
         }
     } else {
         Serial.printf("❌ Error HTTP: %d al descargar firmware.\n", httpCode);
