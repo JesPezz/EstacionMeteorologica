@@ -12,18 +12,8 @@
 #include <WiFiClientSecure.h>  // Para conexiones seguras (ej. enviar correos con SSL)
 #include "config.h"
 
-// Estructura para almacenar las credenciales de notificación
-struct NotificationConfig {
-    String telegramToken;
-    String chatId;
-    String emailSender;
-    String emailPassword;
-    String emailRecipient;
-};
-
 // Declaraciones de funciones
 void sendTelegramMessage(const String& message, const NotificationConfig& config);
 void sendEmailNotification(const String& message, const NotificationConfig& config);
 void saveNotificationConfig(const NotificationConfig& config);
-NotificationConfig convertToNotificationConfig(const Config& config);
 #endif

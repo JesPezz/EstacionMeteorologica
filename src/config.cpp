@@ -122,3 +122,13 @@ void testFlash() {
         Serial.println("✅ SPIFFS funcionando correctamente.");
     }
 }
+
+NotificationConfig extractNotificationConfig(const Config& config) {
+    NotificationConfig notificationConfig;
+    notificationConfig.telegramToken = config.telegramToken;
+    notificationConfig.chatId = config.chatId;
+    notificationConfig.emailSender = config.emailSender;
+    notificationConfig.emailPassword = config.emailPassword;
+    notificationConfig.emailRecipient = config.emailRecipient;
+    return notificationConfig;
+}
