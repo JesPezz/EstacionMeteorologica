@@ -6,14 +6,15 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 #include <bsec.h>
-#include <ESP_Mail_Client.h>
+
 
 extern String webUsername;
 extern String webPassword;
 
 extern const char version[];  
 extern const char nombreCodigo[];
-extern MB_String githubAPIURL;
+extern String githubAPIURL;
+
 
 
 
@@ -21,38 +22,39 @@ extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tie
 extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 horas)
 
 
+
 // ✅ Estructura de configuración
-// 🔹 Estructura principal de configuración del ESP32
+
 struct Config {
     String ssid;
     String password;
     String googleSheetURL;
     String thingSpeakAPIKey;
-    unsigned long updateInterval;  // En milisegundos
-    unsigned long channelID;       // ID del canal en ThingSpeak
-    String location;               // Ubicación para Google Sheets
-
-    // 🔹 Datos de notificación (Telegram y Email)
-    MB_String telegramToken;
-    MB_String chatId;
-    MB_String emailSender;
-    MB_String emailPassword;
-    MB_String emailRecipient;
+    unsigned long updateInterval;
+    unsigned long channelID;
+    String location;
+    String telegramToken;
+    String chatId;
+    String emailSender;
+    String emailPassword;
+    String emailRecipient;
 };
 
 // 🔹 Subestructura solo para notificaciones (extraída de `Config`)
 struct NotificationConfig {
-    MB_String telegramToken;
-    MB_String chatId;
-    MB_String emailSender;
-    MB_String emailPassword;
-    MB_String emailRecipient;
+    String telegramToken;
+    String chatId;
+    String emailSender;
+    String emailPassword;
+    String emailRecipient;
 };
+    extern Config config;  
+    extern NotificationConfig notificationConfig;  // ✅ Solo declaración
+
+    NotificationConfig extractNotificationConfig(const Config& config);  // ✅ Declaración de la función (NO eliminar)
 
 
-NotificationConfig extractNotificationConfig(const Config& config);
 
-extern Config config;  // ✅ Declaramos la variable global
 
 // WiFi
 extern String serverName;

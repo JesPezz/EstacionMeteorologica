@@ -1,7 +1,6 @@
 #ifndef NOTIFICATIONS_H
 #define NOTIFICATIONS_H
 
-#include <Arduino.h>
 #include <WiFiClientSecure.h>
 #include "ESP_Mail_Client.h"
 #include <HTTPClient.h>
@@ -13,7 +12,7 @@
 #include "config.h"
 
 // Declaraciones de funciones
-void sendTelegramMessage(const String& message, const NotificationConfig& config);
-void sendEmailNotification(const String& message, const NotificationConfig& config);
-void saveNotificationConfig(const NotificationConfig& config);
+void sendTelegramMessage(const MB_String &mensaje, const Config &config); 
+void sendEmailNotification(const MB_String &subject, const Config &config);
+void saveNotificationConfig();
 #endif

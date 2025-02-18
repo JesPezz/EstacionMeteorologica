@@ -10,8 +10,6 @@
 #include "notifications.h"
 #include "extras/MB_String.h"
 
-NotificationConfig notificationConfig = extractNotificationConfig(config);
-
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
     String githubAPIURLString = githubAPIURL.c_str();
@@ -50,8 +48,8 @@ void checkForUpdates() {
             return;
         } else {
             Serial.println("🚀 Nueva versión detectada. Iniciando OTA...");
-            sendTelegramMessage("🔧 Nueva actualización OTA iniciada", notificationConfig);
-            sendEmailNotification("Nueva actualización OTA iniciada", notificationConfig);
+            sendEmailNotification("🚀 Nueva versión detectada. Iniciando OTA...", config);
+            sendTelegramMessage("🚀 Nueva versión detectada. Iniciando OTA...", config);
             downloadAndUpdate();  // Pasar NotificationConfig
         }
     } else {
@@ -63,8 +61,8 @@ void checkForUpdates() {
 
 void downloadAndUpdate() {  // ✅ Eliminamos los parámetros innecesarios
     Serial.println("📥 Descargando firmware desde GitHub...");
-    sendTelegramMessage("🔧 Actualización en progreso", notificationConfig);
-    sendEmailNotification("Actualización en progreso", notificationConfig);
+    sendTelegramMessage("📥 Descargando firmware desde GitHub...", config);
+    sendEmailNotification("📥 Descargando firmware desde GitHub...", config);
     ledInProgress();
 
     WiFiClientSecure client;
@@ -107,14 +105,14 @@ void downloadAndUpdate() {  // ✅ Eliminamos los parámetros innecesarios
             if (written == contentLength) {
                 if (Update.end(true)) {
                     Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
-                    sendTelegramMessage("✅ Actualización exitosa", notificationConfig);
-                    sendEmailNotification("Actualización exitosa", notificationConfig);
+                    sendTelegramMessage("✅ Firmware actualizado correctamente. Reiniciando...", config);
+                    sendEmailNotification("✅ Firmware actualizado correctamente. Reiniciando...", config);
                     ledSuccess();
                     ESP.restart();
                 } else {
                     Serial.println("❌ Error al finalizar la actualización.");
-                    sendTelegramMessage("❌ Error en la actualización", notificationConfig);
-                    sendEmailNotification("Error en la actualización", notificationConfig);
+                    sendTelegramMessage("❌ Error al finalizar la actualización.", config);
+                    sendEmailNotification("❌ Error al finalizar la actualización.", config);
                     errLeds();
                     Update.printError(Serial);
                 }
