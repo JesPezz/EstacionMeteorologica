@@ -10,6 +10,8 @@
 #include "notifications.h"
 #include "extras/MB_String.h"
 
+NotificationConfig notificationConfig = extractNotificationConfig(config);
+
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
     String githubAPIURLString = githubAPIURL.c_str();
@@ -35,8 +37,8 @@ void checkForUpdates() {
             return;
         }
 
-        MB_String newVersion = doc["tag_name"].as<MB_String>();
-        MB_String githubAPIURL = doc["assets"][0]["browser_download_url"].as<MB_String>();
+        MB_String newVersion = doc["tag_name"].as<String>();
+        MB_String githubAPIURL = doc["assets"][0]["browser_download_url"].as<String>();
 
         Serial.print("📌 Última versión en GitHub: ");
         Serial.println(newVersion.c_str());
@@ -48,8 +50,9 @@ void checkForUpdates() {
             return;
         } else {
             Serial.println("🚀 Nueva versión detectada. Iniciando OTA...");
-            NotificationConfig notificationConfig = convertToNotificationConfig(config);  // Convertir Config a NotificationConfig
-            downloadAndUpdate(githubAPIURL, notificationConfig);  // Pasar NotificationConfig
+            sendTelegramMessage("🔧 Nueva actualización OTA iniciada", notificationConfig);
+            sendEmailNotification("Nueva actualización OTA iniciada", notificationConfig);
+            downloadAndUpdate();  // Pasar NotificationConfig
         }
     } else {
         Serial.printf("❌ Error HTTP: %d al verificar actualizaciones.\n", httpCode);
@@ -58,7 +61,7 @@ void checkForUpdates() {
     http.end();
 }
 
-void downloadAndUpdate(MB_String githubAPIURL, const NotificationConfig& notificationConfig) {
+void downloadAndUpdate() {  // ✅ Eliminamos los parámetros innecesarios
     Serial.println("📥 Descargando firmware desde GitHub...");
     sendTelegramMessage("🔧 Actualización en progreso", notificationConfig);
     sendEmailNotification("Actualización en progreso", notificationConfig);
@@ -68,7 +71,8 @@ void downloadAndUpdate(MB_String githubAPIURL, const NotificationConfig& notific
     client.setInsecure();
 
     HTTPClient http;
-    http.begin(client, githubAPIURL.c_str());
+    http.begin(client, githubAPIURL.c_str());  // ✅ Usamos githubAPIURL global
+
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
     int httpCode = http.GET();
 
@@ -124,5 +128,5 @@ void downloadAndUpdate(MB_String githubAPIURL, const NotificationConfig& notific
         errLeds();
     }
 
-    http.end();
+    http.end();  // ✅ Cerrar conexión HTTP
 }

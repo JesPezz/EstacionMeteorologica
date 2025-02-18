@@ -22,20 +22,35 @@ extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 h
 
 
 // ✅ Estructura de configuración
+// 🔹 Estructura principal de configuración del ESP32
 struct Config {
     String ssid;
     String password;
     String googleSheetURL;
     String thingSpeakAPIKey;
-    unsigned long updateInterval;  // Ahora en milisegundos
-    unsigned long channelID;  // Nuevo campo para ThingSpeak
-    String location;  // Nuevo campo para Google Sheets
-    String telegramToken;
-    String chatId;
-    String emailSender;
-    String emailPassword;
-    String emailRecipient;
+    unsigned long updateInterval;  // En milisegundos
+    unsigned long channelID;       // ID del canal en ThingSpeak
+    String location;               // Ubicación para Google Sheets
+
+    // 🔹 Datos de notificación (Telegram y Email)
+    MB_String telegramToken;
+    MB_String chatId;
+    MB_String emailSender;
+    MB_String emailPassword;
+    MB_String emailRecipient;
 };
+
+// 🔹 Subestructura solo para notificaciones (extraída de `Config`)
+struct NotificationConfig {
+    MB_String telegramToken;
+    MB_String chatId;
+    MB_String emailSender;
+    MB_String emailPassword;
+    MB_String emailRecipient;
+};
+
+
+NotificationConfig extractNotificationConfig(const Config& config);
 
 extern Config config;  // ✅ Declaramos la variable global
 
