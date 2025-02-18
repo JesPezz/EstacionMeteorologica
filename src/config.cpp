@@ -9,7 +9,7 @@ const char nombreCodigo[] = "EstacionThingSpeak";
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
 const unsigned long UPDATE_INTERVAL = 1 * 60 * 1000;  // 6 horas en milisegundos
 
-MB_String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest";
+String githubAPIURL = "https://api.github.com/repos/usuario/repositorio/releases/latest";
 
 Config config;
 String serverName;
@@ -122,13 +122,27 @@ void testFlash() {
         Serial.println("✅ SPIFFS funcionando correctamente.");
     }
 }
+// Config config;  
+// NotificationConfig notificationConfig = extractNotificationConfig(config);  // ✅ Definición únic
+// NotificationConfig extractNotificationConfig(const Config& config) {
+//     NotificationConfig notificationConfig;
+//     notificationConfig.telegramToken = config.telegramToken;
+//     notificationConfig.chatId = config.chatId;
+//     notificationConfig.emailSender = config.emailSender;
+//     notificationConfig.emailPassword = config.emailPassword;
+//     notificationConfig.emailRecipient = config.emailRecipient;
+//     return notificationConfig;
+// }
 
-NotificationConfig extractNotificationConfig(const Config& config) {
-    NotificationConfig notificationConfig;
-    notificationConfig.telegramToken = config.telegramToken;
-    notificationConfig.chatId = config.chatId;
-    notificationConfig.emailSender = config.emailSender;
-    notificationConfig.emailPassword = config.emailPassword;
-    notificationConfig.emailRecipient = config.emailRecipient;
-    return notificationConfig;
+//Config config;  
+NotificationConfig notificationConfig = extractNotificationConfig(config);  // ✅ Definición única
+
+NotificationConfig extractNotificationConfig(const Config& config) {  
+    NotificationConfig nc;
+    nc.telegramToken = config.telegramToken;
+    nc.chatId = config.chatId;
+    nc.emailSender = config.emailSender;
+    nc.emailPassword = config.emailPassword;
+    nc.emailRecipient = config.emailRecipient;
+    return nc;
 }

@@ -81,7 +81,7 @@ void startWebServer() {
     // 🔹 Configuración de parámetros (WiFi, Google Sheet, ThingSpeak, etc.)
     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!isAuthenticated(request)) return;
-
+        
         Config newConfig = config;
 
         if (request->hasParam("ssid", true)) newConfig.ssid = request->getParam("ssid", true)->value();
@@ -98,15 +98,15 @@ void startWebServer() {
         if (request->hasParam("telegramToken", true) && request->hasParam("chatId", true) &&
             request->hasParam("emailSender", true) && request->hasParam("emailPassword", true) &&
             request->hasParam("emailRecipient", true)) {
-
+            
             NotificationConfig config;
             config.telegramToken = request->getParam("telegramToken", true)->value();
             config.chatId = request->getParam("chatId", true)->value();
             config.emailSender = request->getParam("emailSender", true)->value();
             config.emailPassword = request->getParam("emailPassword", true)->value();
             config.emailRecipient = request->getParam("emailRecipient", true)->value();
-
-            saveNotificationConfig(config);
+            
+           saveNotificationConfig();
         }
 
         if (saveConfig(newConfig)) {
@@ -143,10 +143,19 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
     String authHeader = request->header("Authorization");
 authHeader.replace("Basic ", "");  
 
-String expectedAuth = base64::encode(webUsername + ":" + webPassword);
+MB_String authData = webUsername;
+authData += ":";
+authData += webPassword;
 
-Serial.println("🔍 authHeader: " + authHeader);
-Serial.println("🔍 expectedAuth: " + expectedAuth);
+String expectedAuth = base64::encode(authData.c_str());
+
+
+Serial.print("🔍 authHeader: ");
+Serial.println(authHeader.c_str());
+
+Serial.print("🔍 expectedAuth: ");
+Serial.println(expectedAuth.c_str());
+
 
 if (authHeader != expectedAuth) {
     Serial.println("❌ Autenticación fallida");
