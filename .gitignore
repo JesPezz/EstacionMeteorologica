@@ -2,4 +2,3 @@
 .bin/
 *.hex
 *.elf
-*.json
