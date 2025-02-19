@@ -1,16 +1,15 @@
 {
-    "ssid": "INFINITUM181E",
-    "password": "zKYRN3FFC7",
-    "googleSheetURL": "https://script.google.com/macros/s/AKfycbyskgoHGsr6O8hhnkh9ShoYntCLnaUQA6d1IKrPJEcz-tULY8HWsC3Sbl1Ln9qbkxEvrQ/exec",
+    "ssid": "",
+    "password": "",
+    "googleSheetURL":
     "thingSpeakAPIKey": "DTJW5F18CR97AIHS",
     "updateInterval": 10,
-    "channelID": 2426971,
-    "location": "PlantaAlta",
+    "channelID": 
+    "location": "",
     "webUsername": "admin",
     "webPassword": "admin123",
-    "telegramToken": "6587883941:AAFRIaj6xxokxA4QBPfX5DoxcqwvblwlaOY",
-    "chatId": "6921079409",
-    "emailSender": "jespezz@gmail.com",
-    "emailPassword": "Chonachichona02",
+    "telegramToken": "",
+    "chatId": "",
+    "emailSender":": "",
     "emailRecipient": "jespezz@hotmail.com"
 }
