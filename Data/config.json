@@ -2,7 +2,7 @@
     "ssid": "",
     "password": "",
     "googleSheetURL":
-    "thingSpeakAPIKey": "DTJW5F18CR97AIHS",
+    "thingSpeakAPIKey": "",
     "updateInterval": 10,
     "channelID": 
     "location": "",
@@ -11,5 +11,4 @@
     "telegramToken": "",
     "chatId": "",
     "emailSender":": "",
-    "emailRecipient": "jespezz@hotmail.com"
-}
+    "emailRecipient":
