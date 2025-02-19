@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
     "ssid": "INFINITUM181E",
     "password": "zKYRN3FFC7",
     "googleSheetURL": "https://script.google.com/macros/s/AKfycbyskgoHGsr6O8hhnkh9ShoYntCLnaUQA6d1IKrPJEcz-tULY8HWsC3Sbl1Ln9qbkxEvrQ/exec",
@@ -14,3 +15,18 @@
     "emailPassword": "Chonachichona02",
     "emailRecipient": "jespezz@hotmail.com"
 }
+=======
+    "ssid": "",
+    "password": "",
+    "googleSheetURL":
+    "thingSpeakAPIKey": "",
+    "updateInterval": 10,
+    "channelID": 
+    "location": "",
+    "webUsername": "admin",
+    "webPassword": "admin123",
+    "telegramToken": "",
+    "chatId": "",
+    "emailSender":": "",
+    "emailRecipient":
+>>>>>>> ac2c9edc4eadbb25916ca6cb274c32c384b0205a
