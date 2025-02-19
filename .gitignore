@@ -2,4 +2,4 @@
 .bin/
 *.hex
 *.elf
-*.jsonconfig.json
+
