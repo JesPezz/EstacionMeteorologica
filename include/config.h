@@ -57,14 +57,14 @@ struct NotificationConfig {
 
 
 // WiFi
-extern String serverName;
+extern String googleSheetURL;
 extern const char* ssid;
 extern const char* password;
 
 // ThingSpeak
 extern unsigned long channelID;
 extern const char *writeAPIKey;
-extern String LOCATION;
+extern String location;
 
 // Timing
 extern unsigned long CHANNEL_UPDATE_INTERVAL;

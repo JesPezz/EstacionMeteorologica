@@ -30,7 +30,6 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
             otaInProgress = false;
             return;
         }
-
         totalSize = 0;
     }
 
@@ -78,8 +77,25 @@ void startWebServer() {
         request->send(SPIFFS, "/index.html", "text/html");
     });
 
+    server.on("/getConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+        StaticJsonDocument<512> doc;
+    
+        doc["ssid"] = config.ssid;
+        doc["googleSheetURL"] = config.googleSheetURL;
+        doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
+        doc["updateInterval"] = config.updateInterval / 60000; // Minutos
+        doc["channelID"] = config.channelID;
+        doc["location"] = config.location;
+    
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+
     // 🔹 Configuración de parámetros (WiFi, Google Sheet, ThingSpeak, etc.)
     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request) {
+
         if (!isAuthenticated(request)) return;
         
         Config newConfig = config;
@@ -91,23 +107,35 @@ void startWebServer() {
         if (request->hasParam("updateInterval", true)) {
             newConfig.updateInterval = request->getParam("updateInterval", true)->value().toInt() * 60000;
         }
-        
         if (request->hasParam("channelID", true)) newConfig.channelID = request->getParam("channelID", true)->value().toInt();
         if (request->hasParam("location", true)) newConfig.location = request->getParam("location", true)->value();
 
-        if (request->hasParam("telegramToken", true) && request->hasParam("chatId", true) &&
-            request->hasParam("emailSender", true) && request->hasParam("emailPassword", true) &&
-            request->hasParam("emailRecipient", true)) {
-            
-            NotificationConfig config;
-            config.telegramToken = request->getParam("telegramToken", true)->value();
-            config.chatId = request->getParam("chatId", true)->value();
-            config.emailSender = request->getParam("emailSender", true)->value();
-            config.emailPassword = request->getParam("emailPassword", true)->value();
-            config.emailRecipient = request->getParam("emailRecipient", true)->value();
-            
-           saveNotificationConfig();
+        // ✅ No sobrescribe los valores de notificación si están vacíos
+        NotificationConfig newNotificationConfig = notificationConfig;
+
+        if (request->hasParam("telegramToken", true)) {
+            String token = request->getParam("telegramToken", true)->value();
+            if (!token.isEmpty()) newNotificationConfig.telegramToken = token;
         }
+        if (request->hasParam("chatId", true)) {
+            String chatId = request->getParam("chatId", true)->value();
+            if (!chatId.isEmpty()) newNotificationConfig.chatId = chatId;
+        }
+        if (request->hasParam("emailSender", true)) {
+            String sender = request->getParam("emailSender", true)->value();
+            if (!sender.isEmpty()) newNotificationConfig.emailSender = sender;
+        }
+        if (request->hasParam("emailPassword", true)) {
+            String password = request->getParam("emailPassword", true)->value();
+            if (!password.isEmpty()) newNotificationConfig.emailPassword = password;
+        }
+        if (request->hasParam("emailRecipient", true)) {
+            String recipient = request->getParam("emailRecipient", true)->value();
+            if (!recipient.isEmpty()) newNotificationConfig.emailRecipient = recipient;
+        }
+
+        notificationConfig = newNotificationConfig;  // Actualizamos solo los valores válidos
+        saveNotificationConfig();  // Guardamos la configuración de notificaciones
 
         if (saveConfig(newConfig)) {
             request->send(200, "text/plain", "✅ Configuración guardada. Reiniciando ESP32...");
@@ -141,27 +169,22 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
     }
 
     String authHeader = request->header("Authorization");
-authHeader.replace("Basic ", "");  
+    authHeader.replace("Basic ", "");  
 
-MB_String authData = webUsername;
-authData += ":";
-authData += webPassword;
+    MB_String authData = webUsername;
+    authData += ":";
+    authData += webPassword;
 
-String expectedAuth = base64::encode(authData.c_str());
+    String expectedAuth = base64::encode(authData.c_str());
 
+    Serial.printf("🔍 authHeader: %s\n", authHeader.c_str());
+    Serial.printf("🔍 expectedAuth: %s\n", expectedAuth.c_str());
 
-Serial.print("🔍 authHeader: ");
-Serial.println(authHeader.c_str());
-
-Serial.print("🔍 expectedAuth: ");
-Serial.println(expectedAuth.c_str());
-
-
-if (authHeader != expectedAuth) {
-    Serial.println("❌ Autenticación fallida");
-    request->send(403, "text/plain", "Forbidden");
-    return false;
-}
+    if (authHeader != expectedAuth) {
+        Serial.println("❌ Autenticación fallida");
+        request->send(403, "text/plain", "Forbidden");
+        return false;
+    }
 
     return true;
 }

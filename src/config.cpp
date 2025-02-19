@@ -12,12 +12,12 @@ const unsigned long UPDATE_INTERVAL = 1 * 60 * 1000;  // 6 horas en milisegundos
 String githubAPIURL = "https://api.github.com/repos/usuario/repositorio/releases/latest";
 
 Config config;
-String serverName;
+String googleSheetURL;
 const char* ssid;
 const char* password;
 const char* writeAPIKey;
 unsigned long channelID;
-String LOCATION;
+String location;
 unsigned long CHANNEL_UPDATE_INTERVAL = 60 * 1000;
 unsigned long MONTH_IN_SECONDS = 30 * 24 * 60 * 60;
 unsigned long STATE_SAVE_PERIOD = 360 * 60 * 1000;
@@ -61,13 +61,24 @@ bool loadConfig() {
     // Leer valores del JSON
     if (doc["ssid"].is<String>()) config.ssid = doc["ssid"].as<String>();
     if (doc["password"].is<String>()) config.password = doc["password"].as<String>();
-    if (doc["googleSheetURL"].is<String>()) config.googleSheetURL = doc["googleSheetURL"].as<String>();
+    //if (doc["googleSheetURL"].is<String>()) config.googleSheetURL = doc["googleSheetURL"].as<String>();
+    if (doc["googleSheetURL"].is<String>()) {
+    googleSheetURL = doc["googleSheetURL"].as<String>();
+    } else {
+    Serial.println("❌ Error: googleSheetURL no está en config.json");
+    }
     if (doc["thingSpeakAPIKey"].is<String>()) config.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
     if (doc["updateInterval"].is<int>()) config.updateInterval = doc["updateInterval"].as<int>() * 60000;
     if (doc["channelID"].is<unsigned long>()) config.channelID = doc["channelID"].as<unsigned long>();
     if (doc["location"].is<String>()) config.location = doc["location"].as<String>();
     if (doc["webUsername"].is<String>()) webUsername = doc["webUsername"].as<String>();
     if (doc["webPassword"].is<String>()) webPassword = doc["webPassword"].as<String>();
+    if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
+    if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
+    if (doc["emailSender"].is<String>()) config.emailSender = doc["emailSender"].as<String>();
+    if (doc["emailPassword"].is<String>()) config.emailPassword = doc["emailPassword"].as<String>();
+    if (doc["emailRecipient"].is<String>()) config.emailRecipient = doc["emailRecipient"].as<String>();
+
 
     return true;
 }
@@ -122,19 +133,7 @@ void testFlash() {
         Serial.println("✅ SPIFFS funcionando correctamente.");
     }
 }
-// Config config;  
-// NotificationConfig notificationConfig = extractNotificationConfig(config);  // ✅ Definición únic
-// NotificationConfig extractNotificationConfig(const Config& config) {
-//     NotificationConfig notificationConfig;
-//     notificationConfig.telegramToken = config.telegramToken;
-//     notificationConfig.chatId = config.chatId;
-//     notificationConfig.emailSender = config.emailSender;
-//     notificationConfig.emailPassword = config.emailPassword;
-//     notificationConfig.emailRecipient = config.emailRecipient;
-//     return notificationConfig;
-// }
 
-//Config config;  
 NotificationConfig notificationConfig = extractNotificationConfig(config);  // ✅ Definición única
 
 NotificationConfig extractNotificationConfig(const Config& config) {  
