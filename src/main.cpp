@@ -31,7 +31,7 @@ void setup() {
     WiFi.begin("SSID", "PASSWORD");
     
 }
-  
+  loadConfig();
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
   Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
 
@@ -70,37 +70,13 @@ connectToWiFi();
 startWebServer();
 
 printConfig();  // ✅ Ver los valores actuales de configuración
-WiFi.mode(WIFI_STA);  // Configura el ESP32 en modo cliente
-WiFi.begin(config.ssid.c_str(), config.password.c_str());
 
-Serial.print("Conectando a WiFi ");
-int attempts = 0;
-
-while (WiFi.status() != WL_CONNECTED && attempts < 10) {
-    delay(1000);
-    Serial.print(".");
-    attempts++;
-}
-
-if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n✅ Conectado a WiFi.");
-    Serial.print("📡 IP del ESP32: ");
-    Serial.println(WiFi.localIP());
-} else {
-    Serial.println("\n❌ No se pudo conectar. Activando Modo AP...");
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP("ESP32_Config", "12345678");
-
-    Serial.print("🔗 Conéctate a 'ESP32_Config' y accede a: ");
-    Serial.println(WiFi.softAPIP());
-}
-  
   // Definir el nombre del código y la ubicación
   Serial.print("Version: ");
   Serial.print(nombreCodigo);
   Serial.print(" ");
   Serial.println(version);
-  Serial.println("Ubicacion: " + LOCATION);
+  Serial.println("Ubicacion: " + location);
   pinMode(LED_BUILTIN, OUTPUT);
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
@@ -110,18 +86,6 @@ if (WiFi.status() == WL_CONNECTED) {
   loadState();
   Serial.println("loadState() se ha cargado.");
   
-  // Conectar a WiFi
-  WiFi.begin(ssid, password);
-  Serial.print("Conectando a ");
-  Serial.println(ssid);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println();
-  Serial.println("WiFi connected");
-
   // Sincronizar el reloj una vez al mes
   syncClock();
 

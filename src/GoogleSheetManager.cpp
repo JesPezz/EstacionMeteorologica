@@ -3,7 +3,7 @@
 #include <HTTPClient.h>
 #include <bsec.h>
 #include "BME_Sensor.h"
-
+#include "led.h"
 
 std::vector<String> storedReadings;
 Preferences preferences;
@@ -16,8 +16,15 @@ void googlesheet(void)
   if (WiFi.status() == WL_CONNECTED) {
     // Crear cliente HTTP
     HTTPClient http;
-    String url = serverName;
-    url += "?location=" + LOCATION;  // Agregar la ubicación a la URL
+
+    if (!googleSheetURL.startsWith("http://") && !googleSheetURL.startsWith("https://")) {
+      googleSheetURL = "https://" + googleSheetURL;  // Asegurar protocolo correcto
+  }
+    Serial.print("🔍 googleSheetURL actual: ");
+    Serial.println(googleSheetURL);
+  
+    String url = googleSheetURL;
+    url += "?location=" + config.location;  // Agregar la ubicación a la URL
     url += "&iaq=" + String(iaqSensor.iaq);
     url += "&iaqAccuracy=" + String(iaqSensor.iaqAccuracy);
     url += "&staticIaq=" + String(iaqSensor.staticIaq);
@@ -33,8 +40,12 @@ void googlesheet(void)
     url += "&humidity=" + String(iaqSensor.humidity);
     url += "&gasPercentage=" + String(iaqSensor.gasPercentage);
     
+    Serial.print("🌍 URL final: ");
+    Serial.println(url);
+
     // Realizar la solicitud HTTP
     http.begin(url);
+    http.setTimeout(5000);
     int httpResponseCode = http.GET();
 
     // Si hay una redirección (código 302)
@@ -45,15 +56,25 @@ void googlesheet(void)
       Serial.print("Nueva URL: ");
       Serial.println(newUrl);
 
+      if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+        http.end();
+        http.begin(newUrl);
+        httpResponseCode = http.GET();
+    } else {
+        Serial.println("⚠️ URL de redirección inválida.");
+    }
+
+
       // Realizar la solicitud a la nueva URL
       http.end();  // Finalizar la conexión anterior
       http.begin(newUrl);  // Comenzar con la nueva URL
       httpResponseCode = http.GET();  // Realizar la nueva solicitud
     }
 
-    if (httpResponseCode > 0) {
+   if (httpResponseCode > 0) {
       Serial.print("Datos enviados al Google Sheet. Código de respuesta HTTP: ");
       Serial.println(httpResponseCode);
+      ;
 
       // Leer la respuesta del servidor (si la hay)
       String response = http.getString();
@@ -62,12 +83,12 @@ void googlesheet(void)
 
       // Limpiar datos almacenados si la conexión fue exitosa
       preferences.clear();
-      digitalWrite(LED_BUILTIN, HIGH);  // Enciende el LED
-      delay(LED_ON_DURATION_MS);  // Mantener el LED encendido por un tiempo
-      digitalWrite(LED_BUILTIN, LOW);   // Apaga el LED
+      ledSuccess();
+
     } else {
       Serial.print("Error al enviar datos. Código de respuesta HTTP: ");
       Serial.println(httpResponseCode);
+      errLeds();
       saveAndSendData();
     }
 
@@ -128,7 +149,7 @@ void saveAndSendData() {
 void sendReadingToGoogleSheet(const String &reading) {
     // Send sensor data to Google Sheets
       HTTPClient http;
-      String url = serverName; // `serverName` contiene la URL base de tu hoja de Google Sheets
+      String url = googleSheetURL; // `serverName` contiene la URL base de tu hoja de Google Sheets
       url += "?iaq=" + reading; // Agregar la cadena `reading` como un parámetro en la URL
   
       // Imprime `reading` en el puerto serial
@@ -138,9 +159,7 @@ void sendReadingToGoogleSheet(const String &reading) {
       if (httpCode > 0) {
         Serial.println("Data sent to Google Sheets");
         preferences.clear(); // Clear stored data in case of successful connection
-        digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED si la conexión fue exitosa
-        delay(1000);
-        digitalWrite(LED_BUILTIN, LOW);
+        ledSuccess();
       } 
     }
   

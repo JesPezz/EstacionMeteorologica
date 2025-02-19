@@ -6,5 +6,6 @@
 void connectToWiFi();
 bool reconnectWiFi();
 void checkWiFiConnection();
+void startAPMode();
 
 #endif

@@ -1,7 +1,16 @@
 {
-    "telegramToken": "TU_TOKEN_DE_TELEGRAM",
-    "chatId": "TU_CHAT_ID",
-    "emailSender": "TU_CORREO@gmail.com",
-    "emailPassword": "TU_CONTRASEÑA",
-    "emailRecipient": "DESTINATARIO@example.com"
+    "ssid": "INFINITUM181E",
+    "password": "zKYRN3FFC7",
+    "googleSheetURL": "https://script.google.com/macros/s/AKfycbyskgoHGsr6O8hhnkh9ShoYntCLnaUQA6d1IKrPJEcz-tULY8HWsC3Sbl1Ln9qbkxEvrQ/exec",
+    "thingSpeakAPIKey": "DTJW5F18CR97AIHS",
+    "updateInterval": 10,
+    "channelID": 2426971,
+    "location": "PlantaAlta",
+    "webUsername": "admin",
+    "webPassword": "admin123",
+    "telegramToken": "6587883941:AAFRIaj6xxokxA4QBPfX5DoxcqwvblwlaOY",
+    "chatId": "6921079409",
+    "emailSender": "jespezz@gmail.com",
+    "emailPassword": "Chonachichona02",
+    "emailRecipient": "jespezz@hotmail.com"
 }

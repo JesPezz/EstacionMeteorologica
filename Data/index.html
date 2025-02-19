@@ -4,47 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración ESP32</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        form { max-width: 400px; margin: auto; }
+        input, label { display: block; width: 100%; margin: 10px 0; }
+        button { padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+    </style>
 </head>
 <body>
-    <h2>Configuración de ESP32</h2>
-    <form action="/config" method="post">
-        <label>WiFi SSID:</label>
-        <input type="text" name="ssid"><br>
+    <h2>Configuración del ESP32</h2>
+    <form action="/config" method="POST">
+        <label for="ssid">SSID:</label>
+        <input type="text" id="ssid" name="ssid" required>
 
-        <label>WiFi Password:</label>
-        <input type="password" name="password"><br>
+        <label for="password">Contraseña:</label>
+        <input type="password" id="password" name="password">
 
-        <label>Google Sheet URL:</label>
-        <input type="text" name="googleSheetURL"><br>
+        <label for="googleSheetURL">Google Sheet URL:</label>
+        <input type="text" id="googleSheetURL" name="googleSheetURL">
 
-        <label>ThingSpeak API Key:</label>
-        <input type="text" name="thingSpeakAPIKey"><br>
+        <label for="thingSpeakAPIKey">ThingSpeak API Key:</label>
+        <input type="text" id="thingSpeakAPIKey" name="thingSpeakAPIKey">
 
-        <label>ThingSpeak Channel ID:</label>
-        <input type="number" name="channelID"><br>
+        <label for="updateInterval">Intervalo de actualización (min):</label>
+        <input type="number" id="updateInterval" name="updateInterval" min="1">
 
-        <label>Ubicación (Google Sheets):</label>
-        <input type="text" name="location"><br>
+        <label for="channelID">Channel ID:</label>
+        <input type="number" id="channelID" name="channelID">
 
-        <label>Intervalo de Actualización (minutos):</label>
-        <input type="number" name="updateInterval"><br>
+        <label for="location">Ubicación:</label>
+        <input type="text" id="location" name="location">
 
+        <h3>Configuración de Notificaciones (Opcional)</h3>
         <label for="telegramToken">Token de Telegram:</label>
-        <input type="text" id="telegramToken" name="telegramToken" required>
+        <input type="text" id="telegramToken" name="telegramToken">
 
         <label for="chatId">Chat ID de Telegram:</label>
-        <input type="text" id="chatId" name="chatId" required>
+        <input type="text" id="chatId" name="chatId">
 
-        <label for="emailSender">Correo electrónico (remitente):</label>
-        <input type="email" id="emailSender" name="emailSender" required>
+        <label for="emailSender">Correo del Remitente:</label>
+        <input type="email" id="emailSender" name="emailSender">
 
-        <label for="emailPassword">Contraseña del correo:</label>
-        <input type="password" id="emailPassword" name="emailPassword" required>
+        <label for="emailPassword">Contraseña del Correo:</label>
+        <input type="password" id="emailPassword" name="emailPassword">
 
-        <label for="emailRecipient">Correo electrónico (destinatario):</label>
-        <input type="email" id="emailRecipient" name="emailRecipient" required>
+        <label for="emailRecipient">Correo del Destinatario:</label>
+        <input type="email" id="emailRecipient" name="emailRecipient">
 
-        <button type="submit">Guardar</button>
+        <button type="submit">Guardar Configuración</button>
     </form>
 
     <h2>Actualización OTA</h2>
@@ -88,8 +96,21 @@ function uploadFirmware() {
     xhr.send(formData);
 }
 </script>
-
-
-</body>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        fetch("/getConfig")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("ssid").value = data.ssid;
+                document.getElementById("googleSheetURL").value = data.googleSheetURL;
+                document.getElementById("thingSpeakAPIKey").value = data.thingSpeakAPIKey;
+                document.getElementById("updateInterval").value = data.updateInterval;
+                document.getElementById("channelID").value = data.channelID;
+                document.getElementById("location").value = data.location;
+            })
+            .catch(error => console.error("Error cargando configuración:", error));
+    });
+    </script>
+ </body>
 </html>
 
