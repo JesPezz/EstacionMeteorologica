@@ -1,38 +1,16 @@
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "ssid": "INFINITUM181E",
-    "password": "zKYRN3FFC7",
-    "googleSheetURL": "https://script.google.com/macros/s/AKfycbyskgoHGsr6O8hhnkh9ShoYntCLnaUQA6d1IKrPJEcz-tULY8HWsC3Sbl1Ln9qbkxEvrQ/exec",
-    "thingSpeakAPIKey": "DTJW5F18CR97AIHS",
-    "updateInterval": 10,
-    "channelID": 2426971,
-    "location": "PlantaAlta",
-    "webUsername": "admin",
-    "webPassword": "admin123",
-    "telegramToken": "6587883941:AAFRIaj6xxokxA4QBPfX5DoxcqwvblwlaOY",
-    "chatId": "6921079409",
-    "emailSender": "jespezz@gmail.com",
-    "emailPassword": "Chonachichona02",
-    "emailRecipient": "jespezz@hotmail.com"
-}
-=======
-=======
->>>>>>> ac2c9edc4eadbb25916ca6cb274c32c384b0205a
     "ssid": "",
     "password": "",
-    "googleSheetURL":
+    "googleSheetURL": "",
     "thingSpeakAPIKey": "",
     "updateInterval": 10,
-    "channelID": 
+    "channelID": 123456,
     "location": "",
     "webUsername": "admin",
     "webPassword": "admin123",
     "telegramToken": "",
     "chatId": "",
-    "emailSender":": "",
-    "emailRecipient":
-<<<<<<< HEAD
->>>>>>> ac2c9edc4eadbb25916ca6cb274c32c384b0205a
-=======
->>>>>>> ac2c9edc4eadbb25916ca6cb274c32c384b0205a
+    "emailSender": "",
+    "emailPassword": "",
+    "emailRecipient": ""
+}
