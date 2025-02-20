@@ -9,7 +9,6 @@
 
 
 extern const char* indexURL;
-extern const char* lastModifiedPath;
 
 extern String webUsername;
 extern String webPassword;

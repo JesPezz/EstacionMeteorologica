@@ -2,12 +2,11 @@
 
 
 const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/main/Data/index.html";
-const char* lastModifiedPath = "/index_last_modified.txt";
 
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char version[] = "v2.3";
+const char version[] = "v2.4";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0

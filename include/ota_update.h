@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include "config.h"
 
-
 // 🔹 Función para verificar y aplicar actualizaciones OTA desde un servidor HTTP
 void checkForUpdates();
 void downloadAndUpdate();

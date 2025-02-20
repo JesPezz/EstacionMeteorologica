@@ -32,6 +32,7 @@ void setup() {
     
 }
   loadConfig();
+  
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
   Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
 

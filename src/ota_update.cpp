@@ -10,6 +10,11 @@
 #include "notifications.h"
 #include "extras/MB_String.h"
 
+const char* host = "raw.githubusercontent.com";
+const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
+const char* etagFilePath = "/index_etag.txt";
+const char* url2 = "https://github.com/JesPezz/EstacionMeteorologica/blob/main/Data/index.html";
+
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
     String githubAPIURLString = githubAPIURL.c_str();
@@ -63,50 +68,124 @@ void checkForIndexUpdate() {
     Serial.println("🔍 Verificando actualización de index.html...");
 
     WiFiClientSecure client;
-    client.setInsecure();  // Permite conexiones HTTPS sin verificación de certificado
+    client.setInsecure();  // Deshabilita la verificación SSL
 
-    HTTPClient http;
-    http.begin(client, indexURL);
-    http.addHeader("User-Agent", "ESP32");  // GitHub bloquea requests sin User-Agent
-
-    int httpCode = http.sendRequest("HEAD");  // Solo pedimos las cabeceras
-    if (httpCode == HTTP_CODE_OK) {
-        String remoteLastModified = http.header("Last-Modified");  // Obtener fecha de modificación
-        String mensaje = "📅 Última modificación en GitHub: ";
-        mensaje += remoteLastModified;
-        Serial.println(mensaje);
-
-
-
-        // Leer la fecha almacenada localmente
-        File file = SPIFFS.open(lastModifiedPath, "r");
-        String localLastModified;
-        if (file) {
-            localLastModified = file.readString();
-            file.close();
-        }
-
-        // Comparar fechas
-        if (remoteLastModified != localLastModified) {
-            Serial.println("📥 Nueva versión detectada. Descargando...");
-            if (updateFileFromURL(indexURL, "/index.html")) {
-                // Guardar la nueva fecha
-                File outFile = SPIFFS.open(lastModifiedPath, "w");
-                if (outFile) {
-                    outFile.print(remoteLastModified);
-                    outFile.close();
-                }
-                Serial.println("✅ index.html actualizado.");
-            }
-        } else {
-            Serial.println("✅ index.html ya está actualizado.");
-        }
-    } else {
-        Serial.printf("❌ Error HTTP %d al verificar index.html\n", httpCode);
+    if (!client.connect(host, 443)) {
+        Serial.println("❌ Error al conectar con GitHub.");
+        return;
     }
 
-    http.end();
+    // Enviar solicitud HEAD
+    String request = "HEAD ";
+    request += url;
+    request += " HTTP/1.1\r\nHost: ";
+    request += host;
+    request += "\r\nUser-Agent: ESP32\r\nConnection: close\r\n\r\n";
+
+    client.print(request);
+
+    // Leer respuesta del servidor
+    String response = "";
+    String remoteETag = "";
+    while (client.connected() || client.available()) {
+        String line = client.readStringUntil('\n');
+        response += line;
+        response += "\n";
+
+
+        // Buscar y extraer el ETag
+        if (line.startsWith("ETag:")) {
+            remoteETag = line.substring(6);
+            remoteETag.trim();  // Eliminar espacios extra
+            remoteETag.replace("\"", "");  // Eliminar comillas
+        }
+    }
+    client.stop();
+
+    if (remoteETag.isEmpty()) {
+        Serial.println("❌ No se encontró 'ETag'. No se puede verificar la actualización.");
+        return;
+    }
+
+    Serial.print("🔖 ETag de GitHub: ");
+    Serial.println(remoteETag);
+
+
+
+    // Leer el ETag almacenado en SPIFFS
+    String localETag = "";
+    if (SPIFFS.exists(etagFilePath)) {
+        File file = SPIFFS.open(etagFilePath, "r");
+        if (file) {
+            localETag = file.readString();
+            file.close();
+        }
+    } else {
+        Serial.println("⚠️ Archivo index_etag.txt no encontrado. Creando...");
+        localETag = "N/A";  // Valor inicial para forzar la primera descarga
+    }
+
+    // Comparar ETag remoto con el local
+    if (remoteETag != localETag) {
+        Serial.println("📥 Nueva versión detectada. Descargando index.html...");
+        if (updateFileFromURL(url, "/index.html")) {
+            // Guardar el nuevo ETag en SPIFFS
+            File file = SPIFFS.open(etagFilePath, "w");
+            if (file) {
+                file.print(remoteETag);
+                file.close();
+            }
+            Serial.println("✅ index.html actualizado.");
+        }
+    } else {
+        Serial.println("✅ index.html ya está actualizado.");
+    }
 }
+
+
+// bool updateFileFromURL(const char *url2, const char *path) {
+//     Serial.printf("📥 Descargando: %s\n", url2);
+
+//     WiFiClientSecure client;
+//     client.setInsecure();
+
+//     HTTPClient http;
+//     http.begin(client, url2);
+//     int httpCode = http.GET();
+
+//     if (httpCode != HTTP_CODE_OK) {
+//         Serial.printf("❌ Error HTTP %d al descargar archivo.\n", httpCode);
+//         http.end();
+//         return false;
+//     }
+
+//     File file = SPIFFS.open(path, "w");
+//     if (!file) {
+//         Serial.println("❌ Error al abrir archivo en SPIFFS.");
+//         http.end();
+//         return false;
+//     }
+
+//     WiFiClient *stream = http.getStreamPtr();
+//     if (!stream) {
+//         Serial.println("❌ Error: stream inválido.");
+//         file.close();
+//         http.end();
+//         return false;
+//     }
+
+//     uint8_t buffer[512];
+//     int bytesRead;
+//     while ((bytesRead = stream->readBytes(buffer, sizeof(buffer))) > 0) {
+//         file.write(buffer, bytesRead);
+//     }
+
+//     file.close();
+//     http.end();
+
+//     Serial.println("✅ Archivo actualizado desde GitHub.");
+//     return true;
+// }
 
 bool updateFileFromURL(const char *url, const char *path) {
     WiFiClientSecure client;
@@ -210,3 +289,6 @@ void downloadAndUpdate() {  // ✅ Eliminamos los parámetros innecesarios
 
     http.end();  // ✅ Cerrar conexión HTTP
 }
+
+
+
