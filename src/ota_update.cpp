@@ -59,6 +59,88 @@ void checkForUpdates() {
     http.end();
 }
 
+void checkForIndexUpdate() {
+    Serial.println("🔍 Verificando actualización de index.html...");
+
+    WiFiClientSecure client;
+    client.setInsecure();  // Permite conexiones HTTPS sin verificación de certificado
+
+    HTTPClient http;
+    http.begin(client, indexURL);
+    http.addHeader("User-Agent", "ESP32");  // GitHub bloquea requests sin User-Agent
+
+    int httpCode = http.sendRequest("HEAD");  // Solo pedimos las cabeceras
+    if (httpCode == HTTP_CODE_OK) {
+        String remoteLastModified = http.header("Last-Modified");  // Obtener fecha de modificación
+        String mensaje = "📅 Última modificación en GitHub: ";
+        mensaje += remoteLastModified;
+        Serial.println(mensaje);
+
+
+
+        // Leer la fecha almacenada localmente
+        File file = SPIFFS.open(lastModifiedPath, "r");
+        String localLastModified;
+        if (file) {
+            localLastModified = file.readString();
+            file.close();
+        }
+
+        // Comparar fechas
+        if (remoteLastModified != localLastModified) {
+            Serial.println("📥 Nueva versión detectada. Descargando...");
+            if (updateFileFromURL(indexURL, "/index.html")) {
+                // Guardar la nueva fecha
+                File outFile = SPIFFS.open(lastModifiedPath, "w");
+                if (outFile) {
+                    outFile.print(remoteLastModified);
+                    outFile.close();
+                }
+                Serial.println("✅ index.html actualizado.");
+            }
+        } else {
+            Serial.println("✅ index.html ya está actualizado.");
+        }
+    } else {
+        Serial.printf("❌ Error HTTP %d al verificar index.html\n", httpCode);
+    }
+
+    http.end();
+}
+
+bool updateFileFromURL(const char *url, const char *path) {
+    WiFiClientSecure client;
+    client.setInsecure();
+
+    HTTPClient http;
+    http.begin(client, url);
+    int httpCode = http.GET();
+
+    if (httpCode == HTTP_CODE_OK) {
+        File file = SPIFFS.open(path, "w");
+        if (!file) {
+            Serial.println("❌ Error al abrir archivo en SPIFFS.");
+            return false;
+        }
+
+        WiFiClient *stream = http.getStreamPtr();
+        uint8_t buffer[512];
+        int bytesRead;
+        while ((bytesRead = stream->readBytes(buffer, sizeof(buffer))) > 0) {
+            file.write(buffer, bytesRead);
+        }
+
+        file.close();
+        Serial.println("✅ Archivo actualizado desde GitHub.");
+        return true;
+    } else {
+        Serial.printf("❌ Error HTTP %d al descargar archivo.\n", httpCode);
+        return false;
+    }
+
+    http.end();
+}
+
 void downloadAndUpdate() {  // ✅ Eliminamos los parámetros innecesarios
     Serial.println("📥 Descargando firmware desde GitHub...");
     sendTelegramMessage("📥 Descargando firmware desde GitHub...", config);

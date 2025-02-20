@@ -132,6 +132,12 @@ void loop() {
         lastUpdateCheck = millis();
     }
 
+    if (millis() - lastUpdateCheck >= UPDATE_INTERVAL1) {
+      checkForIndexUpdate();
+      lastUpdateCheck = millis();
+  }
+  
+
   if (otaInProgress) {
     return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
   }

@@ -1,15 +1,21 @@
 #include "config.h"
 
+
+const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/main/Data/index.html";
+const char* lastModifiedPath = "/index_last_modified.txt";
+
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char version[] = "v2.2";
+const char version[] = "v2.3";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
 const unsigned long UPDATE_INTERVAL = 1 * 60 * 1000;  // 6 horas en milisegundos
+const unsigned long UPDATE_INTERVAL1 = 1 * 30 * 1000;
 
-String githubAPIURL = "https://api.github.com/repos/usuario/repositorio/releases/latest";
+String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest";
+
 
 Config config;
 String googleSheetURL;

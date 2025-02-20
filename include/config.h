@@ -8,6 +8,9 @@
 #include <bsec.h>
 
 
+extern const char* indexURL;
+extern const char* lastModifiedPath;
+
 extern String webUsername;
 extern String webPassword;
 
@@ -20,7 +23,7 @@ extern String githubAPIURL;
 
 extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
 extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 horas)
-
+extern const unsigned long UPDATE_INTERVAL1;
 
 
 // ✅ Estructura de configuración
