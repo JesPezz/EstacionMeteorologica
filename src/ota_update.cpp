@@ -13,7 +13,6 @@
 const char* host = "raw.githubusercontent.com";
 const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
 const char* etagFilePath = "/index_etag.txt";
-const char* url2 = "https://github.com/JesPezz/EstacionMeteorologica/blob/main/Data/index.html";
 
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
@@ -128,7 +127,7 @@ void checkForIndexUpdate() {
     // Comparar ETag remoto con el local
     if (remoteETag != localETag) {
         Serial.println("📥 Nueva versión detectada. Descargando index.html...");
-        if (updateFileFromURL(url, "/index.html")) {
+        if (updateFileFromURL(indexURL, "/index.html")) {
             // Guardar el nuevo ETag en SPIFFS
             File file = SPIFFS.open(etagFilePath, "w");
             if (file) {
@@ -142,57 +141,12 @@ void checkForIndexUpdate() {
     }
 }
 
-
-// bool updateFileFromURL(const char *url2, const char *path) {
-//     Serial.printf("📥 Descargando: %s\n", url2);
-
-//     WiFiClientSecure client;
-//     client.setInsecure();
-
-//     HTTPClient http;
-//     http.begin(client, url2);
-//     int httpCode = http.GET();
-
-//     if (httpCode != HTTP_CODE_OK) {
-//         Serial.printf("❌ Error HTTP %d al descargar archivo.\n", httpCode);
-//         http.end();
-//         return false;
-//     }
-
-//     File file = SPIFFS.open(path, "w");
-//     if (!file) {
-//         Serial.println("❌ Error al abrir archivo en SPIFFS.");
-//         http.end();
-//         return false;
-//     }
-
-//     WiFiClient *stream = http.getStreamPtr();
-//     if (!stream) {
-//         Serial.println("❌ Error: stream inválido.");
-//         file.close();
-//         http.end();
-//         return false;
-//     }
-
-//     uint8_t buffer[512];
-//     int bytesRead;
-//     while ((bytesRead = stream->readBytes(buffer, sizeof(buffer))) > 0) {
-//         file.write(buffer, bytesRead);
-//     }
-
-//     file.close();
-//     http.end();
-
-//     Serial.println("✅ Archivo actualizado desde GitHub.");
-//     return true;
-// }
-
-bool updateFileFromURL(const char *url, const char *path) {
+bool updateFileFromURL(const char *indexURL, const char *path) {
     WiFiClientSecure client;
     client.setInsecure();
 
     HTTPClient http;
-    http.begin(client, url);
+    http.begin(client, indexURL);
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
