@@ -13,6 +13,7 @@
 const char* host = "raw.githubusercontent.com";
 const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
 const char* etagFilePath = "/index_etag.txt";
+const char* url2 = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/refs/heads/main/Data/index.html";
 
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
@@ -127,7 +128,7 @@ void checkForIndexUpdate() {
     // Comparar ETag remoto con el local
     if (remoteETag != localETag) {
         Serial.println("📥 Nueva versión detectada. Descargando index.html...");
-        if (updateFileFromURL(indexURL, "/index.html")) {
+        if (updateFileFromURL(url2, "/index.html")) {
             // Guardar el nuevo ETag en SPIFFS
             File file = SPIFFS.open(etagFilePath, "w");
             if (file) {
@@ -141,12 +142,12 @@ void checkForIndexUpdate() {
     }
 }
 
-bool updateFileFromURL(const char *indexURL, const char *path) {
+bool updateFileFromURL(const char *url2, const char *path) {
     WiFiClientSecure client;
     client.setInsecure();
 
     HTTPClient http;
-    http.begin(client, indexURL);
+    http.begin(client, url2);
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
