@@ -18,28 +18,40 @@ const char* etagFilePath = "/index_etag.txt";
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
 
+
     WiFiClientSecure client;
     client.setInsecure();
 
     HTTPClient http;
+    http.begin(client, githubAPIURL);
     http.begin(client, githubAPIURL);
     int httpCode = http.GET();
 
     if (httpCode == 200) {
         String jsonResponse = http.getString();  // 📌 Guardar la respuesta en un String
         Serial.println("📜 Respuesta JSON: " + jsonResponse);
+        String jsonResponse = http.getString();  // 📌 Guardar la respuesta en un String
+        Serial.println("📜 Respuesta JSON: " + jsonResponse);
 
         JsonDocument doc;  // 📌 Crear el buffer JSON
         DeserializationError error = deserializeJson(doc, jsonResponse);  // Usar 'doc' en lugar de 'json'
         
+        JsonDocument doc;  // 📌 Crear el buffer JSON
+        DeserializationError error = deserializeJson(doc, jsonResponse);  // Usar 'doc' en lugar de 'json'
+        
         if (error) {
+            Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
             Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
             return;
         }
 
         String newVersion = doc["tag_name"];  // 📌 Extraer versión
         String githubAPIURL = doc["assets"][0]["browser_download_url"];  // 📌 Extraer URL del firmware
+        String newVersion = doc["tag_name"];  // 📌 Extraer versión
+        String githubAPIURL = doc["assets"][0]["browser_download_url"];  // 📌 Extraer URL del firmware
 
+        Serial.printf("📌 Última versión en GitHub: %s\n", newVersion.c_str());
+        Serial.printf("📥 URL del firmware: %s\n", githubAPIURL.c_str());
         Serial.printf("📌 Última versión en GitHub: %s\n", newVersion.c_str());
         Serial.printf("📥 URL del firmware: %s\n", githubAPIURL.c_str());
 
@@ -50,13 +62,16 @@ void checkForUpdates() {
             Serial.println("🚀 Nueva versión detectada. Iniciando OTA...");
             sendTelegramMessage("🚀 Nueva versión detectada. Iniciando OTA...", config);
             downloadAndUpdate();
+            downloadAndUpdate();
         }
     } else {
+        Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
         Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
     }
 
     http.end();
 }
+    
     
 void checkForIndexUpdate() {
     Serial.println("🔍 Verificando actualización de index.html...");
@@ -124,6 +139,8 @@ void checkForIndexUpdate() {
         Serial.println("📥 Nueva versión detectada. Descargando index.html...");
         sendTelegramMessage("📥 Nueva versión detectada. Descargando index.html...", config);
         if (updateFileFromURL(url, "/index.html")) {
+        sendTelegramMessage("📥 Nueva versión detectada. Descargando index.html...", config);
+        if (updateFileFromURL(url, "/index.html")) {
             // Guardar el nuevo ETag en SPIFFS
             File file = SPIFFS.open(etagFilePath, "w");
             if (file) {
@@ -131,6 +148,7 @@ void checkForIndexUpdate() {
                 file.close();
             }
             Serial.println("✅ index.html actualizado.");
+            sendTelegramMessage("✅ index.html actualizado.", config);
             sendTelegramMessage("✅ index.html actualizado.", config);
         }
     } else {
@@ -152,6 +170,8 @@ bool updateFileFromURL(const char *url2, const char *path) {
             Serial.println("❌ Error al abrir archivo en SPIFFS.");
             sendTelegramMessage("❌ Error al abrir archivo en SPIFFS.", config);
             otaInProgress = false;
+            sendTelegramMessage("❌ Error al abrir archivo en SPIFFS.", config);
+            otaInProgress = false;
             return false;
         }
 
@@ -165,9 +185,11 @@ bool updateFileFromURL(const char *url2, const char *path) {
         file.close();
         Serial.println("✅ Archivo actualizado desde GitHub.");
         sendTelegramMessage("✅ Archivo actualizado desde GitHub.", config);
+        sendTelegramMessage("✅ Archivo actualizado desde GitHub.", config);
         return true;
     } else {
         Serial.printf("❌ Error HTTP %d al descargar archivo.\n", httpCode);
+        sendTelegramMessage("❌ Error HTTP %d al descargar archivo.\n", config);
         sendTelegramMessage("❌ Error HTTP %d al descargar archivo.\n", config);
         return false;
     }
@@ -186,10 +208,18 @@ void downloadAndUpdate() {
         return;
     }
 
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("❌ Error: No hay conexión WiFi.");
+        sendTelegramMessage("❌ Error: No hay conexión WiFi.", config);
+        return;
+    }
+
     WiFiClientSecure client;
+    client.setInsecure(); // ⚠️ Usar certificado raíz válido en producción
     client.setInsecure(); // ⚠️ Usar certificado raíz válido en producción
 
     HTTPClient http;
+    http.begin(client, githubAPIURL);
     http.begin(client, githubAPIURL);
     int httpCode = http.GET();
 
@@ -207,7 +237,10 @@ void downloadAndUpdate() {
 
         if (contentLength > 0 && contentLength <= ESP.getFreeSketchSpace()) {
             if (!Update.begin(contentLength, U_FLASH)) {
+            if (!Update.begin(contentLength, U_FLASH)) {
                 Serial.println("❌ No hay suficiente espacio para actualizar.");
+                sendTelegramMessage("❌ No hay suficiente espacio para actualizar.", config);
+                http.end();
                 sendTelegramMessage("❌ No hay suficiente espacio para actualizar.", config);
                 http.end();
                 return;
@@ -239,11 +272,14 @@ void downloadAndUpdate() {
 
             Serial.printf("📤 Bytes escritos en Flash: %d bytes\n", written);
             sendTelegramMessage("📤 Bytes escritos en Flash: " + String(written) + " bytes", config);
+            sendTelegramMessage("📤 Bytes escritos en Flash: " + String(written) + " bytes", config);
 
             if (written == contentLength) {
                 if (Update.end()) {
+                if (Update.end()) {
                     Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
                     sendTelegramMessage("✅ Firmware actualizado correctamente. Reiniciando...", config);
+                    http.end();
                     http.end();
                     ESP.restart();
                 } else {
@@ -254,7 +290,11 @@ void downloadAndUpdate() {
             } else {
                 Serial.println("❌ Error: No se recibió el firmware completo.");
                 sendTelegramMessage("❌ Error: No se recibió el firmware completo.", config);
+                sendTelegramMessage("❌ Error: No se recibió el firmware completo.", config);
             }
+        } else {
+            Serial.println("❌ Error: Tamaño de firmware inválido o insuficiente espacio.");
+            sendTelegramMessage("❌ Error: Tamaño de firmware inválido o insuficiente espacio.", config);
         } else {
             Serial.println("❌ Error: Tamaño de firmware inválido o insuficiente espacio.");
             sendTelegramMessage("❌ Error: Tamaño de firmware inválido o insuficiente espacio.", config);
@@ -262,7 +302,9 @@ void downloadAndUpdate() {
     } else {
         Serial.printf("❌ Error HTTP: %d al descargar firmware.\n", httpCode);
         sendTelegramMessage("❌ Error HTTP: " + String(httpCode) + " al descargar firmware.", config);
+        sendTelegramMessage("❌ Error HTTP: " + String(httpCode) + " al descargar firmware.", config);
     }
 
+    http.end();
     http.end();
 }
