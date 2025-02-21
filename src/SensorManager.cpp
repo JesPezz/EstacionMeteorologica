@@ -7,11 +7,23 @@
 
 // Implementación de setupBsecSensor
 void setupBsecSensor() {
-    // Inicializa el sensor BME680
-    iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
-    checkIaqSensorStatus();
-    loadState();
+  // Verificar si el sensor responde en la dirección I2C
+  Wire.beginTransmission(BME68X_I2C_ADDR_LOW);
+  if (Wire.endTransmission() != 0) {  // Si el sensor no responde, reiniciar I2C
+      Serial.println("🔄 Reiniciando I2C...");
+      Wire.end();
+      Wire.begin(21, 22);
+  } else {
+      Serial.println("✅ I2C ya estaba iniciado.");
+  }
+
+  // Inicializar el sensor BME680
+  iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
+  checkIaqSensorStatus();
+  loadState();
 }
+
+
 
 // Implementación de checkClockSync
 void checkClockSync() {

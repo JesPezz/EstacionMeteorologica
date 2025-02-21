@@ -6,12 +6,11 @@ const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteor
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char version[] = "v2.4";
+const char version[] = "v2.3";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
 const unsigned long UPDATE_INTERVAL = 1 * 60 * 1000;  // 6 horas en milisegundos
-const unsigned long UPDATE_INTERVAL1 = 1 * 30 * 1000;
 
 String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest";
 
@@ -80,11 +79,7 @@ bool loadConfig() {
     if (doc["webPassword"].is<String>()) webPassword = doc["webPassword"].as<String>();
     if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
     if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
-    if (doc["emailSender"].is<String>()) config.emailSender = doc["emailSender"].as<String>();
-    if (doc["emailPassword"].is<String>()) config.emailPassword = doc["emailPassword"].as<String>();
-    if (doc["emailRecipient"].is<String>()) config.emailRecipient = doc["emailRecipient"].as<String>();
-
-
+    
     return true;
 }
 
@@ -101,6 +96,8 @@ bool saveConfig(const Config& config) {
     doc["location"] = config.location;
     doc["webUsername"] = webUsername;
     doc["webPassword"] = webPassword;
+    doc["telegramToken"] = config.telegramToken;
+    doc["chatId"] = config.chatId;
 
     // Guardar el JSON en el sistema de archivos
     File file = SPIFFS.open("/config.json", "w");
@@ -145,8 +142,6 @@ NotificationConfig extractNotificationConfig(const Config& config) {
     NotificationConfig nc;
     nc.telegramToken = config.telegramToken;
     nc.chatId = config.chatId;
-    nc.emailSender = config.emailSender;
-    nc.emailPassword = config.emailPassword;
-    nc.emailRecipient = config.emailRecipient;
+    
     return nc;
 }

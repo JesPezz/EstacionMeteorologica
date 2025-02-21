@@ -78,7 +78,7 @@ void startWebServer() {
     });
 
     server.on("/getConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<512> doc;
+        JsonDocument doc;
     
         doc["ssid"] = config.ssid;
         doc["googleSheetURL"] = config.googleSheetURL;
@@ -121,21 +121,9 @@ void startWebServer() {
             String chatId = request->getParam("chatId", true)->value();
             if (!chatId.isEmpty()) newNotificationConfig.chatId = chatId;
         }
-        if (request->hasParam("emailSender", true)) {
-            String sender = request->getParam("emailSender", true)->value();
-            if (!sender.isEmpty()) newNotificationConfig.emailSender = sender;
-        }
-        if (request->hasParam("emailPassword", true)) {
-            String password = request->getParam("emailPassword", true)->value();
-            if (!password.isEmpty()) newNotificationConfig.emailPassword = password;
-        }
-        if (request->hasParam("emailRecipient", true)) {
-            String recipient = request->getParam("emailRecipient", true)->value();
-            if (!recipient.isEmpty()) newNotificationConfig.emailRecipient = recipient;
-        }
-
+        
         notificationConfig = newNotificationConfig;  // Actualizamos solo los valores válidos
-        saveNotificationConfig();  // Guardamos la configuración de notificaciones
+        void saveNotificationConfig();  // Guardamos la configuración de notificaciones
 
         if (saveConfig(newConfig)) {
             request->send(200, "text/plain", "✅ Configuración guardada. Reiniciando ESP32...");
@@ -171,14 +159,11 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
     String authHeader = request->header("Authorization");
     authHeader.replace("Basic ", "");  
 
-    MB_String authData = webUsername;
-    authData += ":";
-    authData += webPassword;
+    String authData = webUsername + ":" + webPassword;  // Concatenación con String
+    String expectedAuth = base64::encode(authData);     // Codificar en Base64
 
-    String expectedAuth = base64::encode(authData.c_str());
-
-    Serial.printf("🔍 authHeader: %s\n", authHeader.c_str());
-    Serial.printf("🔍 expectedAuth: %s\n", expectedAuth.c_str());
+    Serial.println("🔍 authHeader: " + authHeader);
+    Serial.println("🔍 expectedAuth: " + expectedAuth);
 
     if (authHeader != expectedAuth) {
         Serial.println("❌ Autenticación fallida");
@@ -188,3 +173,4 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
 
     return true;
 }
+

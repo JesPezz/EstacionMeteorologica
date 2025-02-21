@@ -31,7 +31,9 @@ void setup() {
     WiFi.begin("SSID", "PASSWORD");
     
 }
-  loadConfig();
+  
+initSPIFFS();
+loadConfig();
   
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
   Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
@@ -48,9 +50,7 @@ void setup() {
 
   testFlash();
 
-  initSPIFFS();
-  pinMode(LED_BUILTIN, OUTPUT);
-
+  
   setupBsecSensor();
 
   if (!loadConfig()) {
@@ -130,15 +130,10 @@ void loop() {
 
   if (millis() - lastUpdateCheck >= UPDATE_INTERVAL) {
         checkForUpdates();
+        checkForIndexUpdate();
         lastUpdateCheck = millis();
     }
-
-    if (millis() - lastUpdateCheck >= UPDATE_INTERVAL1) {
-      checkForIndexUpdate();
-      lastUpdateCheck = millis();
-  }
-  
-
+    
   if (otaInProgress) {
     return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
   }

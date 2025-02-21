@@ -22,7 +22,7 @@ extern String githubAPIURL;
 
 extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
 extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 horas)
-extern const unsigned long UPDATE_INTERVAL1;
+
 
 
 // ✅ Estructura de configuración
@@ -37,18 +37,12 @@ struct Config {
     String location;
     String telegramToken;
     String chatId;
-    String emailSender;
-    String emailPassword;
-    String emailRecipient;
 };
 
 // 🔹 Subestructura solo para notificaciones (extraída de `Config`)
 struct NotificationConfig {
     String telegramToken;
     String chatId;
-    String emailSender;
-    String emailPassword;
-    String emailRecipient;
 };
     extern Config config;  
     extern NotificationConfig notificationConfig;  // ✅ Solo declaración
