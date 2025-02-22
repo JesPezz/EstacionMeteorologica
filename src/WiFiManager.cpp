@@ -10,6 +10,8 @@ void connectToWiFi() {
     WiFi.begin(config.ssid.c_str(), config.password.c_str());
 
     Serial.print("Conectando a WiFi ");
+    
+    
     int attempts = 0;
     
     while (WiFi.status() != WL_CONNECTED && attempts < 10) {
@@ -21,13 +23,13 @@ void connectToWiFi() {
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println("\n✅ Conectado a WiFi.");
         Serial.print("📡 IP del ESP32: ");
-                
+        String localIP = WiFi.localIP().toString();
+                                
     } else {
         Serial.println("\n❌ No se pudo conectar. Activando Modo AP...");
         startAPMode();
     }
 }
-
 void startAPMode() {
     WiFi.mode(WIFI_AP);
     WiFi.softAP("ESP32_Config", "12345678");

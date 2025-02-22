@@ -108,9 +108,6 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     BSEC_OUTPUT_GAS_PERCENTAGE
   };
 
-  iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
-  checkIaqSensorStatus();
-
   // Imprimir el encabezado
   output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
   Serial.println(output);
@@ -134,7 +131,15 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 
 }
 
+bool telegramSent = false;
+
 void loop() {
+
+  if (WiFi.status() == WL_CONNECTED && !telegramSent) {
+    delay(5000); // Esperar estabilidad
+    sendTelegramMessage("✅ ESP32 conectado a WiFi.\n📡 IP: " + WiFi.localIP().toString() + "\n📍 Ubicación: " + config.location, config);
+    telegramSent = true;
+}
 
   if (millis() - lastUpdateCheck >= UPDATE_INTERVAL) {
         checkForUpdates();
