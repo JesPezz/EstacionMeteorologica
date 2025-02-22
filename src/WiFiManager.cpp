@@ -1,12 +1,10 @@
 #include "WiFiManager.h"
 #include "config.h"
 #include <WiFi.h>
+#include "notifications.h"
+
 
 void connectToWiFi() {
-
-    if (otaInProgress) {
-        return;  // 🔹 Si la OTA está en proceso, no ejecutamos la función
-    }
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(config.ssid.c_str(), config.password.c_str());
@@ -24,6 +22,8 @@ void connectToWiFi() {
         Serial.println("\n✅ Conectado a WiFi.");
         Serial.print("📡 IP del ESP32: ");
         Serial.println(WiFi.localIP());
+        String localIP = WiFi.localIP().toString();
+        sendTelegramMessage("✅ ESP32 conectado a WiFi.\n📡 IP: " + localIP + "\n📍 Ubicación: " + config.location, config);
     } else {
         Serial.println("\n❌ No se pudo conectar. Activando Modo AP...");
         startAPMode();

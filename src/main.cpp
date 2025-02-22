@@ -122,7 +122,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     4096,                   // Tamaño de la pila de la tarea
     NULL,                   // Parámetros de la tarea
     1,                      // Prioridad de la tarea
-    &thingSpeakTaskHandle,  // Manejador de la tarea (no utilizado)
+    &thingSpeakTaskHandle,  // Manejador de la tarea
     0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
   );
 }
@@ -131,7 +131,7 @@ void loop() {
 
   if (millis() - lastUpdateCheck >= UPDATE_INTERVAL) {
         checkForUpdates();
-        checkForIndexUpdate();
+        //checkForIndexUpdate();
         lastUpdateCheck = millis();
     }
 
