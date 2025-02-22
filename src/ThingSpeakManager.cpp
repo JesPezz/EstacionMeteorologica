@@ -11,7 +11,7 @@ void taskSendToThingSpeak(void *pvParameters) {
       if (millis() - lastChannelUpdate >= CHANNEL_UPDATE_INTERVAL) {
         // Construir la URL completa con los datos
         String url = "https://api.thingspeak.com/update?api_key=";
-        url += writeAPIKey;
+        url += config.thingSpeakAPIKey;
         url += "&field1=";
         url += String(iaqSensor.temperature);
         url += "&field2=";
@@ -20,6 +20,8 @@ void taskSendToThingSpeak(void *pvParameters) {
         url += String(iaqSensor.pressure / 100);
         url += "&field4=";
         url += String(iaqSensor.iaq);
+
+        Serial.println(url);
   
         // Enviar una solicitud HTTP GET a la URL
         HTTPClient http;

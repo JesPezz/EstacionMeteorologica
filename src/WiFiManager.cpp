@@ -21,9 +21,7 @@ void connectToWiFi() {
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println("\n✅ Conectado a WiFi.");
         Serial.print("📡 IP del ESP32: ");
-        Serial.println(WiFi.localIP());
-        String localIP = WiFi.localIP().toString();
-        sendTelegramMessage("✅ ESP32 conectado a WiFi.\n📡 IP: " + localIP + "\n📍 Ubicación: " + config.location, config);
+                
     } else {
         Serial.println("\n❌ No se pudo conectar. Activando Modo AP...");
         startAPMode();

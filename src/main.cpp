@@ -21,7 +21,7 @@
 #include "ota_update.h"
 #include "esp_ota_ops.h"
 #include "led.h"
-
+#include "notifications.h"
 
 void setup() {
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
@@ -125,6 +125,13 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     &thingSpeakTaskHandle,  // Manejador de la tarea
     0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
   );
+
+  if (WiFi.status() == WL_CONNECTED) {
+    String localIP = WiFi.localIP().toString();
+    sendTelegramMessage("✅ ESP32 conectado a WiFi.\n📡 IP: " + localIP + "\n📍 Ubicación: " + config.location, config);
+            
+}
+
 }
 
 void loop() {
