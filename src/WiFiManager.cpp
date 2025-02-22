@@ -3,6 +3,11 @@
 #include <WiFi.h>
 
 void connectToWiFi() {
+
+    if (otaInProgress) {
+        return;  // 🔹 Si la OTA está en proceso, no ejecutamos la función
+    }
+
     WiFi.mode(WIFI_STA);
     WiFi.begin(config.ssid.c_str(), config.password.c_str());
 

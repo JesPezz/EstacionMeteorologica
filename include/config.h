@@ -7,7 +7,13 @@
 #include <ArduinoJson.h>
 #include <bsec.h>
 
+extern const char* host;
+extern const char* url;
+extern const char* etagFilePath;
 
+extern TaskHandle_t thingSpeakTaskHandle;
+
+extern bool otaInProgress;
 extern const char* indexURL;
 
 extern String webUsername;

@@ -22,6 +22,7 @@
 #include "esp_ota_ops.h"
 #include "led.h"
 
+
 void setup() {
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
@@ -121,7 +122,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     4096,                   // Tamaño de la pila de la tarea
     NULL,                   // Parámetros de la tarea
     1,                      // Prioridad de la tarea
-    NULL,                   // Manejador de la tarea (no utilizado)
+    &thingSpeakTaskHandle,  // Manejador de la tarea (no utilizado)
     0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
   );
 }
@@ -133,11 +134,12 @@ void loop() {
         checkForIndexUpdate();
         lastUpdateCheck = millis();
     }
-    
-  if (otaInProgress) {
-    return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
+
+    if (otaInProgress) {
+      yield(); // Alimenta el WDT
+      return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
   }
-  
+   
   checkWiFiConnection(); // Verificar la conexión WiFi
   readSensorData();      // Leer datos del sensor
   sendDataToServices();  // Enviar datos a ThingSpeak y Google Sheets

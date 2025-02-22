@@ -1,5 +1,10 @@
 #include "config.h"
 
+const char* host = "raw.githubusercontent.com";
+const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
+const char* etagFilePath = "/index_etag.txt";
+
+TaskHandle_t thingSpeakTaskHandle = NULL;
 
 const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/main/Data/index.html";
 

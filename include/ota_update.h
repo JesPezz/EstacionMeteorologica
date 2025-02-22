@@ -4,7 +4,8 @@
 #include <Arduino.h>
 #include "config.h"
 
-// 🔹 Función para verificar y aplicar actualizaciones OTA desde un servidor HTTP
+void disableWatchdog();
+void enableWatchdog();
 void checkForUpdates();
 void downloadAndUpdate();
 void checkForIndexUpdate();

@@ -3,10 +3,6 @@
 #include <HTTPClient.h>
 #include "BME_Sensor.h"
 
-// Implementa taskSendToThingSpeak (copiar código original)
-
-
-
 void taskSendToThingSpeak(void *pvParameters) {
     (void) pvParameters; // Se suprime la advertencia de parámetro no utilizado
   

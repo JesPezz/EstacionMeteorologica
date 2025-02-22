@@ -6,6 +6,6 @@
 
 void startWebServer();
 bool isAuthenticated(AsyncWebServerRequest *request);
-extern bool otaInProgress;
+
 
 #endif

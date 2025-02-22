@@ -27,6 +27,10 @@ void setupBsecSensor() {
 
 // Implementación de checkClockSync
 void checkClockSync() {
+
+  if (otaInProgress) {
+    return;  // 🔹 Si la OTA está en proceso, no ejecutamos la función
+}
     unsigned long currentTime = millis() / 1000;
     if (currentTime - lastSyncTime >= MONTH_IN_SECONDS) {
       syncClock();
@@ -36,6 +40,10 @@ void checkClockSync() {
 
 // Implementación de readSensorData
 void readSensorData() {
+
+  if (otaInProgress) {
+    return;  // 🔹 Si la OTA está en proceso, no ejecutamos la función
+}
     unsigned long time_trigger = millis();
     if (iaqSensor.run()) {
       output = String(time_trigger);
@@ -68,6 +76,11 @@ void readSensorData() {
 
 // Implementación de sendDataToServices
 void sendDataToServices() {
+
+  if (otaInProgress) {
+    return;  // 🔹 Si la OTA está en proceso, no ejecutamos la función
+}
+
     if (WiFi.status() != WL_CONNECTED) {
       if (reconnectWiFi()) {
         output = "Connected to WiFi: " + WiFi.SSID();
