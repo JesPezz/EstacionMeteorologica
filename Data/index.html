@@ -85,33 +85,26 @@
                     document.getElementById("mem-status").textContent = "Error";
                 });
         }
-        document.addEventListener("DOMContentLoaded", function() { 
-    fetch("/getConfig")
-        .then(response => response.json())
-        .then(data => {
+        document.addEventListener("DOMContentLoaded", loadESPStatus);
+        
+    // Cargar configuración actual
+    function loadConfig() {
+        fetch("/getConfig")
+            .then(response => response.json())
+            .then(data => {
                 document.getElementById("ssid").value = data.ssid || "";
+                document.getElementById("password").value = data.password || "";
                 document.getElementById("googleSheetURL").value = data.googleSheetURL || "";
                 document.getElementById("thingSpeakAPIKey").value = data.thingSpeakAPIKey || "";
                 document.getElementById("channelID").value = data.channelID || "";
                 document.getElementById("location").value = data.location || "";
-                document.getElementById("updateOta").value = (data.updateOta || 1);  // 🔹 Ya está en horas
-        })
-        .catch(error => console.error("Error cargando configuración:", error));
+                document.getElementById("updateOta").value = (data.updateOta || 1);
+                document.getElementById("telegramToken").value = data.telegramToken || "";
+                document.getElementById("chatId").value = data.chatId || "";
+            })
+            .catch(error => console.error("Error cargando configuración:", error));
+    }
 
-        });
-
-    document.querySelector("form").addEventListener("submit", function(event) {
-    event.preventDefault();
-    
-    let formData = new FormData(event.target);
-    let updateOtaHours = parseInt(document.getElementById("updateOta").value, 10) || 1;  // 🔹 Horas ingresadas por el usuario
-    formData.set("updateOta", updateOtaHours);  // 🔹 Envía horas, no ms
-
-    fetch("/config", { method: "POST", body: formData })
-        .then(response => response.text())
-        .then(result => alert("✅ Configuración guardada"))
-        .catch(error => console.error("❌ Error guardando configuración:", error));
-});
     // Subir firmware OTA
     function uploadFirmware() {
         let fileInput = document.getElementById("firmwareFile");

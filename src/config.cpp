@@ -1,5 +1,7 @@
 #include "config.h"
 
+const char* configFilePath = "/config.json";
+
 const char* host = "raw.githubusercontent.com";
 const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
 const char* etagFilePath = "/index_etag.txt";
@@ -51,7 +53,7 @@ bool loadConfig() {
     JsonDocument doc;  // Usar JsonDocument en lugar de StaticJsonDocument
 
     // Cargar el archivo JSON desde el sistema de archivos
-    File file = SPIFFS.open("/config.json", "r");
+    File file = SPIFFS.open(configFilePath, "r");
     if (!file) {
         Serial.println("Error al abrir el archivo de configuración.");
         return false;
@@ -79,13 +81,13 @@ bool loadConfig() {
     if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
     if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
     if (doc["updateOta"].is<unsigned long>()) {
-        config.updateOta = doc["updateOta"].as<unsigned long>() * 3600000;  // 🔹 Convierte horas → ms
+        config.updateOta = doc["updateOta"].as<unsigned long>() * 1000;  // 🔹 Convertir horas → ms
     } else {
-        config.updateOta = 3600000;  // 🔹 Valor por defecto: 1 hora en ms
+        Serial.println("⚠️ updateOta no encontrado, usando valor por defecto.");
+        config.updateOta = 1000;  // 🔹 1 hora por defecto
     }
-    
 
-    
+    Serial.printf("✅ updateOta cargado desde config.json: %lu ms\n", config.updateOta);
     return true;
 }
 
@@ -97,7 +99,6 @@ bool saveConfig(const Config& config) {
     doc["password"] = config.password;
     doc["googleSheetURL"] = config.googleSheetURL;
     doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
-    doc["updateInterval"] = config.updateInterval / 60000;  // Convertir a minutos
     doc["channelID"] = config.channelID;
     doc["location"] = config.location;
     doc["webUsername"] = webUsername;
@@ -106,9 +107,11 @@ bool saveConfig(const Config& config) {
     doc["chatId"] = config.chatId;
     doc["updateOta"] = config.updateOta / 3600000;  // 🔹 Guarda en horas
 
+     // 📌 Verificar antes de escribir en el archivo
+     Serial.printf("✅ Guardando updateOta en config.json: %lu horas\n", config.updateOta / 3600000);
 
     // Guardar el JSON en el sistema de archivos
-    File file = SPIFFS.open("/config.json", "w");
+    File file = SPIFFS.open(configFilePath, "w");
     if (!file) {
         Serial.println("Error al abrir el archivo de configuración para escritura.");
         return false;
@@ -121,13 +124,13 @@ bool saveConfig(const Config& config) {
  }
 
 void printConfig() {
-    File file = SPIFFS.open("/settings.json", "r");
+    File file = SPIFFS.open(configFilePath, "r");
     if (!file) {
         Serial.println("❌ No se pudo abrir settings.json para lectura.");
         return;
     }
 
-    Serial.println("📜 Configuración actual en settings.json:");
+    Serial.println("📜 Configuración actual en config.json:");
     while (file.available()) {
         Serial.write(file.read());
     }

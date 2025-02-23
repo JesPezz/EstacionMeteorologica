@@ -7,6 +7,8 @@
 #include <ArduinoJson.h>
 #include <bsec.h>
 
+extern const char* configFilePath;
+
 extern const char* host;
 extern const char* url;
 extern const char* etagFilePath;

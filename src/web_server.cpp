@@ -110,17 +110,20 @@ void startWebServer() {
         JsonDocument doc;
     
         doc["ssid"] = config.ssid;
+        doc["password"] = config.ssid;
         doc["googleSheetURL"] = config.googleSheetURL;
         doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
         doc["channelID"] = config.channelID;
         doc["location"] = config.location;
-    
+        doc["updateOta"] = config.updateOta;
+        doc["telegramToken"] = config.telegramToken;
+        doc["chatId"] = config.chatId;
+
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
     });
     
-    server.on("/esp_status", HTTP_GET, handleESPStatus);
 
     // 🔹 Configuración de parámetros (WiFi, Google Sheet, ThingSpeak, etc.)
     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -133,8 +136,8 @@ void startWebServer() {
         if (request->hasParam("password", true)) newConfig.password = request->getParam("password", true)->value();
         if (request->hasParam("googleSheetURL", true)) newConfig.googleSheetURL = request->getParam("googleSheetURL", true)->value();
         if (request->hasParam("thingSpeakAPIKey", true)) newConfig.thingSpeakAPIKey = request->getParam("thingSpeakAPIKey", true)->value();
-        if (request->hasParam("updateInterval", true)) {
-            newConfig.updateInterval = request->getParam("updateInterval", true)->value().toInt() * 60000;
+        if (request->hasParam("updateOta", true)) {
+            newConfig.updateOta = request->getParam("updateOta", true)->value().toInt() * 1000;
         }
         if (request->hasParam("channelID", true)) newConfig.channelID = request->getParam("channelID", true)->value().toInt();
         if (request->hasParam("location", true)) newConfig.location = request->getParam("location", true)->value();

@@ -64,9 +64,11 @@ Serial.println("SSID: " + config.ssid);
 Serial.println("Password: " + config.password);
 Serial.println("Google Sheet URL: " + config.googleSheetURL);
 Serial.println("ThingSpeak API Key: " + config.thingSpeakAPIKey);
-Serial.println("Update Interval: " + String(config.updateInterval / 60000) + " minutos");
+Serial.println("updateOta: " + String(config.updateOta / 1000) + " Horas");
 Serial.println("Channel ID: " + String(config.channelID));
 Serial.println("Location: " + config.location);
+Serial.println("chatId: " + config.chatId);
+Serial.println("telegramToken: " + config.telegramToken);
 
 connectToWiFi();
 startWebServer();
@@ -130,7 +132,27 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 
 void loop() {
 
+
+//   unsigned long currentMillis = millis();  // Obtener tiempo actual
+
+//   Serial.printf("⏳ Tiempo desde última verificación: %lu ms\n", currentMillis - lastUpdateCheck);
+//   Serial.printf("🕒 Intervalo OTA configurado: %lu ms\n", config.updateOta);
+
+//   if (currentMillis - lastUpdateCheck >= config.updateOta) {  // Comparar con el intervalo
+//       lastUpdateCheck = currentMillis;  // Actualizar última verificación
+
+//       Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
+//       checkForFirmwareUpdate();
+
+//       Serial.println("🔍 Verificando actualización de index.html...");
+//       checkForIndexUpdate();
+//   }
+
+//   delay(100);  // Pequeño retraso para evitar consumo innecesario de CPU
+// }
+
   if (millis() - lastUpdateCheck >= config.updateOta) {
+    Serial.printf("✅ updateOta cargado: %lu ms\n", config.updateOta);
         checkForUpdates();
         checkForIndexUpdate();
         loadState();
