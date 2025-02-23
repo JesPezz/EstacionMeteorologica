@@ -85,7 +85,7 @@
                     document.getElementById("mem-status").textContent = "Error";
                 });
         }
-    document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function() { 
     fetch("/getConfig")
         .then(response => response.json())
         .then(data => {
@@ -96,9 +96,7 @@
                 document.getElementById("location").value = data.location || "";
                 document.getElementById("updateOta").value = (data.updateOta || 1);  // 🔹 Ya está en horas
         })
-                
-            })
-            .catch(error => console.error("Error cargando configuración:", error));
+        .catch(error => console.error("Error cargando configuración:", error));
 
         });
 
