@@ -236,7 +236,9 @@ void checkForIndexUpdate() {
                 file.close();
             }
             Serial.println("✅ index.html actualizado.");
+            enableWatchdog();
             sendTelegramMessage("✅ index.html actualizado.", config);
+            
         }
     } else {
         Serial.println("✅ index.html ya está actualizado.");
