@@ -6,6 +6,6 @@
 
 void startWebServer();
 bool isAuthenticated(AsyncWebServerRequest *request);
-
+void handleESPStatus(AsyncWebServerRequest *request1);
 
 #endif

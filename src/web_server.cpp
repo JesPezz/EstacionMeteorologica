@@ -9,6 +9,19 @@
 #include "notifications.h"
 
 AsyncWebServer server(80);
+
+void handleESPStatus(AsyncWebServerRequest *request1) {
+    JsonDocument doc;
+    doc["ip"] = WiFi.localIP().toString();
+    doc["wifi"] = WiFi.status() == WL_CONNECTED ? "Conectado" : "Desconectado";
+    doc["cpu"] = 80;  // Simulación (ajusta según tu código)
+    doc["memory"] = ESP.getFreeHeap();  // Memoria libre en bytes
+
+    String response;
+    serializeJson(doc, response);
+    request1->send(200, "application/json", "{\"status\":\"ok\"}");
+}
+
 bool otaInProgress = false;  // 🔹 Indica si una OTA está en proceso
 
 // 🔹 Manejo de la subida de firmware OTA Web
@@ -136,6 +149,10 @@ void startWebServer() {
         }
     });
 
+    server.on("/esp_status", HTTP_GET, handleESPStatus);
+    //server.on("/restart", HTTP_POST, handleRestart);
+
+
     // 🔹 Ruta para subir firmware OTA
     server.on("/update", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
@@ -173,4 +190,5 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
 
     return true;
 }
+
 
