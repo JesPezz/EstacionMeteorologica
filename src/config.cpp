@@ -81,10 +81,10 @@ bool loadConfig() {
     if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
     if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
     if (doc["updateOta"].is<unsigned long>()) {
-        config.updateOta = doc["updateOta"].as<unsigned long>() * 1000;  // 🔹 Convertir horas → ms
+        config.updateOta = doc["updateOta"].as<unsigned long>() * 3600000;  // 🔹 Convertir horas → ms
     } else {
         Serial.println("⚠️ updateOta no encontrado, usando valor por defecto.");
-        config.updateOta = 1000;  // 🔹 1 hora por defecto
+        config.updateOta = 3600000;  // 🔹 1 hora por defecto
     }
 
     Serial.printf("✅ updateOta cargado desde config.json: %lu ms\n", config.updateOta);

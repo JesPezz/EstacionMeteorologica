@@ -115,7 +115,7 @@ void startWebServer() {
         doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
         doc["channelID"] = config.channelID;
         doc["location"] = config.location;
-        doc["updateOta"] = config.updateOta;
+        doc["updateOta"] = config.updateOta / 3600000;
         doc["telegramToken"] = config.telegramToken;
         doc["chatId"] = config.chatId;
 
@@ -137,7 +137,7 @@ void startWebServer() {
         if (request->hasParam("googleSheetURL", true)) newConfig.googleSheetURL = request->getParam("googleSheetURL", true)->value();
         if (request->hasParam("thingSpeakAPIKey", true)) newConfig.thingSpeakAPIKey = request->getParam("thingSpeakAPIKey", true)->value();
         if (request->hasParam("updateOta", true)) {
-            newConfig.updateOta = request->getParam("updateOta", true)->value().toInt() * 1000;
+            newConfig.updateOta = request->getParam("updateOta", true)->value().toInt() * 3600000;
         }
         if (request->hasParam("channelID", true)) newConfig.channelID = request->getParam("channelID", true)->value().toInt();
         if (request->hasParam("location", true)) newConfig.location = request->getParam("location", true)->value();
