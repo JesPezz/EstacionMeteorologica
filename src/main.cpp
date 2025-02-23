@@ -125,13 +125,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     &thingSpeakTaskHandle,  // Manejador de la tarea
     0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
   );
-
-  if (WiFi.status() == WL_CONNECTED) {
-    String localIP = WiFi.localIP().toString();
-    sendTelegramMessage("✅ ESP32 conectado a WiFi.\n📡 IP: " + localIP + "\n📍 Ubicación: " + config.location, config);
             
-}
-
 }
 
 bool telegramSent = false;
@@ -146,7 +140,7 @@ void loop() {
 
   if (millis() - lastUpdateCheck >= UPDATE_INTERVAL) {
         checkForUpdates();
-        //checkForIndexUpdate();
+        checkForIndexUpdate();
         lastUpdateCheck = millis();
     }
 

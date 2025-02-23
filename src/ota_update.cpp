@@ -157,16 +157,104 @@ void checkForUpdates() {
 }
     
     
-void checkForIndexUpdate() {
+// void checkForIndexUpdate() {
 
+//     if (otaInProgress) {
+//         return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
+//     }
+
+//     Serial.println("🔍 Verificando actualización de index.html...");
+
+//     WiFiClientSecure client;
+//     client.setInsecure();  // Deshabilita la verificación SSL
+//     client.stop();
+
+//     if (!client.connect(host, 443)) {
+//         Serial.println("❌ Error al conectar con GitHub.");
+//         return;
+//     }
+
+//     // Enviar solicitud HEAD
+//     String request = "HEAD ";
+//     request += url;
+//     request += " HTTP/1.1\r\nHost: ";
+//     request += host;
+//     request += "\r\nUser-Agent: ESP32\r\nConnection: close\r\n\r\n";
+
+//     client.print(request);
+
+//     // Leer respuesta del servidor
+//     String response = "";
+//     String remoteETag = "";
+//     while (client.connected() || client.available()) {
+//         String line = client.readStringUntil('\n');
+//         response += line;
+//         response += "\n";
+
+
+//         // Buscar y extraer el ETag
+//         if (line.startsWith("ETag:")) {
+//             remoteETag = line.substring(6);
+//             remoteETag.trim();  // Eliminar espacios extra
+//             remoteETag.replace("\"", "");  // Eliminar comillas
+//         }
+//     }
+//     client.stop();
+
+//     if (remoteETag.isEmpty()) {
+//         Serial.println("❌ No se encontró 'ETag'. No se puede verificar la actualización.");
+//         return;
+//     }
+
+//     Serial.print("🔖 ETag de GitHub: ");
+//     Serial.println(remoteETag);
+
+
+
+//     // Leer el ETag almacenado en SPIFFS
+//     String localETag = "";
+//     if (SPIFFS.exists(etagFilePath)) {
+//         File file = SPIFFS.open(etagFilePath, "r");
+//         if (file) {
+//             localETag = file.readString();
+//             file.close();
+//         }
+//     } else {
+//         Serial.println("⚠️ Archivo index_etag.txt no encontrado. Creando...");
+//         localETag = "N/A";  // Valor inicial para forzar la primera descarga
+//     }
+
+//     // Comparar ETag remoto con el local
+//     if (remoteETag != localETag) {
+//         Serial.println("📥 Nueva versión detectada. Descargando index.html...");
+//         sendTelegramMessage("📥 Nueva versión detectada. Descargando index.html...", config);
+                
+//         if (updateFileFromURL(url, "/index.html")) {
+//             // Guardar el nuevo ETag en SPIFFS
+//             File file = SPIFFS.open(etagFilePath, "w");
+//             if (file) {
+//                 file.print(remoteETag);
+//                 file.close();
+//             }
+//             Serial.println("✅ index.html actualizado.");
+//             enableWatchdog();
+//             sendTelegramMessage("✅ index.html actualizado.", config);
+            
+//         }
+//     } else {
+//         Serial.println("✅ index.html ya está actualizado.");
+//     }
+// }
+
+void checkForIndexUpdate() {
     if (otaInProgress) {
-        return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
+        return;  // 🔹 No hacer nada si la OTA está en curso
     }
 
     Serial.println("🔍 Verificando actualización de index.html...");
 
     WiFiClientSecure client;
-    client.setInsecure();  // Deshabilita la verificación SSL
+    client.setInsecure();
     client.stop();
 
     if (!client.connect(host, 443)) {
@@ -180,7 +268,6 @@ void checkForIndexUpdate() {
     request += " HTTP/1.1\r\nHost: ";
     request += host;
     request += "\r\nUser-Agent: ESP32\r\nConnection: close\r\n\r\n";
-
     client.print(request);
 
     // Leer respuesta del servidor
@@ -188,14 +275,12 @@ void checkForIndexUpdate() {
     String remoteETag = "";
     while (client.connected() || client.available()) {
         String line = client.readStringUntil('\n');
-        response += line;
-        response += "\n";
-
+        response += line + "\n";
 
         // Buscar y extraer el ETag
         if (line.startsWith("ETag:")) {
             remoteETag = line.substring(6);
-            remoteETag.trim();  // Eliminar espacios extra
+            remoteETag.trim();
             remoteETag.replace("\"", "");  // Eliminar comillas
         }
     }
@@ -209,50 +294,97 @@ void checkForIndexUpdate() {
     Serial.print("🔖 ETag de GitHub: ");
     Serial.println(remoteETag);
 
-
-
     // Leer el ETag almacenado en SPIFFS
     String localETag = "";
     if (SPIFFS.exists(etagFilePath)) {
         File file = SPIFFS.open(etagFilePath, "r");
         if (file) {
             localETag = file.readString();
+            localETag.trim();
             file.close();
         }
     } else {
         Serial.println("⚠️ Archivo index_etag.txt no encontrado. Creando...");
-        localETag = "N/A";  // Valor inicial para forzar la primera descarga
+        localETag = "N/A";  // Forzar la primera descarga
     }
 
     // Comparar ETag remoto con el local
     if (remoteETag != localETag) {
         Serial.println("📥 Nueva versión detectada. Descargando index.html...");
         sendTelegramMessage("📥 Nueva versión detectada. Descargando index.html...", config);
-        if (updateFileFromURL(url, "/index.html")) {
-            // Guardar el nuevo ETag en SPIFFS
+    
+        if (updateFileFromURL(indexURL, "/index.html")) {  // 🔹 Usando indexURL directamente
             File file = SPIFFS.open(etagFilePath, "w");
             if (file) {
                 file.print(remoteETag);
                 file.close();
             }
             Serial.println("✅ index.html actualizado.");
-            enableWatchdog();
             sendTelegramMessage("✅ index.html actualizado.", config);
-            
+            enableWatchdog();
+        } else {
+            Serial.println("❌ Error al actualizar index.html.");
+            sendTelegramMessage("❌ Error al actualizar index.html.", config);
         }
     } else {
         Serial.println("✅ index.html ya está actualizado.");
     }
+    
 }
 
-bool updateFileFromURL(const char *url2, const char *path) {
+
+// bool updateFileFromURL(const char *url, const char *path) {
+//     disableWatchdog();
+//     WiFiClientSecure client;
+//     client.setInsecure();
+//     client.stop();
+
+//     HTTPClient http;
+//     http.begin(client, url);
+//     int httpCode = http.GET();
+
+//     if (httpCode == HTTP_CODE_OK) {
+//         File file = SPIFFS.open(path, "w");
+//         if (!file) {
+//             Serial.println("❌ Error al abrir archivo en SPIFFS.");
+//             sendTelegramMessage("❌ Error al abrir archivo en SPIFFS.", config);
+//             enableWatchdog();
+//             return false;
+//         }
+
+//         WiFiClient *stream = http.getStreamPtr();
+//         uint8_t buffer[512];
+//         int bytesRead;
+//         while ((bytesRead = stream->readBytes(buffer, sizeof(buffer))) > 0) {
+//             file.write(buffer, bytesRead);
+//         }
+
+//         file.close();
+//         Serial.println("✅ Archivo actualizado desde GitHub.");
+//         sendTelegramMessage("✅ Archivo actualizado desde GitHub.", config);
+//         enableWatchdog();
+//         return true;
+//     } else {
+//         Serial.printf("❌ Error HTTP %d al descargar archivo.\n", httpCode);
+//         sendTelegramMessage("❌ Error HTTP %d al descargar archivo.\n", config);
+//         enableWatchdog();
+//         return false;
+//     }
+
+//     http.end();
+// }
+
+bool updateFileFromURL(const char* url, const char* path) {
     disableWatchdog();
+    
     WiFiClientSecure client;
     client.setInsecure();
     client.stop();
 
     HTTPClient http;
-    http.begin(client, url2);
+    Serial.println("🌐 Descargando archivo desde: " + String(url));
+    
+    http.begin(client, url);  // 🔹 Asegúrate de que la URL es completa
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
@@ -260,6 +392,7 @@ bool updateFileFromURL(const char *url2, const char *path) {
         if (!file) {
             Serial.println("❌ Error al abrir archivo en SPIFFS.");
             sendTelegramMessage("❌ Error al abrir archivo en SPIFFS.", config);
+            http.end();  // 🔹 Asegurar que se liberen recursos
             enableWatchdog();
             return false;
         }
@@ -267,6 +400,7 @@ bool updateFileFromURL(const char *url2, const char *path) {
         WiFiClient *stream = http.getStreamPtr();
         uint8_t buffer[512];
         int bytesRead;
+
         while ((bytesRead = stream->readBytes(buffer, sizeof(buffer))) > 0) {
             file.write(buffer, bytesRead);
         }
@@ -274,17 +408,20 @@ bool updateFileFromURL(const char *url2, const char *path) {
         file.close();
         Serial.println("✅ Archivo actualizado desde GitHub.");
         sendTelegramMessage("✅ Archivo actualizado desde GitHub.", config);
+        
+        http.end();  // 🔹 Liberar recursos correctamente
         enableWatchdog();
         return true;
     } else {
         Serial.printf("❌ Error HTTP %d al descargar archivo.\n", httpCode);
-        sendTelegramMessage("❌ Error HTTP %d al descargar archivo.\n", config);
+        sendTelegramMessage("❌ Error HTTP " + String(httpCode) + " al descargar archivo.", config);
+        
+        http.end();  // 🔹 Liberar recursos aunque falle la descarga
         enableWatchdog();
         return false;
     }
-
-    http.end();
 }
+
 
 void downloadAndUpdate() {
     disableWatchdog(); // Desactivar Watchdog para evitar reinicios
