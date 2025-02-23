@@ -94,7 +94,8 @@
                 document.getElementById("thingSpeakAPIKey").value = data.thingSpeakAPIKey || "";
                 document.getElementById("channelID").value = data.channelID || "";
                 document.getElementById("location").value = data.location || "";
-                document.getElementById("updateOta").value = (data.updateOta || 3600000) / 3600000;  // 🔹 Convierte ms → horas
+                document.getElementById("updateOta").value = (data.updateOta || 1);  // 🔹 Ya está en horas
+        })
                 
             })
             .catch(error => console.error("Error cargando configuración:", error));
@@ -106,7 +107,7 @@
     
     let formData = new FormData(event.target);
     let updateOtaHours = parseInt(document.getElementById("updateOta").value, 10) || 1;  // 🔹 Horas ingresadas por el usuario
-    formData.set("updateOta", updateOtaHours * 3600000);  // 🔹 Convierte horas → ms antes de enviar
+    formData.set("updateOta", updateOtaHours);  // 🔹 Envía horas, no ms
 
     fetch("/config", { method: "POST", body: formData })
         .then(response => response.text())
