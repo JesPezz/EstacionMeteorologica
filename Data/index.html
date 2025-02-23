@@ -65,19 +65,25 @@
     </div>
 
     <script>
-    // Cargar estado actual del ESP32
-    function loadESPStatus() {
-        fetch("/esp_status")
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("esp-ip").textContent = data.ip || "Desconocido";
-                document.getElementById("wifi-status").textContent = data.wifi || "Desconocido";
-                document.getElementById("cpu-status").textContent = data.cpu + " %" || "Desconocido";
-                document.getElementById("mem-status").textContent = data.memory || "Desconocido";
-            })
-            .catch(error => console.error("Error obteniendo estado del ESP32:", error));
-    }
-
+        function loadESPStatus() {
+            fetch("/esp_status")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("esp-ip").textContent = data.ip || "Desconocido";
+                    document.getElementById("wifi-status").textContent = data.wifi || "Desconocido";
+                    document.getElementById("cpu-status").textContent = (data.cpu !== undefined ? data.cpu + " %" : "Desconocido");
+                    document.getElementById("mem-status").textContent = (data.memory !== undefined ? data.memory + " KB" : "Desconocido");
+                })
+                .catch(error => {
+                    console.error("Error obteniendo estado del ESP32:", error);
+                    document.getElementById("esp-ip").textContent = "Error";
+                    document.getElementById("wifi-status").textContent = "Error";
+                    document.getElementById("cpu-status").textContent = "Error";
+                    document.getElementById("mem-status").textContent = "Error";
+                });
+        }
+        document.addEventListener("DOMContentLoaded", loadESPStatus);
+        
     // Cargar configuración actual
     function loadConfig() {
         fetch("/getConfig")

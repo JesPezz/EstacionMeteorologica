@@ -72,7 +72,7 @@ bool loadConfig() {
     if (doc["password"].is<String>()) config.password = doc["password"].as<String>();
     //if (doc["googleSheetURL"].is<String>()) config.googleSheetURL = doc["googleSheetURL"].as<String>();
     if (doc["googleSheetURL"].is<String>()) {
-    googleSheetURL = doc["googleSheetURL"].as<String>();
+        config.googleSheetURL = doc["googleSheetURL"].as<String>();
     } else {
     Serial.println("❌ Error: googleSheetURL no está en config.json");
     }

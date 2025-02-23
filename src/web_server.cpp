@@ -10,8 +10,14 @@
 
 AsyncWebServer server(80);
 
-void handleESPStatus(AsyncWebServerRequest *request1) {
-    JsonDocument doc;
+// 📡 Función para devolver estado del ESP32 en JSON
+#include <ArduinoJson.h>
+
+#include <ArduinoJson.h>
+
+void handleESPStatus(AsyncWebServerRequest *request) {
+    JsonDocument doc;  // 🔹 Tamaño predefinido para evitar problemas de memoria
+
     doc["ip"] = WiFi.localIP().toString();
     doc["wifi"] = WiFi.status() == WL_CONNECTED ? "Conectado" : "Desconectado";
     doc["cpu"] = 80;  // Simulación (ajusta según tu código)
@@ -19,7 +25,16 @@ void handleESPStatus(AsyncWebServerRequest *request1) {
 
     String response;
     serializeJson(doc, response);
-    request1->send(200, "application/json", "{\"status\":\"ok\"}");
+    request->send(200, "application/json", response);
+}
+
+
+
+// 🔄 Función para reiniciar ESP32 remotamente
+void handleRestart(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "ESP32 reiniciándose...");
+    delay(1000);
+    ESP.restart();
 }
 
 bool otaInProgress = false;  // 🔹 Indica si una OTA está en proceso
@@ -90,13 +105,15 @@ void startWebServer() {
         request->send(SPIFFS, "/index.html", "text/html");
     });
 
+    server.on("/esp_status", HTTP_GET, handleESPStatus);
+    server.on("/restart", HTTP_POST, handleRestart);
+
     server.on("/getConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
     
         doc["ssid"] = config.ssid;
         doc["googleSheetURL"] = config.googleSheetURL;
         doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
-        doc["updateInterval"] = config.updateInterval / 60000; // Minutos
         doc["channelID"] = config.channelID;
         doc["location"] = config.location;
     
@@ -105,6 +122,7 @@ void startWebServer() {
         request->send(200, "application/json", response);
     });
     
+    server.on("/esp_status", HTTP_GET, handleESPStatus);
 
     // 🔹 Configuración de parámetros (WiFi, Google Sheet, ThingSpeak, etc.)
     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -149,7 +167,7 @@ void startWebServer() {
         }
     });
 
-    server.on("/esp_status", HTTP_GET, handleESPStatus);
+    
     //server.on("/restart", HTTP_POST, handleRestart);
 
 
