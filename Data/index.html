@@ -71,7 +71,7 @@
                 .then(data => {
                     document.getElementById("esp-ip").textContent = data.ip || "Desconocido";
                     document.getElementById("wifi-status").textContent = data.wifi || "Desconocido";
-                    document.getElementById("cpu-status").textContent = (data.cpu !== undefined ? data.cpu + " %" : "Desconocido");
+                    document.getElementById("cpu-status").textContent = (data.cpu !== undefined ? data.cpu + " MHz" : "Desconocido");
                     document.getElementById("mem-status").textContent = (data.memory !== undefined ? data.memory + " KB" : "Desconocido");
                 })
                 .catch(error => {

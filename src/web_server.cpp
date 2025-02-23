@@ -7,27 +7,25 @@
 #include "SensorManager.h"
 #include "led.h"
 #include "notifications.h"
+#include <WiFi.h>
+#include <ArduinoJson.h>
 
 AsyncWebServer server(80);
 
 // 📡 Función para devolver estado del ESP32 en JSON
-#include <ArduinoJson.h>
-
-#include <ArduinoJson.h>
 
 void handleESPStatus(AsyncWebServerRequest *request) {
     JsonDocument doc;  // 🔹 Tamaño predefinido para evitar problemas de memoria
 
     doc["ip"] = WiFi.localIP().toString();
-    doc["wifi"] = WiFi.status() == WL_CONNECTED ? "Conectado" : "Desconectado";
-    doc["cpu"] = 80;  // Simulación (ajusta según tu código)
-    doc["memory"] = ESP.getFreeHeap();  // Memoria libre en bytes
+    doc["wifi"] = (WiFi.status() == WL_CONNECTED) ? "Conectado" : "Desconectado";
+    doc["cpu"] = ESP.getCpuFreqMHz();
+    doc["memory"] = ESP.getFreeHeap() / 1024;  // Memoria libre en bytes
 
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
 }
-
 
 
 // 🔄 Función para reiniciar ESP32 remotamente
@@ -166,9 +164,6 @@ void startWebServer() {
             errLeds();
         }
     });
-
-    
-    //server.on("/restart", HTTP_POST, handleRestart);
 
 
     // 🔹 Ruta para subir firmware OTA
