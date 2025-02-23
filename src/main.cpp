@@ -59,7 +59,7 @@ loadConfig();
 }
 
 // ✅ Verificar que los valores cargados sean correctos
-Serial.println("📜 CONFIGURACIÓN CARGADA DESDE settings.json:");
+Serial.println("📜 CONFIGURACIÓN CARGADA DESDE config.json:");
 Serial.println("SSID: " + config.ssid);
 Serial.println("Password: " + config.password);
 Serial.println("Google Sheet URL: " + config.googleSheetURL);
@@ -78,7 +78,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   Serial.print(nombreCodigo);
   Serial.print(" ");
   Serial.println(version);
-  Serial.println("Ubicacion: " + location);
+  Serial.println("Ubicacion: " + config.location);
   pinMode(LED_BUILTIN, OUTPUT);
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
@@ -128,19 +128,13 @@ printConfig();  // ✅ Ver los valores actuales de configuración
             
 }
 
-bool telegramSent = false;
-
 void loop() {
 
-  if (WiFi.status() == WL_CONNECTED && !telegramSent) {
-    delay(5000); // Esperar estabilidad
-    sendTelegramMessage("✅ ESP32 conectado a WiFi.\n📡 IP: " + WiFi.localIP().toString() + "\n📍 Ubicación: " + config.location, config);
-    telegramSent = true;
-}
-
-  if (millis() - lastUpdateCheck >= UPDATE_INTERVAL) {
+  if (millis() - lastUpdateCheck >= config.UPDATE_INTERVAL) {
         checkForUpdates();
         checkForIndexUpdate();
+        loadState();
+        Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
     }
 

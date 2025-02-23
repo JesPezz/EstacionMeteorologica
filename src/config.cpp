@@ -15,7 +15,7 @@ const char version[] = "v2.7";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
-const unsigned long UPDATE_INTERVAL = 1 * 60 * 1000;  // 6 horas en milisegundos
+
 
 String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest";
 
@@ -24,7 +24,7 @@ Config config;
 String googleSheetURL;
 const char* ssid;
 const char* password;
-const char* writeAPIKey;
+const char* thingSpeakAPIKey;
 unsigned long channelID;
 String location;
 unsigned long CHANNEL_UPDATE_INTERVAL = 60 * 1000;
@@ -70,20 +70,16 @@ bool loadConfig() {
     // Leer valores del JSON
     if (doc["ssid"].is<String>()) config.ssid = doc["ssid"].as<String>();
     if (doc["password"].is<String>()) config.password = doc["password"].as<String>();
-    //if (doc["googleSheetURL"].is<String>()) config.googleSheetURL = doc["googleSheetURL"].as<String>();
-    if (doc["googleSheetURL"].is<String>()) {
-        config.googleSheetURL = doc["googleSheetURL"].as<String>();
-    } else {
-    Serial.println("❌ Error: googleSheetURL no está en config.json");
-    }
+    if (doc["googleSheetURL"].is<String>()) config.googleSheetURL = doc["googleSheetURL"].as<String>();
     if (doc["thingSpeakAPIKey"].is<String>()) config.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
-    if (doc["updateInterval"].is<int>()) config.updateInterval = doc["updateInterval"].as<int>() * 60000;
     if (doc["channelID"].is<unsigned long>()) config.channelID = doc["channelID"].as<unsigned long>();
     if (doc["location"].is<String>()) config.location = doc["location"].as<String>();
     if (doc["webUsername"].is<String>()) webUsername = doc["webUsername"].as<String>();
     if (doc["webPassword"].is<String>()) webPassword = doc["webPassword"].as<String>();
     if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
     if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
+    if (doc["UPDATE_INTERVAL"].is<unsigned long>()) config.UPDATE_INTERVAL = doc["UPDATE_INTERVAL"].as<int>() * 3600000;
+
     
     return true;
 }
@@ -103,6 +99,7 @@ bool saveConfig(const Config& config) {
     doc["webPassword"] = webPassword;
     doc["telegramToken"] = config.telegramToken;
     doc["chatId"] = config.chatId;
+    doc["UPDATE_INTERVAL"] = config.UPDATE_INTERVAL;
 
     // Guardar el JSON en el sistema de archivos
     File file = SPIFFS.open("/config.json", "w");

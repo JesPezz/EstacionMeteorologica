@@ -26,8 +26,8 @@ extern String githubAPIURL;
 
 
 
-extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
-extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 horas)
+// extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
+// extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 horas)
 
 
 
@@ -40,6 +40,7 @@ struct Config {
     String thingSpeakAPIKey;
     unsigned long updateInterval;
     unsigned long channelID;
+    unsigned long UPDATE_INTERVAL;
     String location;
     String telegramToken;
     String chatId;
@@ -55,24 +56,12 @@ struct NotificationConfig {
 
     NotificationConfig extractNotificationConfig(const Config& config);  // ✅ Declaración de la función (NO eliminar)
 
-
-
-
-// WiFi
-extern String googleSheetURL;
-extern const char* ssid;
-extern const char* password;
-
-// ThingSpeak
-extern unsigned long channelID;
-extern const char *writeAPIKey;
-extern String location;
-
-// Timing
+    // Timing
 extern unsigned long CHANNEL_UPDATE_INTERVAL;
 extern unsigned long MONTH_IN_SECONDS;
 extern unsigned long STATE_SAVE_PERIOD;
 extern int LED_ON_DURATION_MS;
+extern unsigned long lastUpdateCheck;
 
 // Sensores BME680 y BSEC
 extern Bsec iaqSensor;

@@ -17,13 +17,13 @@ void googlesheet(void)
     // Crear cliente HTTP
     HTTPClient http;
 
-    if (!googleSheetURL.startsWith("http://") && !googleSheetURL.startsWith("https://")) {
-      googleSheetURL = "https://" + googleSheetURL;  // Asegurar protocolo correcto
+    if (!config.googleSheetURL.startsWith("http://") && !config.googleSheetURL.startsWith("https://")) {
+      config.googleSheetURL = "https://" + config.googleSheetURL;  // Asegurar protocolo correcto
   }
     Serial.print("🔍 googleSheetURL actual: ");
-    Serial.println(googleSheetURL);
+    Serial.println(config.googleSheetURL);
   
-    String url = googleSheetURL;
+    String url = config.googleSheetURL;
     url += "?location=" + config.location;  // Agregar la ubicación a la URL
     url += "&iaq=" + String(iaqSensor.iaq);
     url += "&iaqAccuracy=" + String(iaqSensor.iaqAccuracy);
@@ -149,7 +149,7 @@ void saveAndSendData() {
 void sendReadingToGoogleSheet(const String &reading) {
     // Send sensor data to Google Sheets
       HTTPClient http;
-      String url = googleSheetURL; // `serverName` contiene la URL base de tu hoja de Google Sheets
+      String url = config.googleSheetURL; // `serverName` contiene la URL base de tu hoja de Google Sheets
       url += "?iaq=" + reading; // Agregar la cadena `reading` como un parámetro en la URL
   
       // Imprime `reading` en el puerto serial
