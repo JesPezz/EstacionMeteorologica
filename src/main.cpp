@@ -64,7 +64,7 @@ Serial.println("SSID: " + config.ssid);
 Serial.println("Password: " + config.password);
 Serial.println("Google Sheet URL: " + config.googleSheetURL);
 Serial.println("ThingSpeak API Key: " + config.thingSpeakAPIKey);
-Serial.println("updateOta: " + String(config.updateOta / 1000) + " Horas");
+Serial.println("updateOta: " + String(config.updateOta / 3600000) + " Horas");
 Serial.println("Channel ID: " + String(config.channelID));
 Serial.println("Location: " + config.location);
 Serial.println("chatId: " + config.chatId);
