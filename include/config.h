@@ -27,7 +27,7 @@ extern String githubAPIURL;
 
 
 // extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
-// extern const unsigned long UPDATE_INTERVAL;  // Intervalo de actualización (6 horas)
+// extern const unsigned long updateOta;  // Intervalo de actualización (6 horas)
 
 
 
@@ -40,7 +40,7 @@ struct Config {
     String thingSpeakAPIKey;
     unsigned long updateInterval;
     unsigned long channelID;
-    unsigned long UPDATE_INTERVAL;
+    unsigned long updateOta;
     String location;
     String telegramToken;
     String chatId;

@@ -44,8 +44,8 @@
             <label for="location">Ubicación:</label>
             <input type="text" id="location" name="location">
 
-            <label for="UPDATE_INTERVAL">Intervalo OTA (hrs.):</label>
-            <input type="number" id="UPDATE_INTERVAL" name="UPDATE_INTERVAL" hrs="1">
+            <label for="updateOta">Intervalo OTA (horas):</label>
+            <input type="number" id="updateOta" name="updateOta" min="1" step="1">
 
             <h3>Notificaciones</h3>
             <label for="telegramToken">Token de Telegram:</label>
@@ -85,23 +85,34 @@
                     document.getElementById("mem-status").textContent = "Error";
                 });
         }
-        document.addEventListener("DOMContentLoaded", loadESPStatus);
-        
-    // Cargar configuración actual
-    function loadConfig() {
-        fetch("/getConfig")
-            .then(response => response.json())
-            .then(data => {
+    document.addEventListener("DOMContentLoaded", function() {
+    fetch("/getConfig")
+        .then(response => response.json())
+        .then(data => {
                 document.getElementById("ssid").value = data.ssid || "";
                 document.getElementById("googleSheetURL").value = data.googleSheetURL || "";
                 document.getElementById("thingSpeakAPIKey").value = data.thingSpeakAPIKey || "";
                 document.getElementById("channelID").value = data.channelID || "";
                 document.getElementById("location").value = data.location || "";
-                document.getElementById("UPDATE_INTERVAL").value = data.UPDATE_INTERVAL || "";
+                document.getElementById("updateOta").value = (data.updateOta || 3600000) / 3600000;  // 🔹 Convierte ms → horas
+                
             })
             .catch(error => console.error("Error cargando configuración:", error));
-    }
 
+        });
+
+    document.querySelector("form").addEventListener("submit", function(event) {
+    event.preventDefault();
+    
+    let formData = new FormData(event.target);
+    let updateOtaHours = parseInt(document.getElementById("updateOta").value, 10) || 1;  // 🔹 Horas ingresadas por el usuario
+    formData.set("updateOta", updateOtaHours * 3600000);  // 🔹 Convierte horas → ms antes de enviar
+
+    fetch("/config", { method: "POST", body: formData })
+        .then(response => response.text())
+        .then(result => alert("✅ Configuración guardada"))
+        .catch(error => console.error("❌ Error guardando configuración:", error));
+});
     // Subir firmware OTA
     function uploadFirmware() {
         let fileInput = document.getElementById("firmwareFile");

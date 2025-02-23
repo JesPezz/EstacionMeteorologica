@@ -130,7 +130,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 
 void loop() {
 
-  if (millis() - lastUpdateCheck >= config.UPDATE_INTERVAL) {
+  if (millis() - lastUpdateCheck >= config.updateOta) {
         checkForUpdates();
         checkForIndexUpdate();
         loadState();

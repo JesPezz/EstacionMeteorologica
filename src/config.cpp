@@ -78,7 +78,11 @@ bool loadConfig() {
     if (doc["webPassword"].is<String>()) webPassword = doc["webPassword"].as<String>();
     if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
     if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
-    if (doc["UPDATE_INTERVAL"].is<unsigned long>()) config.UPDATE_INTERVAL = doc["UPDATE_INTERVAL"].as<int>() * 3600000;
+    if (doc["updateOta"].is<unsigned long>()) {
+        config.updateOta = doc["updateOta"].as<unsigned long>();
+        } else {
+        config.updateOta = 3600000;  // 🔹 Valor por defecto: 1 hora en ms
+        }
 
     
     return true;
@@ -99,7 +103,7 @@ bool saveConfig(const Config& config) {
     doc["webPassword"] = webPassword;
     doc["telegramToken"] = config.telegramToken;
     doc["chatId"] = config.chatId;
-    doc["UPDATE_INTERVAL"] = config.UPDATE_INTERVAL;
+    doc["updateOta"] = config.updateOta;
 
     // Guardar el JSON en el sistema de archivos
     File file = SPIFFS.open("/config.json", "w");
