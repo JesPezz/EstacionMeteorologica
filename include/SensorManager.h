@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <bsec.h>
 
-// Declaraciones de funciones
 void setupBsecSensor();
 void checkClockSync();
 void readSensorData();

@@ -1,10 +1,8 @@
 #include "TimeManager.h"
 #include "config.h"
 #include "TimeManager.h"
-#include <time.h>       // Para configTime
-#include <Arduino.h>    // Para delay
-
-// Implementa syncClock, getCurrentTime, isHourOnTheDot (copiar código original)
+#include <time.h>       
+#include <Arduino.h>    
 
 // Function to synchronize the ESP32's internal clock with NTP server
 void syncClock() {

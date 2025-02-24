@@ -1,12 +1,13 @@
 #include "SensorManager.h"
-#include "config.h" // Si necesitas acceder a variables globales
+#include "config.h" 
 #include "TimeManager.h"
 #include "WiFiManager.h"
 #include "GoogleSheetManager.h"
 #include "BME_Sensor.h"
 
-// Implementación de setupBsecSensor
+
 void setupBsecSensor() {
+  
   // Verificar si el sensor responde en la dirección I2C
   Wire.beginTransmission(BME68X_I2C_ADDR_LOW);
   if (Wire.endTransmission() != 0) {  // Si el sensor no responde, reiniciar I2C

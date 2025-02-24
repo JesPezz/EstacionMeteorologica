@@ -133,25 +133,10 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 void loop() {
 
 
-//   unsigned long currentMillis = millis();  // Obtener tiempo actual
-
-//   Serial.printf("⏳ Tiempo desde última verificación: %lu ms\n", currentMillis - lastUpdateCheck);
-//   Serial.printf("🕒 Intervalo OTA configurado: %lu ms\n", config.updateOta);
-
-//   if (currentMillis - lastUpdateCheck >= config.updateOta) {  // Comparar con el intervalo
-//       lastUpdateCheck = currentMillis;  // Actualizar última verificación
-
-//       Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
-//       checkForFirmwareUpdate();
-
-//       Serial.println("🔍 Verificando actualización de index.html...");
-//       checkForIndexUpdate();
-//   }
-
-//   delay(100);  // Pequeño retraso para evitar consumo innecesario de CPU
-// }
-
   if (millis() - lastUpdateCheck >= config.updateOta) {
+        stateUpdateCounter = 0;  // Restablecer el contador
+        updateState();  // Llamar a la función
+
     Serial.printf("✅ updateOta cargado: %lu ms\n", config.updateOta);
         checkForUpdates();
         checkForIndexUpdate();
@@ -167,7 +152,7 @@ void loop() {
    
   checkWiFiConnection(); // Verificar la conexión WiFi
   readSensorData();      // Leer datos del sensor
-  sendDataToServices();  // Enviar datos a ThingSpeak y Google Sheets
+  sendDataToServices();  // Enviar Google Sheets
   checkClockSync();      // Sincronizar el reloj si es necesario
 }
 

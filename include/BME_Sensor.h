@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include <bsec.h>
 
-extern Bsec iaqSensor; // Declaración externa
+extern Bsec iaqSensor;
 
 void checkIaqSensorStatus();
 void loadState();
