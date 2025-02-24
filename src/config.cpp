@@ -13,7 +13,7 @@ const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteor
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char version[] = "v2.7";
+const char version[] = "v2.8";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0

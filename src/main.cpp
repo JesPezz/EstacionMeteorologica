@@ -152,7 +152,7 @@ void loop() {
 // }
 
   if (millis() - lastUpdateCheck >= config.updateOta) {
-    Serial.printf("✅ updateOta cargado: %lu ms\n", config.updateOta);
+        updateState();
         checkForUpdates();
         checkForIndexUpdate();
         loadState();
