@@ -24,7 +24,7 @@ void googlesheet(void)
     Serial.println(config.googleSheetURL);
   
     String url = config.googleSheetURL;
-    url += "?location=" + config.location;  // Agregar la ubicación a la URL
+    url += "?location=" + config.location;  
     url += "&iaq=" + String(iaqSensor.iaq);
     url += "&iaqAccuracy=" + String(iaqSensor.iaqAccuracy);
     url += "&staticIaq=" + String(iaqSensor.staticIaq);
@@ -149,7 +149,7 @@ void saveAndSendData() {
 void sendReadingToGoogleSheet(const String &reading) {
     // Send sensor data to Google Sheets
       HTTPClient http;
-      String url = config.googleSheetURL; // `serverName` contiene la URL base de tu hoja de Google Sheets
+      String url = config.googleSheetURL; 
       url += "?iaq=" + reading; // Agregar la cadena `reading` como un parámetro en la URL
   
       // Imprime `reading` en el puerto serial

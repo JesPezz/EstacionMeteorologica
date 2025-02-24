@@ -10,7 +10,6 @@
 #include <WiFiClientSecure.h>  // Para conexiones seguras (ej. enviar correos con SSL)
 #include "config.h"
 
-// Declaraciones de funciones
 void sendTelegramMessage(const String &mensaje, const Config &config); 
 void saveNotificationConfig();
 #endif

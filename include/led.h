@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-// Declaraciones de funciones
 void ledSuccess();
 void ledInProgress();
 void errLeds();

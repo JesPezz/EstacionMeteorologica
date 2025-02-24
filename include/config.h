@@ -54,7 +54,7 @@ struct NotificationConfig {
     String chatId;
 };
     extern Config config;  
-    extern NotificationConfig notificationConfig;  // ✅ Solo declaración
+    extern NotificationConfig notificationConfig;  
 
     NotificationConfig extractNotificationConfig(const Config& config);  // ✅ Declaración de la función (NO eliminar)
 

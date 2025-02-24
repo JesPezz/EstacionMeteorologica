@@ -1,113 +1,99 @@
-# Estación Meteorológica ThingSpeak
+# Estación Meteorológica ThingSpeak (v2.8)
 
-Este proyecto es una estación meteorológica basada en ESP32 que envía datos a ThingSpeak y los gestiona mediante Google Apps Script. Los datos se recogen desde sensores en varias ubicaciones y se integran en una hoja de cálculo de Google Sheets para su análisis.
+```markdown
+Este proyecto es una **estación meteorológica basada en ESP32** que envía datos a **ThingSpeak** y los gestiona mediante **Google Apps Script**. Los datos se integran en una hoja de cálculo de **Google Sheets** para su análisis y visualización en la interfaz web integrada.
+```
 
-## Características del Proyecto
+## 🌟 Novedades en la versión 2.8
 
-- **Hardware**: Utiliza ESP32 para la recolección de datos de temperatura y otros parámetros con el sensor BME680.
-- **Software**: ThingSpeak para la visualización de datos, Google Apps Script para la gestión de estos datos, y un servidor que facilita la automatización.
-- **Integración**: El proyecto se integra con Google Sheets a través de un script personalizado, donde se almacenan los datos recibidos de los sensores.
-- **Múltiples ubicaciones**: Se pueden recoger los datos desde múltiples ESP32.
+```diff
+- Mejora en la configuración de OTA: `updateOta` ahora se configura en **horas** en la interfaz web y se almacena correctamente en `config.json`.
+- Correcciones en la interfaz web: Se optimizó la carga y envío de configuraciones, eliminando dependencias innecesarias.
+- Mejor manejo de configuraciones en el ESP32: Se asegura la conversión entre **milisegundos** y **horas** al manejar `updateOta`.
+- Mayor estabilidad en el servidor web ESP32: Correcciones en `/config` y `/getConfig` para mejorar la comunicación con la interfaz web.
+```
 
-## Diagrama de Conexión del ESP32 con el BME680
+## ⚙️ Características del Proyecto
 
-A continuación, se describe la conexión entre el ESP32 y el sensor BME680 usando el protocolo I2C:
+```yaml
+hardware:
+  - ESP32
+  - Sensor BME680 (temperatura, humedad, presión, calidad del aire)
+software:
+  - ThingSpeak (visualización de datos)
+  - Google Apps Script (gestión de datos)
+  - Interfaz web embebida (configuración)
+  - Múltiples ubicaciones soportadas
+```
 
-| ESP32 Pin | BME680 Pin |
-|-----------|------------|
-| 3.3V      | VIN        |
-| GND       | GND        |
-| GPIO 21   | SDA        |
-| GPIO 22   | SCL        |
-
-Este diagrama muestra las conexiones necesarias para que el ESP32 pueda comunicarse con el BME680 y recoger datos ambientales.
-
-## Instalación
-
-### 1. Clonar el repositorio
-
-Clona este repositorio en tu máquina local:
+## 📊 Conexión del ESP32 con el BME680
 
 ```bash
-git clone https://github.com/tu-usuario/EstacionThingSpeakv1.2.git
+ESP32 Pin | BME680 Pin
+--------- | ----------
+3.3V      | VIN
+GND       | GND
+GPIO 21   | SDA
+GPIO 22   | SCL
 ```
-### 2. Configuración de un Canal en ThingSpeak
 
-1. Accede a ThingSpeak y regístrate o inicia sesión en tu cuenta.
-2. Crea un nuevo canal y completa los detalles según lo que vayas a monitorear (por ejemplo, temperatura, humedad, etc.).
-3. Una vez creado el canal, ve a la configuración del canal y copia tanto el **ID del canal** como la **API Key**:
-   - El **ID del canal** es un número que identifica tu canal.
-   - La **API Key** es una cadena alfanumérica que necesitarás para enviar datos al canal.
+## 🛠 Instalación
 
-### 3. Configuración en el Código
-
-- **ID de la Sheet**: Inserta el ID de la hoja de cálculo en el código para que los datos se registren correctamente.
-- **ID del Canal y API Key de ThingSpeak**: Asegúrate de introducir estos datos en el código para cada ubicación configurada.
-
-### 4. Registro de Datos por Ubicación
-
-- Por cada ubicación que configures en el código, se creará una hoja dentro de la misma Google Sheet. Cada hoja registrará y analizará los datos específicos de esa ubicación.
-- **Frecuencia de Registro**: Los datos se registran cada hora de manera automática.
-
-## Instrucciones para Implementar el Script de Google Apps Script
-
-### 1. Crear un Proyecto en Google Apps Script
-
-1. Accede a [Google Apps Script](https://script.google.com/) y crea un nuevo proyecto.
-2. Copia y pega el script proporcionado que gestionará los datos de los sensores.
-3. En el script, localiza la sección donde se debe insertar el **ID de la hoja de cálculo** y reemplaza el marcador de posición con el ID que obtuviste anteriormente.
-
-### Ejemplo:
-
-```javascript
-// Inserta aquí el ID de tu hoja de cálculo
-var sheetId = '1A2B3C4D5E6F7G8H9I';
-var sheet = SpreadsheetApp.openById(sheetId);
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/JesPezz/EstacionMeteorologica.git
 ```
-### Implementar el Script
 
-1. **Guardar el Proyecto y Desplegar la Implementación**
+### 2. Configuración del Canal en ThingSpeak
 
-2. **Implementar el Script**
-   - Haz clic en **"Deploy"** (Desplegar) y selecciona **"Manage deployments"** (Gestionar implementaciones).
-   - Crea una nueva implementación y selecciona **"Web app"**.
-   - En la sección de **"Execute the app as"** (Ejecutar la app como), selecciona **"Me"** (tú mismo).
-   - En **"Who has access"** (Quién tiene acceso), selecciona **"Anyone, even anonymous"** (Cualquiera, incluso anónimos).
-   - Copia la URL de la implementación después de realizar el despliegue.
-
-   **Ejemplo de URL**: `https://script.google.com/macros/s/1A2B3C4D5E6F7G8H9I1A2B3C4D5E6F7G8H9I1A2B3C4D5E6F7G8H9I/exec`
-
-3. **Agregar la URL de Implementación al Código del ESP32**
-   - Abre el código de tu ESP32 y localiza la parte donde se hace la solicitud para enviar datos.
-   - Inserta la URL de implementación que obtuviste en el paso anterior.
-
-### Ejemplo:
-
-```cpp
-const char* scriptURL = "https://script.google.com/macros/s/1A2B3C4D5E6F7G8H9I1A2B3C4D5E6F7G8H9I1A2B3C4D5E6F7G8H9I/exec";
+```yaml
+1. Crea un canal en ThingSpeak.
+2. Obtén el **ID del canal** y la **API Key**.
 ```
-### 4. Verificación de Datos
 
-Una vez que todo esté configurado, el ESP32 comenzará a enviar datos a la hoja de cálculo a través del script de Google Apps Script. Puedes verificar los registros en la hoja de cálculo y en ThingSpeak para asegurarte de que los datos están siendo recibidos correctamente.
+### 3. Configuración en el ESP32
 
-## Contribuir
-
-Si deseas contribuir a este proyecto:
-
-1. Haz un **fork** del repositorio.
-2. Crea una nueva rama:
-   ```bash
-   git checkout -b feature/nueva-funcionalidad
-´´´
-3. Realiza tus cambios y haz commit:
-   ```bash
-   git commit -am 'Añadir nueva funcionalidad'
+```json
+{
+  "ssid": "TuRedWiFi",
+  "password": "TuContraseña",
+  "googleSheetURL": "https://script.google.com/...",
+  "thingSpeakAPIKey": "TU_API_KEY",
+  "channelID": 123456,
+  "location": "PlantaAlta",
+  "updateOta": 6,
+  "telegramToken": "TU_TELEGRAM_TOKEN",
+  "chatId": "TU_CHAT_ID"
+}
 ```
-4. Haz push de la rama:
-   ```bash
-   git push origin feature/nueva-funcionalidad
 
-5. Envía un pull request.
+## 🔄 Actualización OTA
 
-##Licencia
-Este proyecto está bajo la licencia MIT. Puedes ver más detalles en el archivo LICENSE.
+```diff
+- Se puede actualizar el firmware desde la interfaz web.
+- Ahora `updateOta` se maneja en **horas**, permitiendo mejor configuración.
+- El sistema verifica nuevas versiones automáticamente.
+```
+
+## 📈 Configuración de Google Apps Script
+
+```yaml
+1. Crea un nuevo proyecto en Google Apps Script.
+2. Copia y pega el script para gestionar datos en Google Sheets.
+3. Despliega como **Web App** y copia la URL en la configuración del ESP32.
+```
+
+## 💡 Contribuir
+
+```bash
+git checkout -b feature/nueva-funcionalidad
+git commit -m "Añadir nueva funcionalidad"
+git push origin feature/nueva-funcionalidad
+```
+
+## ✨ Licencia
+
+```plaintext
+Este proyecto está bajo la licencia MIT.
+```
+

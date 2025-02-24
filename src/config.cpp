@@ -92,7 +92,7 @@ bool loadConfig() {
 }
 
 bool saveConfig(const Config& config) {
-    JsonDocument doc;  // Usar JsonDocument en lugar de StaticJsonDocument
+    JsonDocument doc;
 
     // Asignar valores al JSON
     doc["ssid"] = config.ssid;
