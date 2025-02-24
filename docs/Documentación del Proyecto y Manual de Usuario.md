@@ -57,13 +57,13 @@ git clone https://github.com/JesPezz/EstacionMeteorologica.git
 La interfaz web permite gestionar la configuración y actualizar el firmware del ESP32. A continuación, se presentan los pasos para su uso:
 
 ### 🔹 **Estado del ESP32**
-![Interfaz Web - Estado ESP32](https://github.com/JesPezz/EstacionMeteorologica/blob/main/docs/img/2025-02-23%20(1).png)
+![Interfaz Web - Estado ESP32](https://github.com/JesPezz/EstacionMeteorologica/blob/main/docs/img/2025-02-23%20.png)
 - **Muestra la dirección IP del ESP32**.
 - **Estado de la conexión WiFi**.
 - **Uso de CPU y memoria libre**.
 
 ### 🔹 **Configuración del ESP32**
-![Interfaz Web - Configuración](https://github.com/JesPezz/EstacionMeteorologica/blob/main/docs/img/2025-02-23%20(2).png)
+![Interfaz Web - Configuración](https://github.com/JesPezz/EstacionMeteorologica/blob/main/docs/img/2025-02-23%20(1).png)
 1. Ingresar **SSID y contraseña** del WiFi.
 2. Configurar **ThingSpeak API Key** y **Channel ID**.
 3. Ingresar la **ubicación del sensor**.
@@ -71,7 +71,7 @@ La interfaz web permite gestionar la configuración y actualizar el firmware del
 5. Guardar los cambios y reiniciar.
 
 ### 🔹 **Actualización OTA**
-![Interfaz Web - Actualización OTA](https://github.com/JesPezz/EstacionMeteorologica/blob/main/docs/img/2025-02-23.png)
+![Interfaz Web - Actualización OTA](https://github.com/JesPezz/EstacionMeteorologica/blob/main/docs/img/2025-02-23(2).png)
 - Seleccionar un archivo de firmware `.bin`.
 - Hacer clic en `Subir Firmware`.
 - Esperar la actualización y reinicio automático.
