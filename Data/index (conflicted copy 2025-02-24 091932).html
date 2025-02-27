@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 - Configuración</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input, label { display: block; width: 100%; margin: 10px 0; }
+        button { padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer; width: 100%; }
+        button:hover { background-color: #45a049; }
+        .status { font-size: 1.2em; margin-top: 20px; }
+        .status span { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Configuración del ESP32</h2>
+        <div class="status">
+            <p>📡 <b>Estado del ESP32</b></p>
+            <p>IP: <span id="esp-ip">Cargando...</span></p>
+            <p>WiFi: <span id="wifi-status">Cargando...</span></p>
+            <p>CPU: <span id="cpu-status">Cargando...</span></p>
+            <p>Memoria Libre: <span id="mem-status">Cargando...</span> KB</p>
+        </div>
+
+        <form action="/config" method="POST">
+            <label for="ssid">SSID:</label>
+            <input type="text" id="ssid" name="ssid" required>
+
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" name="password">
+
+            <label for="googleSheetURL">Google Sheet URL:</label>
+            <input type="text" id="googleSheetURL" name="googleSheetURL">
+
+            <label for="thingSpeakAPIKey">ThingSpeak API Key:</label>
+            <input type="text" id="thingSpeakAPIKey" name="thingSpeakAPIKey">
+
+            <label for="channelID">Channel ID:</label>
+            <input type="number" id="channelID" name="channelID">
+
+            <label for="location">Ubicación:</label>
+            <input type="text" id="location" name="location">
+
+            <label for="updateOta">Intervalo OTA (horas):</label>
+            <input type="number" id="updateOta" name="updateOta" min="1" step="1">
+
+            <h3>Notificaciones</h3>
+            <label for="telegramToken">Token de Telegram:</label>
+            <input type="text" id="telegramToken" name="telegramToken">
+
+            <label for="chatId">Chat ID de Telegram:</label>
+            <input type="text" id="chatId" name="chatId">
+            
+            <button type="submit">Guardar Configuración</button>
+        </form>
+
+        <h2>Actualización OTA</h2>
+        <form id="otaForm">
+            <input type="file" id="firmwareFile">
+            <button type="button" onclick="uploadFirmware()">Subir Firmware</button>
+        </form>
+        <p id="status"></p>
+
+        <button onclick="restartESP32()">🔄 Reiniciar ESP32</button>
+    </div>
+
+    <script>
+        function loadESPStatus() {
+            fetch("/esp_status")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("esp-ip").textContent = data.ip || "Desconocido";
+                    document.getElementById("wifi-status").textContent = data.wifi || "Desconocido";
+                    document.getElementById("cpu-status").textContent = (data.cpu !== undefined ? data.cpu + " MHz" : "Desconocido");
+                    document.getElementById("mem-status").textContent = (data.memory !== undefined ? data.memory + " KB" : "Desconocido");
+                })
+                .catch(error => {
+                    console.error("Error obteniendo estado del ESP32:", error);
+                    document.getElementById("esp-ip").textContent = "Error";
+                    document.getElementById("wifi-status").textContent = "Error";
+                    document.getElementById("cpu-status").textContent = "Error";
+                    document.getElementById("mem-status").textContent = "Error";
+                });
+        }
+        document.addEventListener("DOMContentLoaded", loadESPStatus);
+        
+    // Cargar configuración actual
+    function loadConfig() {
+        fetch("/getConfig")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("ssid").value = data.ssid || "";
+                document.getElementById("password").value = data.password || "";
+                document.getElementById("googleSheetURL").value = data.googleSheetURL || "";
+                document.getElementById("thingSpeakAPIKey").value = data.thingSpeakAPIKey || "";
+                document.getElementById("channelID").value = data.channelID || "";
+                document.getElementById("location").value = data.location || "";
+                document.getElementById("updateOta").value = (data.updateOta / 3600000) || 1;
+                document.getElementById("telegramToken").value = data.telegramToken || "";
+                document.getElementById("chatId").value = data.chatId || "";
+            })
+            .catch(error => console.error("Error cargando configuración:", error));
+    }
+
+    // Subir firmware OTA
+    function uploadFirmware() {
+        let fileInput = document.getElementById("firmwareFile");
+        let file = fileInput.files[0];
+        if (!file) {
+            alert("Selecciona un archivo primero.");
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append("firmware", file);
+
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/update", true);
+
+        xhr.upload.onprogress = function(event) {
+            let percent = Math.round((event.loaded / event.total) * 100);
+            document.getElementById("status").innerText = "Subiendo: " + percent + "%";
+        };
+
+        xhr.onload = function() {
+            if (xhr.status == 200) {
+                document.getElementById("status").innerText = "✅ Actualización completada. Reiniciando...";
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+            } else {
+                document.getElementById("status").innerText = "❌ Error en la actualización.";
+            }
+        };
+
+        xhr.send(formData);
+    }
+
+    // Reiniciar ESP32
+    function restartESP32() {
+        fetch("/restart", { method: "POST" })
+            .then(() => {
+                alert("🔄 ESP32 se reiniciará...");
+            })
+            .catch(error => console.error("Error al reiniciar:", error));
+    }
+
+    // Cargar datos al cargar la página
+    document.addEventListener("DOMContentLoaded", function() {
+        loadConfig();
+        loadESPStatus();
+    });
+    </script>
+</body>
+</html>
