@@ -87,22 +87,69 @@
         }
         document.addEventListener("DOMContentLoaded", loadESPStatus);
         
-    // Cargar configuración actual
+    // Cargar configuración actual y ocultar datos sensibles
     function loadConfig() {
         fetch("/getConfig")
             .then(response => response.json())
             .then(data => {
                 document.getElementById("ssid").value = data.ssid || "";
-                document.getElementById("password").value = data.password || "";
+                document.getElementById("password").value = ""; // No mostrar la contraseña
                 document.getElementById("googleSheetURL").value = data.googleSheetURL || "";
-                document.getElementById("thingSpeakAPIKey").value = data.thingSpeakAPIKey || "";
+                document.getElementById("thingSpeakAPIKey").value = "*****";
                 document.getElementById("channelID").value = data.channelID || "";
                 document.getElementById("location").value = data.location || "";
                 document.getElementById("updateOta").value = data.updateOta || 1;
-                document.getElementById("telegramToken").value = data.telegramToken || "";
+                document.getElementById("telegramToken").value = "*****";
                 document.getElementById("chatId").value = data.chatId || "";
+
+                // Guardar configuración original para evitar sobrescribir valores vacíos
+                window.originalConfig = data;
             })
             .catch(error => console.error("Error cargando configuración:", error));
+    }
+
+    // Guardar configuración sin sobrescribir valores vacíos ni enviar asteriscos
+    function saveConfig(event) {
+        event.preventDefault(); // Evita recargar la página
+
+        let newConfig = {};
+        let form = document.querySelector("form");
+
+        // Tomar valores del formulario, pero evitar enviar valores vacíos o asteriscos
+        function processField(fieldId, originalValue) {
+            let value = document.getElementById(fieldId).value.trim();
+            if (value !== "" && value !== "*****") {
+                newConfig[fieldId] = value;
+            } else {
+                newConfig[fieldId] = originalValue; // Mantener el valor anterior
+            }
+        }
+
+        processField("ssid", window.originalConfig.ssid);
+        processField("password", window.originalConfig.password);
+        processField("googleSheetURL", window.originalConfig.googleSheetURL);
+        processField("thingSpeakAPIKey", window.originalConfig.thingSpeakAPIKey);
+        processField("channelID", window.originalConfig.channelID);
+        processField("location", window.originalConfig.location);
+        processField("updateOta", window.originalConfig.updateOta);
+        processField("telegramToken", window.originalConfig.telegramToken);
+        processField("chatId", window.originalConfig.chatId);
+
+        // Enviar la configuración al servidor
+        fetch("/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newConfig)
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert("✅ Configuración guardada correctamente.");
+            loadConfig(); // Recargar la configuración actualizada
+        })
+        .catch(error => {
+            console.error("Error guardando configuración:", error);
+            alert("❌ Error al guardar la configuración.");
+        });
     }
 
     // Subir firmware OTA
@@ -151,6 +198,7 @@
     // Cargar datos al cargar la página
     document.addEventListener("DOMContentLoaded", function() {
         loadConfig();
+        document.querySelector("form").addEventListener("submit", saveConfig);
         loadESPStatus();
     });
     </script>
