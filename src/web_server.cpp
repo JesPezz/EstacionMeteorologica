@@ -155,7 +155,7 @@ void startWebServer() {
         }
         
         notificationConfig = newNotificationConfig;  // Actualizamos solo los valores válidos
-        void saveNotificationConfig();  // Guardamos la configuración de notificaciones
+        saveNotificationConfig();  // Guardamos la configuración de notificaciones
 
         if (saveConfig(newConfig)) {
             request->send(200, "text/plain", "✅ Configuración guardada. Reiniciando ESP32...");

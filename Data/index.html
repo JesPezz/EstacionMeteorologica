@@ -109,48 +109,49 @@
     }
 
     // Guardar configuración sin sobrescribir valores vacíos ni enviar asteriscos
-    function saveConfig(event) {
-        event.preventDefault(); // Evita recargar la página
+function saveConfig(event) {
+    event.preventDefault(); // Evita recargar la página
 
-        let newConfig = {};
-        let form = document.querySelector("form");
+    let formData = new URLSearchParams();
 
-        // Tomar valores del formulario, pero evitar enviar valores vacíos o asteriscos
-        function processField(fieldId, originalValue) {
-            let value = document.getElementById(fieldId).value.trim();
-            if (value !== "" && value !== "*****") {
-                newConfig[fieldId] = value;
-            } else {
-                newConfig[fieldId] = originalValue; // Mantener el valor anterior
-            }
+    function processField(fieldId, originalValue) {
+        let value = document.getElementById(fieldId).value.trim();
+        if (value !== "" && value !== "*****") {
+            formData.append(fieldId, value);
+        } else {
+            formData.append(fieldId, originalValue); // Mantener el valor anterior
         }
-
-        processField("ssid", window.originalConfig.ssid);
-        processField("password", window.originalConfig.password);
-        processField("googleSheetURL", window.originalConfig.googleSheetURL);
-        processField("thingSpeakAPIKey", window.originalConfig.thingSpeakAPIKey);
-        processField("channelID", window.originalConfig.channelID);
-        processField("location", window.originalConfig.location);
-        processField("updateOta", window.originalConfig.updateOta);
-        processField("telegramToken", window.originalConfig.telegramToken);
-        processField("chatId", window.originalConfig.chatId);
-
-        // Enviar la configuración al servidor
-        fetch("/config", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newConfig)
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert("✅ Configuración guardada correctamente.");
-            loadConfig(); // Recargar la configuración actualizada
-        })
-        .catch(error => {
-            console.error("Error guardando configuración:", error);
-            alert("❌ Error al guardar la configuración.");
-        });
     }
+
+    processField("ssid", window.originalConfig.ssid);
+    processField("password", window.originalConfig.password);
+    processField("googleSheetURL", window.originalConfig.googleSheetURL);
+    processField("thingSpeakAPIKey", window.originalConfig.thingSpeakAPIKey);
+    processField("channelID", window.originalConfig.channelID);
+    processField("location", window.originalConfig.location);
+    processField("updateOta", window.originalConfig.updateOta);
+    processField("telegramToken", window.originalConfig.telegramToken);
+    processField("chatId", window.originalConfig.chatId);
+
+    // Enviar la configuración al servidor en formato URL-Encoded
+    fetch("/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString()
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Error en la respuesta del servidor");
+        return response.json();
+    })
+    .then(data => {
+        alert("✅ Configuración guardada correctamente.");
+        loadConfig(); // Recargar la configuración actualizada
+    })
+    .catch(error => {
+        console.error("Error guardando configuración:", error);
+        alert("❌ Error al guardar la configuración.");
+    });
+}
 
     // Subir firmware OTA
     function uploadFirmware() {
