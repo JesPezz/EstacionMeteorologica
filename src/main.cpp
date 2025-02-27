@@ -136,8 +136,6 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-
-    Serial.printf("✅ updateOta cargado: %lu ms\n", config.updateOta);
         checkForUpdates();
         checkForIndexUpdate();
         loadState();
