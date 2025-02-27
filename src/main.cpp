@@ -92,6 +92,8 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   // Sincronizar el reloj una vez al mes
   syncClock();
+  sendTelegramMessage("ℹ️ Estado del ESP32", config);
+
 
   // Configurar sensores
   bsec_virtual_sensor_t sensorList[13] = {

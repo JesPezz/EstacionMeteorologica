@@ -6,23 +6,31 @@
 
 // 🔹 Función para enviar mensaje por Telegram
 void sendTelegramMessage(const String &mensaje, const Config &config) {
-    String telegramToken = config.telegramToken;
-    String chatId = config.chatId;
-    
-    if (telegramToken.isEmpty() || chatId.isEmpty()) {
+    if (config.telegramToken.isEmpty() || config.chatId.isEmpty()) {
         Serial.println("❌ Telegram: Configuración no válida.");
         return;
     }
 
     WiFiClientSecure client;
-    client.setInsecure();  
+    client.setInsecure();
 
     HTTPClient http;
-    String url = "https://api.telegram.org/bot" + telegramToken + 
-                 "/sendMessage?chat_id=" + chatId + 
-                 "&text=" + mensaje;
+    
+    // Obtener la IP del ESP32
+    String ipAddress = WiFi.localIP().toString();
+
+    // Construir el mensaje con la IP y ubicación
+    String mensajeConInfo = mensaje + 
+                            "\n📡 IP: " + ipAddress + 
+                            "\n📍 Ubicación: " + config.location;
+
+    // Construir la URL de Telegram
+    String url = "https://api.telegram.org/bot" + config.telegramToken + 
+                 "/sendMessage?chat_id=" + config.chatId + 
+                 "&text=" + mensajeConInfo;
 
     Serial.println("📤 Enviando Telegram: " + url);
+    
     http.begin(client, url);
     int httpCode = http.GET();
     http.end();
