@@ -124,20 +124,32 @@ void startWebServer() {
         request->send(200, "application/json", response);
     });
     
-
     // 🔹 Configuración de parámetros (WiFi, Google Sheet, ThingSpeak, etc.)
     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!isAuthenticated(request)) return;
+        
+        Serial.println("📡 Recibida solicitud POST en /config");
+
+
+        if (!isAuthenticated(request)) {
+            Serial.println("❌ Error: Autenticación fallida.");
+            request->send(401, "text/plain", "❌ Acceso no autorizado.");
+            return;
+            }
     
+            Serial.println("✅ Autenticación exitosa.");
+
         Config newConfig = config;
     
-        if (request->hasParam("ssid", true)) newConfig.ssid = request->getParam("ssid", true)->value();
-        if (request->hasParam("password", true)) {
-            String newPassword = request->getParam("password", true)->value();
-            if (!newPassword.isEmpty() && newPassword != "*****") {
-                newConfig.password = newPassword;
-            }
+        if (request->hasParam("ssid", true)) {
+            newConfig.ssid = request->getParam("ssid", true)->value();
+            Serial.println("✅ SSID recibido: " + newConfig.ssid);
         }
+        
+        if (request->hasParam("password", true)) {
+            newConfig.password = request->getParam("password", true)->value();
+            Serial.println("✅ Password recibido.");
+        }
+
         if (request->hasParam("googleSheetURL", true)) newConfig.googleSheetURL = request->getParam("googleSheetURL", true)->value();
         if (request->hasParam("thingSpeakAPIKey", true)) newConfig.thingSpeakAPIKey = request->getParam("thingSpeakAPIKey", true)->value();
         if (request->hasParam("updateOta", true)) {
@@ -146,7 +158,7 @@ void startWebServer() {
         }
         if (request->hasParam("channelID", true)) newConfig.channelID = request->getParam("channelID", true)->value().toInt();
         if (request->hasParam("location", true)) newConfig.location = request->getParam("location", true)->value();
-
+    
         if (request->hasParam("telegramToken", true)) {
             String token = request->getParam("telegramToken", true)->value();
             if (!token.isEmpty()) newConfig.telegramToken = token;
@@ -157,29 +169,19 @@ void startWebServer() {
         }
     
         if (saveConfig(newConfig)) {
-
-            request->send(200, "text/plain", "✅ Configuración guardada correctamente.");
             Serial.println("✅ Configuración guardada con éxito.");
+            
+            Serial.println("📡 Intentando enviar respuesta HTTP...");
+            request->send(200, "text/plain", "✅ Configuración guardada correctamente.");
+            Serial.println("✅ Respuesta HTTP enviada.");
 
-            delay(500);
-
-            disableWatchdog();
-                   
-            Serial.println("🔄 ESP32 se reiniciará en 10 segundos...");
-            delay(1000);
-
-            ESP.restart();
-
+           // ✅ Crear una tarea para reiniciar sin bloquear el servidor
+        xTaskCreate(restartESP32, "RestartESP32", 2048, NULL, 1, NULL);
         } else {
-
-            enableWatchdog();
             Serial.println("❌ Error al guardar la configuración.");
             request->send(500, "text/plain", "❌ Error al guardar la configuración.");
         }
-    });
-    
-    
-
+    });     
 
     // 🔹 Ruta para subir firmware OTA
     server.on("/update", HTTP_POST, 
@@ -219,4 +221,9 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
     return true;
 }
 
-
+void restartESP32(void *parameter) {
+    Serial.println("🔄 ESP32 se reiniciará en 3 segundos...");
+    vTaskDelay(3000 / portTICK_PERIOD_MS);  // Esperar 3 segundos sin bloquear
+    Serial.println("🔄 Reiniciando ESP32 ahora...");
+    ESP.restart();
+}
