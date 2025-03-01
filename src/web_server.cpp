@@ -110,7 +110,7 @@ void startWebServer() {
         JsonDocument doc;
     
         doc["ssid"] = config.ssid;
-        doc["password"] = config.ssid;
+        doc["password"] = config.password;
         doc["googleSheetURL"] = config.googleSheetURL;
         doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
         doc["channelID"] = config.channelID;
@@ -127,46 +127,58 @@ void startWebServer() {
 
     // 🔹 Configuración de parámetros (WiFi, Google Sheet, ThingSpeak, etc.)
     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request) {
-
         if (!isAuthenticated(request)) return;
-        
+    
         Config newConfig = config;
-
+    
         if (request->hasParam("ssid", true)) newConfig.ssid = request->getParam("ssid", true)->value();
-        if (request->hasParam("password", true)) newConfig.password = request->getParam("password", true)->value();
+        if (request->hasParam("password", true)) {
+            String newPassword = request->getParam("password", true)->value();
+            if (!newPassword.isEmpty() && newPassword != "*****") {
+                newConfig.password = newPassword;
+            }
+        }
         if (request->hasParam("googleSheetURL", true)) newConfig.googleSheetURL = request->getParam("googleSheetURL", true)->value();
         if (request->hasParam("thingSpeakAPIKey", true)) newConfig.thingSpeakAPIKey = request->getParam("thingSpeakAPIKey", true)->value();
         if (request->hasParam("updateOta", true)) {
-            newConfig.updateOta = request->getParam("updateOta", true)->value().toInt() * 3600000;
+            int updateOtaValue = request->getParam("updateOta", true)->value().toInt();
+            if (updateOtaValue > 0) newConfig.updateOta = updateOtaValue * 3600000;
         }
         if (request->hasParam("channelID", true)) newConfig.channelID = request->getParam("channelID", true)->value().toInt();
         if (request->hasParam("location", true)) newConfig.location = request->getParam("location", true)->value();
 
-        // ✅ No sobrescribe los valores de notificación si están vacíos
-        NotificationConfig newNotificationConfig = notificationConfig;
-
         if (request->hasParam("telegramToken", true)) {
             String token = request->getParam("telegramToken", true)->value();
-            if (!token.isEmpty()) newNotificationConfig.telegramToken = token;
+            if (!token.isEmpty()) newConfig.telegramToken = token;
         }
         if (request->hasParam("chatId", true)) {
             String chatId = request->getParam("chatId", true)->value();
-            if (!chatId.isEmpty()) newNotificationConfig.chatId = chatId;
+            if (!chatId.isEmpty()) newConfig.chatId = chatId;
         }
-        
-        notificationConfig = newNotificationConfig;  // Actualizamos solo los valores válidos
-        saveNotificationConfig();  // Guardamos la configuración de notificaciones
-
+    
         if (saveConfig(newConfig)) {
-            request->send(200, "text/plain", "✅ Configuración guardada. Reiniciando ESP32...");
-            Serial.println("🔄 Reiniciando ESP32 para aplicar cambios...");
-            delay(2000);
+
+            request->send(200, "text/plain", "✅ Configuración guardada correctamente.");
+            Serial.println("✅ Configuración guardada con éxito.");
+
+            delay(500);
+
+            disableWatchdog();
+                   
+            Serial.println("🔄 ESP32 se reiniciará en 10 segundos...");
+            delay(1000);
+
             ESP.restart();
+
         } else {
-            request->send(500, "text/plain", "❌ Error al guardar configuración.");
-            errLeds();
+
+            enableWatchdog();
+            Serial.println("❌ Error al guardar la configuración.");
+            request->send(500, "text/plain", "❌ Error al guardar la configuración.");
         }
     });
+    
+    
 
 
     // 🔹 Ruta para subir firmware OTA

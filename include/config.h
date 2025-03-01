@@ -48,15 +48,7 @@ struct Config {
     String chatId;
 };
 
-// 🔹 Subestructura solo para notificaciones (extraída de `Config`)
-struct NotificationConfig {
-    String telegramToken;
-    String chatId;
-};
-    extern Config config;  
-    extern NotificationConfig notificationConfig;  
-
-    NotificationConfig extractNotificationConfig(const Config& config);  // ✅ Declaración de la función (NO eliminar)
+    extern Config config;
 
     // Timing
 extern unsigned long CHANNEL_UPDATE_INTERVAL;

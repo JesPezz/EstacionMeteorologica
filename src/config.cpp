@@ -107,9 +107,6 @@ bool saveConfig(const Config& config) {
     doc["chatId"] = config.chatId;
     doc["updateOta"] = config.updateOta / 3600000;  // 🔹 Guarda en horas
 
-     // 📌 Verificar antes de escribir en el archivo
-     Serial.printf("✅ Guardando updateOta en config.json: %lu horas\n", config.updateOta / 3600000);
-
     // Guardar el JSON en el sistema de archivos
     File file = SPIFFS.open(configFilePath, "w");
     if (!file) {
@@ -145,14 +142,4 @@ void testFlash() {
     } else {
         Serial.println("✅ SPIFFS funcionando correctamente.");
     }
-}
-
-NotificationConfig notificationConfig = extractNotificationConfig(config);  // ✅ Definición única
-
-NotificationConfig extractNotificationConfig(const Config& config) {  
-    NotificationConfig nc;
-    nc.telegramToken = config.telegramToken;
-    nc.chatId = config.chatId;
-    
-    return nc;
 }

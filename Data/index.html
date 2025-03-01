@@ -93,7 +93,7 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById("ssid").value = data.ssid || "";
-                document.getElementById("password").value = ""; // No mostrar la contraseña
+                document.getElementById("password").value = data.password || "";
                 document.getElementById("googleSheetURL").value = data.googleSheetURL || "";
                 document.getElementById("thingSpeakAPIKey").value = "*****";
                 document.getElementById("channelID").value = data.channelID || "";
@@ -109,8 +109,12 @@
     }
 
     // Guardar configuración sin sobrescribir valores vacíos ni enviar asteriscos
-function saveConfig(event) {
+    function saveConfig(event) {
     event.preventDefault(); // Evita recargar la página
+
+    let botonGuardar = document.querySelector("button[type='submit']");
+    botonGuardar.disabled = true;
+    botonGuardar.innerText = "Guardando...";
 
     let formData = new URLSearchParams();
 
@@ -119,12 +123,19 @@ function saveConfig(event) {
         if (value !== "" && value !== "*****") {
             formData.append(fieldId, value);
         } else {
-            formData.append(fieldId, originalValue); // Mantener el valor anterior
+            formData.append(fieldId, originalValue);
         }
     }
 
     processField("ssid", window.originalConfig.ssid);
-    processField("password", window.originalConfig.password);
+    
+    let passwordValue = document.getElementById("password").value.trim();
+    if (passwordValue !== "") {
+        formData.append("password", passwordValue);
+    } else {
+        formData.append("password", "*****");
+    }
+
     processField("googleSheetURL", window.originalConfig.googleSheetURL);
     processField("thingSpeakAPIKey", window.originalConfig.thingSpeakAPIKey);
     processField("channelID", window.originalConfig.channelID);
@@ -133,25 +144,32 @@ function saveConfig(event) {
     processField("telegramToken", window.originalConfig.telegramToken);
     processField("chatId", window.originalConfig.chatId);
 
-    // Enviar la configuración al servidor en formato URL-Encoded
     fetch("/config", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: formData.toString()
     })
-    .then(response => {
-        if (!response.ok) throw new Error("Error en la respuesta del servidor");
-        return response.json();
-    })
+    .then(response => response.json()) // ✅ Convertimos la respuesta en JSON
     .then(data => {
-        alert("✅ Configuración guardada correctamente.");
-        loadConfig(); // Recargar la configuración actualizada
+        if (data.status === "success") {
+            alert("✅ " + data.message);
+            setTimeout(() => {
+                location.reload(); // 🔄 Recargar la página después de unos segundos
+            }, 5000);
+        } else {
+            alert("❌ " + data.message);
+        }
     })
     .catch(error => {
         console.error("Error guardando configuración:", error);
         alert("❌ Error al guardar la configuración.");
+    })
+    .finally(() => {
+        botonGuardar.disabled = false;
+        botonGuardar.innerText = "Guardar Configuración";
     });
 }
+
 
     // Subir firmware OTA
     function uploadFirmware() {
