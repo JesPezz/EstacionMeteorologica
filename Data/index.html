@@ -89,6 +89,14 @@
         
     // Cargar configuración actual y ocultar datos sensibles
     function loadConfig() {
+
+        let loadingMessage = document.getElementById("loadingMessage");
+        let form = document.querySelector("form");
+
+        // ✅ Mostrar el mensaje de carga y ocultar el formulario temporalmente
+        loadingMessage.style.display = "block";
+        form.style.display = "none";
+
         fetch("/getConfig")
             .then(response => response.json())
             .then(data => {
@@ -104,28 +112,47 @@
 
                 // Guardar configuración original para evitar sobrescribir valores vacíos
                 window.originalConfig = data;
+
+                // ✅ Ocultar el mensaje de carga y mostrar el formulario cuando los datos estén listos
+                loadingMessage.style.display = "none";
+                form.style.display = "block";
+
             })
-            .catch(error => console.error("Error cargando configuración:", error));
+            .catch(error => {
+                console.error("Error cargando configuración:", error);
+                document.getElementById("loadingMessage").innerText = "❌ Error al cargar la configuración.";
+            });
     }
 
-    // Guardar configuración sin sobrescribir valores vacíos ni enviar asteriscos
+
+
+    function showToast(message, type = "success") {
+        let toast = document.getElementById("toast");
+        toast.className = "toast " + type;
+        toast.innerText = message;
+        toast.classList.add("show");
+        setTimeout(() => {
+            toast.classList.remove("show");
+        }, 4000);  // 🔹 Desaparece después de 4 segundos
+    }
+
     function saveConfig(event) {
-    event.preventDefault(); // Evita recargar la página
+        event.preventDefault();
 
-    let botonGuardar = document.querySelector("button[type='submit']");
-    botonGuardar.disabled = true;
-    botonGuardar.innerText = "Guardando...";
+        let botonGuardar = document.querySelector("button[type='submit']");
+        botonGuardar.disabled = true;
+        botonGuardar.innerHTML = "Guardando... <span class='loading-spinner'></span>";
 
-    let formData = new URLSearchParams();
+        let formData = new URLSearchParams();
 
-    function processField(fieldId, originalValue) {
-        let value = document.getElementById(fieldId).value.trim();
-        if (value !== "" && value !== "*****") {
-            formData.append(fieldId, value);
-        } else {
-            formData.append(fieldId, originalValue);
+        function processField(fieldId, originalValue) {
+            let value = document.getElementById(fieldId).value.trim();
+            if (value !== "" && value !== "*****") {
+                formData.append(fieldId, value);
+            } else {
+                formData.append(fieldId, originalValue);
+            }
         }
-    }
 
     processField("ssid", window.originalConfig.ssid);
     
@@ -149,26 +176,24 @@
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: formData.toString()
     })
-    .then(response => response.text()) // ✅ Cambia a texto plano
-    .then(data => {
-        if (data.includes("✅")) { // Verifica si la respuesta contiene el emoji de éxito
-            alert(data); // Muestra el mensaje de éxito
-            setTimeout(() => {
-                location.reload(); // 🔄 Recargar la página después de unos segundos
-            }, 5000);
-        } else {
-            alert(data); // Muestra el mensaje de error
-        }
-    })
-    .catch(error => {
-        console.error("Error guardando configuración:", error);
-        alert("❌ Error al guardar la configuración.");
-    })
-    .finally(() => {
-        botonGuardar.disabled = false;
-        botonGuardar.innerText = "Guardar Configuración";
-    });
-}
+        .then(response => response.text())
+        .then(message => {
+            if (message.includes("✅")) {
+                showToast(message, "success");
+                setTimeout(() => location.reload(), 5000);
+            } else {
+                showToast("❌ " + message, "error");
+            }
+        })
+        .catch(error => {
+            console.error("Error guardando configuración:", error);
+            showToast("❌ Error al guardar la configuración.", "error");
+        })
+        .finally(() => {
+            botonGuardar.disabled = false;
+            botonGuardar.innerHTML = "Guardar Configuración";
+        });
+    }
 
 
     // Subir firmware OTA
@@ -221,5 +246,170 @@
         loadESPStatus();
     });
     </script>
+    <style>
+        /* 🔹 Diseño general */
+    body {
+        font-family: 'Arial', sans-serif;
+        text-align: center;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        max-width: 500px;
+        margin: 20px auto;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    h2 {
+        color: #333;
+        font-size: 22px;
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        text-align: left;
+        font-weight: bold;
+        margin-top: 10px;
+        font-size: 14px;
+        color: #555;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: all 0.3s ease-in-out;
+    }
+
+    input:focus {
+        border-color: #4CAF50;
+        outline: none;
+        box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 15px;
+        transition: background 0.3s;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    /* 🔹 Mejor diseño para el spinner */
+    .loading-spinner {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 3px solid white;
+        border-radius: 50%;
+        border-top: 3px solid transparent;
+        animation: spin 1s linear infinite;
+        vertical-align: middle;
+        margin-left: 8px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 🔹 Diseño responsivo */
+    @media (max-width: 600px) {
+        .container {
+            width: 90%;
+            padding: 15px;
+        }
+
+        h2 {
+            font-size: 20px;
+        }
+
+        button {
+            font-size: 14px;
+        }
+    }
+
+        /* 🔹 Estilos para el mensaje flotante */
+    .toast {
+        visibility: hidden;
+        min-width: 250px;
+        margin-left: -125px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 5px;
+        padding: 16px;
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        font-size: 17px;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out, top 0.5s ease-in-out;
+    }
+
+    .toast.show {
+        visibility: visible;
+        opacity: 1;
+        top: 50px;
+    }
+
+    .toast.success { background-color: #4CAF50; }  /* Verde */
+    .toast.error { background-color: #f44336; }    /* Rojo */
+
+    /* 🔄 Estilos para el indicador de carga */
+    .loading {
+        text-align: center;
+        font-size: 18px;
+        color: #666;
+        margin: 20px 0;
+    }
+
+    .spinner {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border: 3px solid #666;
+        border-radius: 50%;
+        border-top: 3px solid transparent;
+        animation: spin 1s linear infinite;
+        vertical-align: middle;
+        margin-left: 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    </style>
+    <div id="toast" class="toast"></div>
+    <div id="loadingMessage" class="loading">Cargando configuración... <span class="spinner"></span></div>
+
 </body>
 </html>
