@@ -19,8 +19,8 @@ void googlesheet(void)
     if (!config.googleSheetURL.startsWith("http://") && !config.googleSheetURL.startsWith("https://")) {
       config.googleSheetURL = "https://" + config.googleSheetURL;  // Asegurar protocolo correcto
   }
-    // Serial.print("🔍 googleSheetURL actual: ");
-    // Serial.println(config.googleSheetURL);
+    Serial.print("🔍 googleSheetURL actual: ");
+    Serial.println(config.googleSheetURL);
   
     GoogleSheetManager::url = config.googleSheetURL;
     GoogleSheetManager::url += "?location=" + config.location;  
@@ -39,8 +39,8 @@ void googlesheet(void)
     GoogleSheetManager::url += "&humidity=" + String(iaqSensor.humidity);
     GoogleSheetManager::url += "&gasPercentage=" + String(iaqSensor.gasPercentage);
     
-    // Serial.print("🌍 URL final: ");
-    // Serial.println(GoogleSheetManager::url);
+    Serial.print("🌍 URL final: ");
+    Serial.println(GoogleSheetManager::url);
 
     // Realizar la solicitud HTTP
     http.begin(GoogleSheetManager::url);
@@ -52,8 +52,8 @@ void googlesheet(void)
       Serial.println("Redirección detectada");
       // Obtener la nueva URL desde el encabezado de redirección
       String newUrl = http.getLocation();
-      // Serial.print("Nueva URL: ");
-      // Serial.println(newUrl);
+      Serial.print("Nueva URL: ");
+      Serial.println(newUrl);
 
       if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
         http.end();
