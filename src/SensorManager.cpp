@@ -69,17 +69,6 @@ void readSensorData() {
     }
   }
 
-// Implementación de sendDataToServices
-void sendDataToServices() {
-
-   if (WiFi.status() != WL_CONNECTED) {
-      if (reconnectWiFi()) {
-        output = "Connected to WiFi: " + WiFi.SSID();
-        Serial.println(output);
-      }
-      saveAndSendData();
-    }
-  }
 
 
 

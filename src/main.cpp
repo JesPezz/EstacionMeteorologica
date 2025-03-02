@@ -152,7 +152,6 @@ void loop() {
    
   checkWiFiConnection(); // Verificar la conexión WiFi
   readSensorData();      // Leer datos del sensor
-  sendDataToServices();  // Enviar Google Sheets
   checkClockSync();      // Sincronizar el reloj si es necesario
 }
 

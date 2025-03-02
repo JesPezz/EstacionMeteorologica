@@ -6,5 +6,7 @@
 void syncClock();
 void getCurrentTime(struct tm* timeinfo);
 bool isHourOnTheDot();
-
+bool isFiveMinutes();
+bool isTenMinutes();
+bool isMinuteOnTheDot();
 #endif

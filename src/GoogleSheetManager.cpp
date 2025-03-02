@@ -7,8 +7,7 @@
 
 std::vector<String> storedReadings;
 Preferences preferences;
-
-// Implementa googlesheet, saveAndSendData, etc. (copiar código original)
+String GoogleSheetManager::url = "";
 
 void googlesheet(void)
 {
@@ -20,31 +19,31 @@ void googlesheet(void)
     if (!config.googleSheetURL.startsWith("http://") && !config.googleSheetURL.startsWith("https://")) {
       config.googleSheetURL = "https://" + config.googleSheetURL;  // Asegurar protocolo correcto
   }
-    Serial.print("🔍 googleSheetURL actual: ");
-    Serial.println(config.googleSheetURL);
+    // Serial.print("🔍 googleSheetURL actual: ");
+    // Serial.println(config.googleSheetURL);
   
-    String url = config.googleSheetURL;
-    url += "?location=" + config.location;  
-    url += "&iaq=" + String(iaqSensor.iaq);
-    url += "&iaqAccuracy=" + String(iaqSensor.iaqAccuracy);
-    url += "&staticIaq=" + String(iaqSensor.staticIaq);
-    url += "&co2Equivalent=" + String(iaqSensor.co2Equivalent);
-    url += "&breathVocEquivalent=" + String(iaqSensor.breathVocEquivalent);
-    url += "&rawTemperature=" + String(iaqSensor.rawTemperature);
-    url += "&pressure=" + String(iaqSensor.pressure / 100);
-    url += "&rawHumidity=" + String(iaqSensor.rawHumidity);
-    url += "&gasResistance=" + String(iaqSensor.gasResistance);
-    url += "&stabStatus=" + String(iaqSensor.stabStatus);
-    url += "&runInStatus=" + String(iaqSensor.runInStatus);
-    url += "&temperature=" + String(iaqSensor.temperature);
-    url += "&humidity=" + String(iaqSensor.humidity);
-    url += "&gasPercentage=" + String(iaqSensor.gasPercentage);
+    GoogleSheetManager::url = config.googleSheetURL;
+    GoogleSheetManager::url += "?location=" + config.location;  
+    GoogleSheetManager::url += "&iaq=" + String(iaqSensor.iaq);
+    GoogleSheetManager::url += "&iaqAccuracy=" + String(iaqSensor.iaqAccuracy);
+    GoogleSheetManager::url += "&staticIaq=" + String(iaqSensor.staticIaq);
+    GoogleSheetManager::url += "&co2Equivalent=" + String(iaqSensor.co2Equivalent);
+    GoogleSheetManager::url += "&breathVocEquivalent=" + String(iaqSensor.breathVocEquivalent);
+    GoogleSheetManager::url += "&rawTemperature=" + String(iaqSensor.rawTemperature);
+    GoogleSheetManager::url += "&pressure=" + String(iaqSensor.pressure / 100);
+    GoogleSheetManager::url += "&rawHumidity=" + String(iaqSensor.rawHumidity);
+    GoogleSheetManager::url += "&gasResistance=" + String(iaqSensor.gasResistance);
+    GoogleSheetManager::url += "&stabStatus=" + String(iaqSensor.stabStatus);
+    GoogleSheetManager::url += "&runInStatus=" + String(iaqSensor.runInStatus);
+    GoogleSheetManager::url += "&temperature=" + String(iaqSensor.temperature);
+    GoogleSheetManager::url += "&humidity=" + String(iaqSensor.humidity);
+    GoogleSheetManager::url += "&gasPercentage=" + String(iaqSensor.gasPercentage);
     
-    Serial.print("🌍 URL final: ");
-    Serial.println(url);
+    // Serial.print("🌍 URL final: ");
+    // Serial.println(GoogleSheetManager::url);
 
     // Realizar la solicitud HTTP
-    http.begin(url);
+    http.begin(GoogleSheetManager::url);
     http.setTimeout(5000);
     int httpResponseCode = http.GET();
 
@@ -53,8 +52,8 @@ void googlesheet(void)
       Serial.println("Redirección detectada");
       // Obtener la nueva URL desde el encabezado de redirección
       String newUrl = http.getLocation();
-      Serial.print("Nueva URL: ");
-      Serial.println(newUrl);
+      // Serial.print("Nueva URL: ");
+      // Serial.println(newUrl);
 
       if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
         http.end();
@@ -102,78 +101,92 @@ void googlesheet(void)
 }
 
 // Función para guardar y enviar datos
+
+
 void saveAndSendData() {
-    // Obtén el tiempo actual en segundos desde el arranque del ESP32
-    unsigned long currentTime = millis() / 1000;
-    
-    // Verifica si ha pasado una hora desde la última sincronización
-    if (currentTime - lastSyncTime >= 3600) {
-      // Realiza una lectura del sensor BME680 y almacena los datos en un formato de cadena
-     
-      String reading = String(iaqSensor.iaq);
-      reading += "&iaqAccuracy=" + String(iaqSensor.iaqAccuracy);
-      reading += "&staticIaq=" + String(iaqSensor.staticIaq);
-      reading += "&co2Equivalent=" + String(iaqSensor.co2Equivalent);
-      reading += "&breathVocEquivalent=" + String(iaqSensor.breathVocEquivalent);
-      reading += "&rawTemperature=" + String(iaqSensor.rawTemperature);
-      reading += "&pressure=" + String(iaqSensor.pressure);
-      reading += "&rawHumidity=" + String(iaqSensor.rawHumidity);
-      reading += "&gasResistance=" + String(iaqSensor.gasResistance);
-      reading += "&stabStatus=" + String(iaqSensor.stabStatus);
-      reading += "&runInStatus=" + String(iaqSensor.runInStatus);
-      reading += "&temperature=" + String(iaqSensor.temperature);
-      reading += "&humidity=" + String(iaqSensor.humidity);
-      reading += "&gasPercentage=" + String(iaqSensor.gasPercentage);    
-  
-         storedReadings.push_back(reading);
-      // Imprime `reading` en el puerto serial
-      Serial.println(reading);
-      Serial. println("datos guardados");
-      // Actualiza el tiempo de la última sincronización
-      lastSyncTime = currentTime;
-    }
-    
-    // Verifica si se ha reconectado el WiFi
-    if (WiFi.status() == WL_CONNECTED && !storedReadings.empty()) {
-      // Envía las lecturas almacenadas a la hoja de Google Sheets
-      for (const String &reading : storedReadings) {
-        sendAllReadingsToGoogleSheet();
+  // Verifica si la URL ya está construida
+  if (GoogleSheetManager::url.length() > 0) {
+      // Guarda la URL en preferences (memoria no volátil)
+      preferences.begin("sensorData", false); // Abre el espacio de almacenamiento
+
+      // Busca la siguiente clave disponible (por ejemplo, url0, url1, etc.)
+      int index = 0;
+      while (preferences.getString(("url" + String(index)).c_str(), "").length() > 0) {
+          index++;
       }
-      
-      // Borra todas las lecturas almacenadas después de enviarlas
-      storedReadings.clear();
-    }
+
+      // Guarda la URL con la clave única
+      String key = "url" + String(index);
+      preferences.putString(key.c_str(), GoogleSheetManager::url.c_str());
+      preferences.end(); // Cierra el espacio de almacenamiento
+
+      Serial.println("Datos guardados en memoria no volátil: " + GoogleSheetManager::url);
+  } else {
+      Serial.println("Error: No hay datos para guardar.");
   }
 
-  // Función para enviar una lectura a la hoja de Google Sheets
-void sendReadingToGoogleSheet(const String &reading) {
-    // Send sensor data to Google Sheets
-      HTTPClient http;
-      String url = config.googleSheetURL; 
-      url += "?iaq=" + reading; // Agregar la cadena `reading` como un parámetro en la URL
-  
-      // Imprime `reading` en el puerto serial
-      Serial.println(reading);
-      http.begin(url);
-      int httpCode = http.GET();
-      if (httpCode > 0) {
-        Serial.println("Data sent to Google Sheets");
-        preferences.clear(); // Clear stored data in case of successful connection
-        ledSuccess();
-      } 
-    }
-  
-  
-    void sendAllReadingsToGoogleSheet() {
-      // Verifica si hay datos para enviar
-      if (!storedReadings.empty()) {
-    // Envía todas las lecturas almacenadas a la hoja de Google Sheets
-    for (const String &reading : storedReadings) {
-      sendReadingToGoogleSheet(reading);
-    }
-    
-    // Borra todas las lecturas almacenadas después de enviarlas
-    storedReadings.clear();
-    Serial.println("Todas las lecturas almacenadas enviadas y borradas");
+  // Si hay conexión WiFi, intenta enviar los datos almacenados
+  if (WiFi.status() == WL_CONNECTED) {
+      sendAllReadingsToGoogleSheet();
   }
+}
+
+void sendAllReadingsToGoogleSheet() {
+  preferences.begin("sensorData", false); // Abre el espacio de almacenamiento
+
+  // Itera sobre las claves en preferences
+  int index = 0;
+  while (true) {
+      String key = "url" + String(index);
+      String storedUrl = preferences.getString(key.c_str(), "");
+
+      // Si no hay más URLs, termina el bucle
+      if (storedUrl.length() == 0) {
+          break;
+      }
+
+      // Envía la URL a Google Sheets
+      GoogleSheetManager::url = storedUrl;
+      sendReadingToGoogleSheet();
+
+      // Borra la URL enviada
+      preferences.remove(key.c_str());
+      index++;
+  }
+
+  preferences.end(); // Cierra el espacio de almacenamiento
+  Serial.println("Todas las lecturas almacenadas en memoria no volátil enviadas y borradas.");
+}
+
+  // Función para enviar una lectura a la hoja de Google Sheets
+  void sendReadingToGoogleSheet() {
+    if (GoogleSheetManager::url.length() > 0) {
+        HTTPClient http;
+        http.begin(GoogleSheetManager::url);
+        http.setTimeout(5000);
+        int httpCode = http.GET();
+
+        // Si hay una redirección (código 302)
+        if (httpCode == 302) {
+            String newUrl = http.getLocation();
+            if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+                http.end(); // Cierra la conexión anterior
+                http.begin(newUrl); // Abre una nueva conexión con la URL redirigida
+                httpCode = http.GET(); // Realiza la solicitud a la nueva URL
+            }
+        }
+
+        if (httpCode > 0) {
+            Serial.println("Datos enviados a Google Sheets");
+            ledSuccess();
+        } else {
+            Serial.print("Error al enviar datos. Código de respuesta HTTP: ");
+            Serial.println(httpCode);
+            errLeds();
+        }
+
+        http.end();
+    } else {
+        Serial.println("Error: No hay datos para enviar.");
     }
+}

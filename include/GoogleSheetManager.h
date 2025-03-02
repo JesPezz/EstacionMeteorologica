@@ -7,10 +7,14 @@
 
 extern std::vector<String> storedReadings;
 extern Preferences preferences;
+class GoogleSheetManager {
+    public:
+        static String url; // Declaración de la variable
+    };
 
 void googlesheet();
 void saveAndSendData();
-void sendReadingToGoogleSheet(const String &reading);
+void sendReadingToGoogleSheet();
 void sendAllReadingsToGoogleSheet();
 
 #endif
