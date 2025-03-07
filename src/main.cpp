@@ -136,36 +136,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 }
 
 void loop() {
-  static bool wasDisconnected = false; // Bandera para rastrear el estado de WiFi
-  //static bool prevMinuteZero = false; // Bandera para rastrear el estado anterior de isHourOnTheDot()
-
-  // // Verificar la conexión WiFi
-  // if (WiFi.status() != WL_CONNECTED) {
-  //   if (!wasDisconnected) {
-  //     wasDisconnected = true; // WiFi está desconectado
-  //     Serial.println("⚠️ WiFi desconectado. Intentando reconectar...");
-  //   }
-  //   if (reconnectWiFi()) {
-  //     Serial.println("✅ WiFi reconectado.");
-  //     if (wasDisconnected) {
-  //       sendAllReadingsToGoogleSheet(); // Envía los datos almacenados después de reconectar
-  //       wasDisconnected = false; // Restablece la bandera
-  //     }
-  //   }
-  // }
-
-  // Verificar la conexión WiFi
-  if (WiFi.status() != WL_CONNECTED) {
-    wasDisconnected = true; // WiFi está desconectado
-    Serial.println("⚠️ WiFi desconectado. Intentando reconectar...");
-    if (reconnectWiFi()) {
-      Serial.println("✅ WiFi reconectado.");
-      if (wasDisconnected) {
-        sendAllReadingsToGoogleSheet(); // Envía los datos almacenados después de reconectar
-        wasDisconnected = false; // Restablece la bandera
-      }
-    }
-  }
+  checkWiFiConnection(); // Verificar la conexión WiFi y reconectar si es necesario
 
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
@@ -182,10 +153,9 @@ void loop() {
       return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
   }
    
-  checkWiFiConnection(); // Verificar la conexión WiFi
   readSensorData();      // Leer datos del sensor
   
-  // Enviar datos a Google Sheets en el intervalo normal (usando isHourOnTheDot)
+  // // Enviar datos a Google Sheets en el intervalo normal (usando isHourOnTheDot)
   // bool currentMinuteZero = isHourOnTheDot();
   // if (!prevMinuteZero && currentMinuteZero) {
   //   googlesheet(); // Envía los datos a Google Sheets

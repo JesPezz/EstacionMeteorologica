@@ -63,6 +63,12 @@ bool reconnectWiFi() {
 void checkWiFiConnection() {
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("⚠️ WiFi desconectado. Intentando reconectar...");
-        reconnectWiFi();
+        if (reconnectWiFi()) {
+            unsigned long startTime = millis();
+            while (millis() - startTime < 5000) { // Esperar 5 segundos para estabilizar la conexión
+                delay(100);
+            }
+            sendAllReadingsToGoogleSheet(); // 🔄 Enviar datos guardados después de reconectar
+        }
     }
 }

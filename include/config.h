@@ -65,8 +65,6 @@ extern uint16_t stateUpdateCounter;
 extern unsigned long lastChannelUpdate;
 extern unsigned long lastSyncTime;
 extern String output;
-extern bool prevFiveMinutes;  // Para envío cada 5 minutos
-extern bool prevTenMinutes;   // Para envío cada 10 minutos
 extern bool prevMinuteZero;   // Para envío cada minuto
 
 // ✅ Funciones de configuración

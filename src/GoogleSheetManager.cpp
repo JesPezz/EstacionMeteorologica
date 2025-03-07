@@ -206,40 +206,43 @@ void sendAllReadingsToGoogleSheet() {
         http.setTimeout(10000); // Aumenta el tiempo de espera a 10 segundos
         
         int retryCount = 3; // Número de reintentos
-        int httpCode = -1; // Inicializa con un valor de error
-        
-        while (retryCount > 0) {
-            httpCode = http.GET();
-            if (httpCode > 0) {
+        bool dataSent = false; // Bandera para evitar doble envío
+        int httpResponseCode = -1; // Inicializa con un valor de error
+
+        while (retryCount > 0 && !dataSent) {
+            httpResponseCode = http.GET();
+            if (httpResponseCode == HTTP_CODE_OK) { // Código 200: Éxito
+                dataSent = true; // Marca los datos como enviados
                 break; // Éxito, sal del bucle
+            } else if (httpResponseCode == HTTP_CODE_FOUND) { // Código 302: Redirección
+                Serial.println("Redirección detectada");
+                String newUrl = http.getLocation();
+                Serial.print("Nueva URL: ");
+                Serial.println(newUrl);
+
+                if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+                    http.end(); // Cierra la conexión anterior
+                    http.begin(newUrl); // Abre una nueva conexión con la URL redirigida
+
+                    // Realiza la solicitud a la nueva URL
+                    httpResponseCode = http.GET();
+                    if (httpResponseCode == HTTP_CODE_OK) {
+                        dataSent = true; // Marca los datos como enviados
+                        break; // Éxito, sal del bucle
+                    }
+                } else {
+                    Serial.println("⚠️ URL de redirección inválida.");
+                }
+            } else {
+                Serial.println("Error en la solicitud HTTP. Código: " + String(httpResponseCode));
             }
 
             retryCount--;
             Serial.println("Reintentando... Intentos restantes: " + String(retryCount));
             delay(1000); // Espera 1 segundo antes de reintentar
         }
-        // Agregar encabezados HTTP
-        http.addHeader("User-Agent", "ESP32");
-        http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-        httpCode = http.GET();
-
-        // Si hay una redirección (código 302)
-        if (httpCode == 302) {
-            String newUrl = http.getLocation();
-            if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
-                http.end(); // Cierra la conexión anterior
-                http.begin(newUrl); // Abre una nueva conexión con la URL redirigida
-
-                // Agregar encabezados HTTP a la nueva URL
-                http.addHeader("User-Agent", "ESP32");
-                http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-                httpCode = http.GET(); // Realiza la solicitud a la nueva URL
-            }
-        }
-
-        if (httpCode > 0) {
+        if (dataSent) {
             Serial.println("Datos enviados a Google Sheets");
             String response = http.getString();
             Serial.println("Respuesta del servidor:");
@@ -248,7 +251,7 @@ void sendAllReadingsToGoogleSheet() {
             ledSuccess();
         } else {
             Serial.print("Error al enviar datos. Código de respuesta HTTP: ");
-            Serial.println(httpCode);
+            Serial.println(httpResponseCode);
             Serial.println("Estado de la conexión: " + String(http.connected() ? "Conectado" : "Desconectado"));
             errLeds();
         }
