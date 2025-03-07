@@ -24,6 +24,7 @@
 #include "notifications.h"
 
 void setup() {
+  initSPIFFS();
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
 
@@ -33,7 +34,7 @@ void setup() {
     
 }
   
-initSPIFFS();
+
 loadConfig();
   
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
@@ -114,6 +115,8 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
+  checkForUpdates();
+  checkForIndexUpdate();
 
   // Imprimir el encabezado
   output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
@@ -133,7 +136,36 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 }
 
 void loop() {
+  static bool wasDisconnected = false; // Bandera para rastrear el estado de WiFi
+  //static bool prevMinuteZero = false; // Bandera para rastrear el estado anterior de isHourOnTheDot()
 
+  // // Verificar la conexión WiFi
+  // if (WiFi.status() != WL_CONNECTED) {
+  //   if (!wasDisconnected) {
+  //     wasDisconnected = true; // WiFi está desconectado
+  //     Serial.println("⚠️ WiFi desconectado. Intentando reconectar...");
+  //   }
+  //   if (reconnectWiFi()) {
+  //     Serial.println("✅ WiFi reconectado.");
+  //     if (wasDisconnected) {
+  //       sendAllReadingsToGoogleSheet(); // Envía los datos almacenados después de reconectar
+  //       wasDisconnected = false; // Restablece la bandera
+  //     }
+  //   }
+  // }
+
+  // Verificar la conexión WiFi
+  if (WiFi.status() != WL_CONNECTED) {
+    wasDisconnected = true; // WiFi está desconectado
+    Serial.println("⚠️ WiFi desconectado. Intentando reconectar...");
+    if (reconnectWiFi()) {
+      Serial.println("✅ WiFi reconectado.");
+      if (wasDisconnected) {
+        sendAllReadingsToGoogleSheet(); // Envía los datos almacenados después de reconectar
+        wasDisconnected = false; // Restablece la bandera
+      }
+    }
+  }
 
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
@@ -152,7 +184,22 @@ void loop() {
    
   checkWiFiConnection(); // Verificar la conexión WiFi
   readSensorData();      // Leer datos del sensor
-  checkClockSync();      // Sincronizar el reloj si es necesario
+  
+  // Enviar datos a Google Sheets en el intervalo normal (usando isHourOnTheDot)
+  // bool currentMinuteZero = isHourOnTheDot();
+  // if (!prevMinuteZero && currentMinuteZero) {
+  //   googlesheet(); // Envía los datos a Google Sheets
+  // }
+  // prevMinuteZero = currentMinuteZero;
+
+  //Enviar datos a Google Sheets en el intervalo de prueba (usando millis)
+  static unsigned long lastUploadTime = 0;
+  if (millis() - lastUploadTime >= 30000) { // 30000 ms = .5 minutes
+    googlesheet();
+    lastUploadTime = millis();
+  }
+
+  checkClockSync();
 }
 
 

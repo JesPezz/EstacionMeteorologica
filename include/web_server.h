@@ -6,6 +6,6 @@
 
 void startWebServer();
 bool isAuthenticated(AsyncWebServerRequest *request);
-void restartESP32(void *parameter);
+void restartESP32Task(void *parameter);
 
 #endif

@@ -24,8 +24,6 @@ void setupBsecSensor() {
   loadState();
 }
 
-
-
 // Implementación de checkClockSync
 void checkClockSync() {
 
@@ -57,12 +55,7 @@ void readSensorData() {
       output += ", " + String(iaqSensor.humidity);
       output += ", " + String(iaqSensor.gasPercentage);
       Serial.println(output);
-  
-      bool currentMinuteZero = isHourOnTheDot();
-      if (!prevMinuteZero && currentMinuteZero) {
-        googlesheet();
-      }
-      prevMinuteZero = currentMinuteZero;
+
       updateState();
     } else {
       checkIaqSensorStatus();

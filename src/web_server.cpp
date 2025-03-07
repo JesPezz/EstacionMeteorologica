@@ -11,6 +11,7 @@
 #include <ArduinoJson.h>
 
 AsyncWebServer server(80);
+void restartESP32Task(void *parameter);
 
 // 📡 Función para devolver estado del ESP32 en JSON
 
@@ -176,7 +177,7 @@ void startWebServer() {
             Serial.println("✅ Respuesta HTTP enviada.");
 
            // ✅ Crear una tarea para reiniciar sin bloquear el servidor
-        xTaskCreate(restartESP32, "RestartESP32", 2048, NULL, 1, NULL);
+        xTaskCreate(restartESP32Task, "RestartESP32", 2048, NULL, 1, NULL);
         } else {
             Serial.println("❌ Error al guardar la configuración.");
             request->send(500, "text/plain", "❌ Error al guardar la configuración.");
@@ -221,7 +222,8 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
     return true;
 }
 
-void restartESP32(void *parameter) {
+// 🔄 ✅ Función compatible con FreeRTOS para reiniciar ESP32 sin bloquear el servidor
+void restartESP32Task(void *parameter) {
     Serial.println("🔄 ESP32 se reiniciará en 3 segundos...");
     vTaskDelay(3000 / portTICK_PERIOD_MS);  // Esperar 3 segundos sin bloquear
     Serial.println("🔄 Reiniciando ESP32 ahora...");

@@ -12,11 +12,22 @@ void syncClock() {
     }
   }
 
-  // Function to get the current time from the ESP32's internal clock
+
+// Function to get the current time from the ESP32's internal clock
 void getCurrentTime(struct tm* timeinfo) {
     time_t now;
     time(&now);
     localtime_r(&now, timeinfo);
+}
+
+  String getFormattedDateTime() {
+    struct tm timeinfo;
+    getCurrentTime(&timeinfo); // Obtiene la fecha y hora actual
+  
+    // Formatea la fecha y hora como "YYYY-MM-DD HH:MM:SS"
+    char buffer[20];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    return String(buffer);
   }
 
   bool isHourOnTheDot() {

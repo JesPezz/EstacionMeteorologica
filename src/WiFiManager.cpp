@@ -2,6 +2,7 @@
 #include "config.h"
 #include <WiFi.h>
 #include "notifications.h"
+#include "GoogleSheetManager.h"
 
 
 void connectToWiFi() {
@@ -40,6 +41,7 @@ void startAPMode() {
 bool reconnectWiFi() {
   Serial.println("🔄 Intentando reconectar a WiFi...");
   WiFi.disconnect();
+  delay(1000);
   WiFi.reconnect();
 
   int attempts = 0;

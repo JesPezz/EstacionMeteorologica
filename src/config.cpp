@@ -13,7 +13,7 @@ const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteor
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char version[] = "v3.0";
+const char version[] = "v3.1";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
@@ -48,6 +48,8 @@ bool prevMinuteZero = false;   // Para envío cada minuto
 void initSPIFFS() {
     if (!SPIFFS.begin(true)) {
         Serial.println("❌ Error al montar SPIFFS");
+    } else {
+        Serial.println("✅ SPIFFS montado correctamente.");
     }
 }
 

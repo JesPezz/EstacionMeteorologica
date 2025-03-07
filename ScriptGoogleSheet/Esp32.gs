@@ -1,12 +1,10 @@
-var sheet_id = "";  // ID del spreadsheet
+var sheet_id = "12ttM1jJPRWgpgqWCg6ApXyouKTo7fzviuX42mmqxS1Q";  // ID del spreadsheet
 
 function doGet(e) {
   var ss = SpreadsheetApp.openById(sheet_id);
   
-  // Obtener el nombre de la hoja de la solicitud (parámetro "location")
-  var sheet_name = e.parameter.location;
-  
   // Verificar si el parámetro 'location' fue proporcionado
+  var sheet_name = e.parameter.location;
   if (!sheet_name) {
     return ContentService.createTextOutput("Error: 'location' no especificado.").setMimeType(ContentService.MimeType.TEXT);
   }
@@ -24,29 +22,81 @@ function doGet(e) {
     }
     
     // Agregar los encabezados a la nueva hoja (opcional)
-    sheet.appendRow(["Fecha", "Temperatura", "Humedad", "Presión", "IAQ", "Precisión IAQ", "IAQ Estático", "CO2 Equivalente", "VOC Equivalente", "Temperatura Raw", "Humedad Raw", "Resistencia Gas", "Estab. Status", "Run-in Status", "Porcentaje Gas"]);
+    sheet.appendRow([
+      "Fecha y Hora", 
+      "Temperatura", 
+      "Humedad", 
+      "Presión", 
+      "IAQ", 
+      "Precisión IAQ", 
+      "IAQ Estático", 
+      "CO2 Equivalente", 
+      "VOC Equivalente", 
+      "Temperatura Raw", 
+      "Humedad Raw", 
+      "Resistencia Gas", 
+      "Estab. Status", 
+      "Run-in Status", 
+      "Porcentaje Gas"
+    ]);
+  }
+  
+  // Obtener la fecha y hora enviada desde el ESP32
+  var fechaHora = e.parameter.fechaHora || null;
+  
+  // Si no se proporcionó fechaHora, usar la fecha y hora actual
+  if (!fechaHora) {
+    fechaHora = new Date();
+  } else {
+    // Convertir la fecha y hora enviada desde el ESP32 a un objeto Date
+    // Asume que el formato es "YYYY-MM-DD HH:MM:SS"
+    fechaHora = new Date(fechaHora.replace(" ", "T") + "Z");
   }
   
   // Obtener los parámetros y convertirlos en números cuando sea necesario
-  var temperature = Number(e.parameter.temperature);
-  var humidity = e.parameter.humidity ? Number(e.parameter.humidity) : "";
-  var pressure = e.parameter.pressure ? Number(e.parameter.pressure) : "";
-  var iaq = e.parameter.iaq ? Number(e.parameter.iaq) : "";
-  var iaqAccuracy = e.parameter.iaqAccuracy ? Number(e.parameter.iaqAccuracy) : "";
-  var staticIaq = e.parameter.staticIaq ? Number(e.parameter.staticIaq) : "";
-  var co2Equivalent = e.parameter.co2Equivalent ? Number(e.parameter.co2Equivalent) : "";
-  var breathVocEquivalent = e.parameter.breathVocEquivalent ? Number(e.parameter.breathVocEquivalent) : "";
-  var rawTemperature = e.parameter.rawTemperature ? Number(e.parameter.rawTemperature) : "";
-  var rawHumidity = e.parameter.rawHumidity ? Number(e.parameter.rawHumidity) : "";
-  var gasResistance = e.parameter.gasResistance ? Number(e.parameter.gasResistance) : "";
-  var stabStatus = e.parameter.stabStatus ? Number(e.parameter.stabStatus) : "";
-  var runInStatus = e.parameter.runInStatus ? Number(e.parameter.runInStatus) : "";
-  var gasPercentage = e.parameter.gasPercentage ? e.parameter.gasPercentage : "";
+  var temperature = parseNumber(e.parameter.temperature);
+  var humidity = parseNumber(e.parameter.humidity);
+  var pressure = parseNumber(e.parameter.pressure);
+  var iaq = parseNumber(e.parameter.iaq);
+  var iaqAccuracy = parseNumber(e.parameter.iaqAccuracy);
+  var staticIaq = parseNumber(e.parameter.staticIaq);
+  var co2Equivalent = parseNumber(e.parameter.co2Equivalent);
+  var breathVocEquivalent = parseNumber(e.parameter.breathVocEquivalent);
+  var rawTemperature = parseNumber(e.parameter.rawTemperature);
+  var rawHumidity = parseNumber(e.parameter.rawHumidity);
+  var gasResistance = parseNumber(e.parameter.gasResistance);
+  var stabStatus = parseNumber(e.parameter.stabStatus);
+  var runInStatus = parseNumber(e.parameter.runInStatus);
+  var gasPercentage = e.parameter.gasPercentage || "";
 
   // Escribir los datos en la hoja correspondiente
-  sheet.appendRow([new Date(), temperature, humidity, pressure, iaq, iaqAccuracy, staticIaq, co2Equivalent, breathVocEquivalent, rawTemperature, rawHumidity, gasResistance, stabStatus, runInStatus, gasPercentage]);
+  sheet.appendRow([
+    fechaHora, // Fecha y hora
+    temperature, 
+    humidity, 
+    pressure, 
+    iaq, 
+    iaqAccuracy, 
+    staticIaq, 
+    co2Equivalent, 
+    breathVocEquivalent, 
+    rawTemperature, 
+    rawHumidity, 
+    gasResistance, 
+    stabStatus, 
+    runInStatus, 
+    gasPercentage
+  ]);
   
   // Devolver una respuesta de éxito
   return ContentService.createTextOutput("Datos recibidos y registrados en la hoja '" + sheet_name + "'").setMimeType(ContentService.MimeType.TEXT);
 }
 
+// Función para convertir un valor a número (o devolver null si no es válido)
+function parseNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  var num = Number(value);
+  return isNaN(num) ? "" : num;
+}

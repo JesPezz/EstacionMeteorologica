@@ -7,6 +7,5 @@
 void setupBsecSensor();
 void checkClockSync();
 void readSensorData();
-void sendDataToServices();
 
 #endif
