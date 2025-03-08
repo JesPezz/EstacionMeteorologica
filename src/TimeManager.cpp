@@ -20,15 +20,37 @@ void getCurrentTime(struct tm* timeinfo) {
     localtime_r(&now, timeinfo);
 }
 
-  String getFormattedDateTime() {
-    struct tm timeinfo;
-    getCurrentTime(&timeinfo); // Obtiene la fecha y hora actual
-  
-    // Formatea la fecha y hora como "YYYY-MM-DD HH:MM:SS"
-    char buffer[20];
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
-    return String(buffer);
+// Cambia el nombre de la función
+String urlEncodeTimeManager(const String &value) {
+  String encoded = "";
+  char c;
+  for (int i = 0; i < value.length(); i++) {
+      c = value.charAt(i);
+      if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+          encoded += c;
+      } else if (c == ' ') {
+          encoded += "%20";
+      } else if (c == ':') {
+          encoded += "%3A";
+      } else {
+          encoded += "%" + String(c, HEX);
+      }
   }
+  return encoded;
+}
+
+String getFormattedDateTime() {
+  struct tm timeinfo;
+  getCurrentTime(&timeinfo); // Obtiene la fecha y hora actual
+
+  // Formatea la fecha y hora como "YYYY-MM-DD HH:MM:SS"
+  char buffer[20];
+  strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+  String fechaHora = String(buffer);
+
+  // Usa la función renombrada para codificar la fecha y hora
+  return urlEncodeTimeManager(fechaHora);
+}
 
   bool isHourOnTheDot() {
     struct tm timeinfo;
