@@ -1,4 +1,4 @@
-# 📡 Estación Meteorológica ThingSpeak (v2.8)
+# 📡 Estación Meteorológica ThingSpeak
 
 Este proyecto es una **estación meteorológica basada en ESP32** que utiliza el sensor **BME680** para medir:
 - 🌡 **Temperatura**
