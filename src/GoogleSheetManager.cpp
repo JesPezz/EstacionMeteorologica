@@ -6,6 +6,7 @@
 #include "led.h"
 #include "SensorManager.h"
 #include "TimeManager.h"
+#include "notifications.h"
 
 String extractRedirectUrl(const String &htmlResponse);
 struct tm timeinfo;
@@ -34,6 +35,7 @@ void googlesheet(void) {
     
             // Si encuentra una URL guardada, imprímela en el serial
         if (storedUrl.length() > 0) {
+            sendTelegramMessage("ℹ️ Se encontraron URLs guardadas en la memoria.", config);
             Serial.print("🔗 URL almacenada [");
             Serial.print(key);
             Serial.print("]: ");
