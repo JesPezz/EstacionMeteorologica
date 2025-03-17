@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 - Configuración</title>
+    <title>ESP32 Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
@@ -12,6 +13,8 @@
         button:hover { background-color: #45a049; }
         .status { font-size: 1.2em; margin-top: 20px; }
         .status span { font-weight: bold; }
+        .version { position: absolute; top: 10px; right: 10px; font-size: 14px; }
+         canvas { max-width: 600px; margin: auto; }
     </style>
 </head>
 <body>
@@ -23,6 +26,14 @@
             <p>WiFi: <span id="wifi-status">Cargando...</span></p>
             <p>CPU: <span id="cpu-status">Cargando...</span></p>
             <p>Memoria Libre: <span id="mem-status">Cargando...</span> KB</p>
+            <h2>ESP32 - Dashboard</h2>
+            <p>Temperatura: <span id="temp">Cargando...</span> °C</p>
+            <p>Humedad: <span id="humidity">Cargando...</span> %</p>
+            <p>Presión: <span id="pressure">Cargando...</span> hPa</p>
+            <p>Calidad del Aire: <span id="air">Cargando...</span></p>
+            <p>Precisión IAQ: <span id="precision">Cargando...</span></p>
+            <div class="version">Versión: <span id="version">Cargando...</span></div>
+            <canvas id="sensorChart"></canvas>
         </div>
 
         <form action="/config" method="POST">
@@ -68,6 +79,62 @@
     </div>
 
     <script>
+
+async function fetchData() {
+    try {
+        const res = await fetch('/sensor_data');
+        if (!res.ok) throw new Error("Error en la respuesta del servidor");
+        const data = await res.json();
+        const precisionValue = data.precision || 0;
+        document.getElementById('temp').innerText = data.temp || "N/A";
+        document.getElementById('humidity').innerText = data.humidity || "N/A";
+        document.getElementById('pressure').innerText = data.pressure || "N/A";
+        document.getElementById('air').innerText = data.air_quality || "N/A";
+        document.getElementById('precision').innerText = data.precision || "No disponible";
+        document.getElementById('version').innerText = data.version || "N/A";
+        
+        updateChart(data);
+    } catch (error) {
+        console.error("Error obteniendo datos del sensor:", error);
+        document.getElementById('temperature').innerText = "Error";
+        document.getElementById('humidity').innerText = "Error";
+        document.getElementById('pressure').innerText = "Error";
+        document.getElementById('air_quality').innerText = "Error";
+        document.getElementById('precision').innerText = "Error";
+        document.getElementById('version').innerText = "Error";
+    }
+}
+        
+function updateChart(data) {
+    const maxDataPoints = 20; // Máximo de 20 puntos en la gráfica
+
+    if (chart.data.labels.length >= maxDataPoints) {
+        chart.data.labels.shift(); // Eliminar el primer punto
+        chart.data.datasets[0].data.shift();
+        chart.data.datasets[1].data.shift();
+    }
+
+    chart.data.labels.push(new Date().toLocaleTimeString());
+    chart.data.datasets[0].data.push(data.temp);
+    chart.data.datasets[1].data.push(data.humidity);
+    chart.update();
+}
+
+        const ctx = document.getElementById('sensorChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'Temperatura (°C)', borderColor: 'red', data: [] },
+                    { label: 'Humedad (%)', borderColor: 'blue', data: [] }
+                ]
+            }
+        });
+
+        setInterval(fetchData, 5000);
+        fetchData();
+
         function loadESPStatus() {
             fetch("/esp_status")
                 .then(response => response.json())

@@ -59,9 +59,8 @@ void readSensorData() {
       updateState();
     } else {
       checkIaqSensorStatus();
-    }
-  }
-
+}
+}
 
 
 

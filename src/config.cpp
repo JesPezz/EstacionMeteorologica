@@ -1,5 +1,7 @@
 #include "config.h"
 
+SemaphoreHandle_t sensorMutex = xSemaphoreCreateMutex(); // Crear el semáforo
+
 const char* configFilePath = "/config.json";
 
 const char* host = "raw.githubusercontent.com";
@@ -13,7 +15,7 @@ const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteor
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char version[] = "v3.2";
+const char* version = "v3.1";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0

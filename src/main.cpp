@@ -28,10 +28,9 @@ void setup() {
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
 
-  if (!otaInProgress) {  // 🔹 Evitar iniciar procesos si hay OTA en curso
-    Serial.println("✅ Iniciando procesos después de OTA...");
-    WiFi.begin("SSID", "PASSWORD");
-    
+if (!otaInProgress) {  // 🔹 Evitar iniciar procesos si hay OTA en curso
+  Serial.println("✅ Iniciando procesos después de OTA...");
+  WiFi.begin("SSID", "PASSWORD");
 }
   
 
@@ -118,6 +117,13 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   checkForUpdates();
   checkForIndexUpdate();
 
+  sensorMutex = xSemaphoreCreateMutex();
+    if (sensorMutex == NULL) {
+        Serial.println("❌ Error al crear el semáforo");
+        while (1); // Bloquear ejecución si falla
+    }
+
+
   // Imprimir el encabezado
   output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
   Serial.println(output);
@@ -155,19 +161,19 @@ void loop() {
    
   readSensorData();      // Leer datos del sensor
   
-  // // Enviar datos a Google Sheets en el intervalo normal (usando isHourOnTheDot)
-  // bool currentMinuteZero = isHourOnTheDot();
-  // if (!prevMinuteZero && currentMinuteZero) {
-  //   googlesheet(); // Envía los datos a Google Sheets
-  // }
-  // prevMinuteZero = currentMinuteZero;
-
-  //Enviar datos a Google Sheets en el intervalo de prueba (usando millis)
-  static unsigned long lastUploadTime = 0;
-  if (millis() - lastUploadTime >= 30000) { // 30000 ms = .5 minutes
-    googlesheet();
-    lastUploadTime = millis();
+  // Enviar datos a Google Sheets en el intervalo normal (usando isHourOnTheDot)
+  bool currentMinuteZero = isHourOnTheDot();
+  if (!prevMinuteZero && currentMinuteZero) {
+    googlesheet(); // Envía los datos a Google Sheets
   }
+  prevMinuteZero = currentMinuteZero;
+
+  // //Enviar datos a Google Sheets en el intervalo de prueba (usando millis)
+  // static unsigned long lastUploadTime = 0;
+  // if (millis() - lastUploadTime >= 30000) { // 30000 ms = .5 minutes
+  //   googlesheet();
+  //   lastUploadTime = millis();
+  // }
 
   checkClockSync();
 }

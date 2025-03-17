@@ -7,6 +7,25 @@
 #include <ArduinoJson.h>
 #include <bsec.h>
 #include <Preferences.h>
+#include <freertos/semphr.h>
+
+// // Declaración de las tareas
+// void taskReadSensor(void *parameter);
+// void taskGetSensorData(void *parameter);
+
+extern SemaphoreHandle_t sensorMutex;
+
+// ✅ Estructura global para datos del sensor
+struct SensorData {
+    float temperature;
+    float humidity;
+    float pressure;
+    float iaq;
+    uint8_t iaqAccuracy;
+    bool dataValid = false;
+};
+
+extern SensorData currentSensorData; // Declaración global
 
 extern const char* configFilePath;
 
@@ -22,7 +41,7 @@ extern const char* indexURL;
 extern String webUsername;
 extern String webPassword;
 
-extern const char version[];  
+extern const char* version;  
 extern const char nombreCodigo[];
 extern String githubAPIURL;
 

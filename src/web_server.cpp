@@ -9,8 +9,11 @@
 #include "notifications.h"
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include "BME_Sensor.h"
+#include <AsyncJson.h>
 
 AsyncWebServer server(80);
+const char* sensorDataFile = "/sensor_data.json";
 void restartESP32Task(void *parameter);
 
 // 📡 Función para devolver estado del ESP32 en JSON
@@ -104,22 +107,28 @@ void startWebServer() {
         request->send(SPIFFS, "/index.html", "text/html");
     });
 
+    server.on("/sensor_data", HTTP_GET, handleSensorData);
+    server.begin();
+    
     server.on("/esp_status", HTTP_GET, handleESPStatus);
     server.on("/restart", HTTP_POST, handleRestart);
 
     server.on("/getConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
     
-        doc["ssid"] = config.ssid;
+        // 🔄 Usar add() para cadenas C-style (si config usa char* o const char*)
+        doc["ssid"] = config.ssid; 
         doc["password"] = config.password;
         doc["googleSheetURL"] = config.googleSheetURL;
         doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
-        doc["channelID"] = config.channelID;
         doc["location"] = config.location;
-        doc["updateOta"] = config.updateOta / 3600000;
         doc["telegramToken"] = config.telegramToken;
         doc["chatId"] = config.chatId;
-
+    
+        // ✅ Campos que no son cadenas C-style:
+        doc["channelID"] = config.channelID;
+        doc["updateOta"] = config.updateOta / 3600000;
+    
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
@@ -228,4 +237,42 @@ void restartESP32Task(void *parameter) {
     vTaskDelay(3000 / portTICK_PERIOD_MS);  // Esperar 3 segundos sin bloquear
     Serial.println("🔄 Reiniciando ESP32 ahora...");
     ESP.restart();
+}
+
+void handleSensorData(AsyncWebServerRequest *request) {
+    JsonDocument doc;
+
+    // Proteger el acceso a los datos del sensor con un semáforo
+    if (xSemaphoreTake(sensorMutex, portMAX_DELAY) == pdTRUE) {
+
+        const char* precisiones[] = {
+            "No disponible",  // 0
+            "Baja",           // 1
+            "Media",          // 2
+            "Alta"           // 3
+        };
+
+        uint8_t precision = iaqSensor.iaqAccuracy;
+        if(precision > 3) precision = 0; // Manejar valores fuera de rango
+
+        // Llenar el JSON con los datos del sensor
+        doc["temp"] = iaqSensor.temperature;
+        doc["humidity"] = iaqSensor.humidity;
+        doc["pressure"] = iaqSensor.pressure;
+        doc["air_quality"] = iaqSensor.iaq;
+        doc["precision"] = precisiones[precision];
+        doc["version"] = version;
+        // Agrega más campos según sea necesario
+
+        xSemaphoreGive(sensorMutex);  // Liberar el semáforo
+    } else {
+        // Si no se puede obtener el semáforo, devolver un error
+        request->send(500, "application/json", "{\"error\": \"No se pudo acceder a los datos del sensor\"}");
+        return;
+    }
+
+    // Serializar el JSON y enviar la respuesta
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
 }
