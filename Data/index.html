@@ -19,6 +19,18 @@
 </head>
 <body>
     <div class="container">
+
+        <h2>📶 Configuración de WiFi</h2>
+
+            <button id="scanBtn" onclick="scanWiFi()">🔍 Escanear Redes</button>
+            <select id="wifiList">
+            <option value="">Selecciona una red...</option>
+            </select>
+
+            <input type="password" id="wifiPassword" placeholder="Ingrese la contraseña">
+            <button onclick="saveWiFi()">💾 Guardar y Conectar</button>
+
+            <p id="wifiStatus"></p>
         <h2>Configuración del ESP32</h2>
         <div class="status">
             <p>📡 <b>Estado del ESP32</b></p>
@@ -37,12 +49,7 @@
         </div>
 
         <form action="/config" method="POST">
-            <label for="ssid">SSID:</label>
-            <input type="text" id="ssid" name="ssid" required>
-
-            <label for="password">Contraseña:</label>
-            <input type="password" id="password" name="password">
-
+            
             <label for="googleSheetURL">Google Sheet URL:</label>
             <input type="text" id="googleSheetURL" name="googleSheetURL">
 
@@ -80,6 +87,75 @@
 
     <script>
 
+function updateSensorData() {
+    fetch("/sensor_data")
+    .then(response => {
+        if (!response.ok) throw new Error("Error en la respuesta del servidor");
+        return response.json();
+    })
+    .then(data => {
+        document.getElementById("temp").innerText = data.temp || "N/A";
+        })
+        .catch(error => console.error("Error obteniendo datos del sensor:", error));
+    }
+
+
+// Llamar a la función cada 5 segundos
+setInterval(updateSensorData, 5000);
+
+
+function updateESPStatus() {
+    fetch("/esp_status")
+        .then(response => response.json())
+        .then(data => {
+            ddocument.getElementById("esp-ip").textContent = data.ip || "No disponible";
+            document.getElementById("espWiFi").textContent = data.wifi || "No disponible";
+            document.getElementById("espCPU").textContent = data.cpu || "No disponible";
+            document.getElementById("espMemory").textContent = data.memory || "No disponible";
+        })
+        .catch(error => console.error("Error al obtener estado del ESP32:", error));
+}
+
+// Llamar a la función cada 5 segundos
+setInterval(updateESPStatus, 5000);
+
+function scanWiFi() {
+    fetch("/scanWiFi")
+        .then(response => response.json())
+        .then(data => {
+            let select = document.getElementById("wifiList");
+            select.innerHTML = '<option value="">Selecciona una red...</option>'; // Limpia opciones previas
+            data.forEach(network => {
+                let option = document.createElement("option");
+                option.value = network.ssid;
+                option.textContent = `${network.ssid} (${network.rssi} dBm)`;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => console.error("Error al escanear WiFi:", error));
+}
+
+// Llamar a la función cuando se presiona el botón "Escanear Redes"
+document.getElementById("scanBtn").addEventListener("click", scanWiFi);
+
+    function saveWiFi() {
+        let ssid = document.getElementById("wifiList").value;
+        let password = document.getElementById("wifiPassword").value;
+        if (!ssid || !password) {
+            alert("⚠️ Debes seleccionar una red e ingresar la contraseña.");
+            return;
+        }
+        
+        fetch('/saveWiFi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`
+        })
+        .then(response => response.text())
+        .then(data => document.getElementById("wifiStatus").textContent = data)
+        .catch(error => console.error('Error al guardar WiFi:', error));
+    }
+
 async function fetchData() {
     try {
         const res = await fetch('/sensor_data');
@@ -96,12 +172,13 @@ async function fetchData() {
         updateChart(data);
     } catch (error) {
         console.error("Error obteniendo datos del sensor:", error);
-        document.getElementById('temperature').innerText = "Error";
+        document.getElementById('temp').innerText = "Error";
         document.getElementById('humidity').innerText = "Error";
         document.getElementById('pressure').innerText = "Error";
-        document.getElementById('air_quality').innerText = "Error";
+        document.getElementById('air').innerText = "Error";
         document.getElementById('precision').innerText = "Error";
         document.getElementById('version').innerText = "Error";
+
     }
 }
         
@@ -167,8 +244,6 @@ function updateChart(data) {
         fetch("/getConfig")
             .then(response => response.json())
             .then(data => {
-                document.getElementById("ssid").value = data.ssid || "";
-                document.getElementById("password").value = data.password || "";
                 document.getElementById("googleSheetURL").value = data.googleSheetURL || "";
                 document.getElementById("thingSpeakAPIKey").value = "*****";
                 document.getElementById("channelID").value = data.channelID || "";
@@ -220,15 +295,6 @@ function updateChart(data) {
                 formData.append(fieldId, originalValue);
             }
         }
-
-    processField("ssid", window.originalConfig.ssid);
-    
-    let passwordValue = document.getElementById("password").value.trim();
-    if (passwordValue !== "") {
-        formData.append("password", passwordValue);
-    } else {
-        formData.append("password", "*****");
-    }
 
     processField("googleSheetURL", window.originalConfig.googleSheetURL);
     processField("thingSpeakAPIKey", window.originalConfig.thingSpeakAPIKey);

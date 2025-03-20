@@ -7,13 +7,13 @@
 #include "SensorManager.h"
 #include "TimeManager.h"
 #include "notifications.h"
+#include "WiFiManager.h"
+#include <Preferences.h>
 
 String extractRedirectUrl(const String &htmlResponse);
 struct tm timeinfo;
 String formattedTime;
 const int maxStoredReadings = 72;
-
-std::vector<String> storedReadings;
 Preferences preferences;
 String GoogleSheetManager::url = "";
 
@@ -311,10 +311,7 @@ void sendReadingToGoogleSheet() {
                     Serial.println("⚠️ Datos incorrectos en la URL. Verifica los valores enviados.");
                 } else if (httpResponseCode == -2) {
                     Serial.println("⚠️ Error de conexión SSL. Intentando reconectar WiFi...");
-                    WiFi.disconnect();
-                    delay(3000);
-                    WiFi.begin(config.ssid, config.password);
-                    delay(8000);
+                    reconnectWiFi();
                 }
             }
             retryCount--;

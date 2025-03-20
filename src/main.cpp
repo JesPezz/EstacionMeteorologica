@@ -60,8 +60,6 @@ loadConfig();
 
 // ✅ Verificar que los valores cargados sean correctos
 Serial.println("📜 CONFIGURACIÓN CARGADA DESDE config.json:");
-Serial.println("SSID: " + config.ssid);
-Serial.println("Password: " + config.password);
 Serial.println("Google Sheet URL: " + config.googleSheetURL);
 Serial.println("ThingSpeak API Key: " + config.thingSpeakAPIKey);
 Serial.println("updateOta: " + String(config.updateOta / 3600000) + " Horas");
@@ -70,8 +68,10 @@ Serial.println("Location: " + config.location);
 Serial.println("chatId: " + config.chatId);
 Serial.println("telegramToken: " + config.telegramToken);
 
-connectToWiFi();
+connectToBestWiFi();
 startWebServer();
+
+printWiFiConfig();
 
 printConfig();  // ✅ Ver los valores actuales de configuración
 
@@ -115,7 +115,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
   checkForUpdates();
-  checkForIndexUpdate();
+  //checkForIndexUpdate();
 
   sensorMutex = xSemaphoreCreateMutex();
     if (sensorMutex == NULL) {
@@ -148,7 +148,7 @@ void loop() {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
         checkForUpdates();
-        checkForIndexUpdate();
+        //checkForIndexUpdate();
         loadState();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();

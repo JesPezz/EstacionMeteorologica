@@ -5,8 +5,8 @@
 #include <vector>
 #include <Preferences.h>
 
-extern std::vector<String> storedReadings;
-extern Preferences preferences;
+// extern std::vector<String> storedReadings;
+// extern Preferences preferences;
 class GoogleSheetManager {
     public:
         static String url; // Declaración de la variable

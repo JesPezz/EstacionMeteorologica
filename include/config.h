@@ -8,10 +8,10 @@
 #include <bsec.h>
 #include <Preferences.h>
 #include <freertos/semphr.h>
+#include <vector>
 
-// // Declaración de las tareas
-// void taskReadSensor(void *parameter);
-// void taskGetSensorData(void *parameter);
+extern std::vector<String> storedReadings;
+extern Preferences preferences;
 
 extern SemaphoreHandle_t sensorMutex;
 
@@ -53,11 +53,9 @@ extern String githubAPIURL;
 
 
 
-// ✅ Estructura de configuración
+// ✅ Estructura para configuración general (config.json)
 
 struct Config {
-    String ssid;
-    String password;
     String googleSheetURL;
     String thingSpeakAPIKey;
     unsigned long updateInterval;
@@ -66,6 +64,12 @@ struct Config {
     String location;
     String telegramToken;
     String chatId;
+};
+
+// Estructura para almacenar redes WiFi en wifi.json
+struct WiFiConfig {
+    String ssid;
+    String password;
 };
 
     extern Config config;

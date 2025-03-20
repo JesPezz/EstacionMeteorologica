@@ -1,4 +1,7 @@
 #include "config.h"
+#include "FS.h"
+#include "SPIFFS.h"
+#include <ArduinoJson.h>
 
 SemaphoreHandle_t sensorMutex = xSemaphoreCreateMutex(); // Crear el semáforo
 
@@ -15,7 +18,7 @@ const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteor
 String webUsername = "admin";  // Usuario por defecto
 String webPassword = "admin123";  // Contraseña por defecto
 
-const char* version = "v3.1";
+const char* version = "v3.3";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
@@ -25,6 +28,8 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 
 Config config;
+
+
 String googleSheetURL;
 const char* ssid;
 const char* password;
@@ -76,8 +81,6 @@ bool loadConfig() {
     file.close();
 
     // Leer valores del JSON
-    if (doc["ssid"].is<String>()) config.ssid = doc["ssid"].as<String>();
-    if (doc["password"].is<String>()) config.password = doc["password"].as<String>();
     if (doc["googleSheetURL"].is<String>()) config.googleSheetURL = doc["googleSheetURL"].as<String>();
     if (doc["thingSpeakAPIKey"].is<String>()) config.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
     if (doc["channelID"].is<unsigned long>()) config.channelID = doc["channelID"].as<unsigned long>();
@@ -101,8 +104,6 @@ bool saveConfig(const Config& config) {
     JsonDocument doc;
 
     // Asignar valores al JSON
-    doc["ssid"] = config.ssid;
-    doc["password"] = config.password;
     doc["googleSheetURL"] = config.googleSheetURL;
     doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
     doc["channelID"] = config.channelID;
