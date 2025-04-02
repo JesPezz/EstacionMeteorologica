@@ -22,17 +22,45 @@
 #include "esp_ota_ops.h"
 #include "led.h"
 #include "notifications.h"
+#include "web_server.h"
+#include <freertos/timers.h>
+// #include <Ticker.h>
+
+// Ticker scanTicker;
+// bool shouldScanNetworks = false;
+
+// // Función para escanear redes (llamada por el Ticker)
+// void triggerNetworkScan() {
+//     shouldScanNetworks = true; // Activa el flag para el loop()
+// }
 
 void setup() {
-  initSPIFFS();
-  EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
-  Serial.begin(115200);
 
+  Serial.begin(115200);
+    if (!SPIFFS.begin(true)) {
+        Serial.println("❌ Error al montar SPIFFS");
+        return;
+    }
+    Serial.println("✅ SPIFFS montado correctamente");
+
+
+  Serial.println("📂 Verificando existencia de /index.html...");
+if (SPIFFS.exists("/index.html")) {
+    Serial.println("✅ Archivo encontrado.");
+} else {
+    Serial.println("❌ El archivo no existe en SPIFFS.");
+}
+
+
+
+EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
+
+printWiFiNetwork();
 if (!otaInProgress) {  // 🔹 Evitar iniciar procesos si hay OTA en curso
   Serial.println("✅ Iniciando procesos después de OTA...");
   WiFi.begin("SSID", "PASSWORD");
 }
-  
+
 
 loadConfig();
   
@@ -57,6 +85,7 @@ loadConfig();
   if (!loadConfig()) {
     Serial.println("No hay configuración guardada. Iniciando en modo AP...");
 }
+startAPMode();
 
 // ✅ Verificar que los valores cargados sean correctos
 Serial.println("📜 CONFIGURACIÓN CARGADA DESDE config.json:");
@@ -68,11 +97,12 @@ Serial.println("Location: " + config.location);
 Serial.println("chatId: " + config.chatId);
 Serial.println("telegramToken: " + config.telegramToken);
 
-connectToBestWiFi();
+// scanTicker.attach(15.0, triggerNetworkScan);
+WiFiManager::scanNetworks(networks);
+initWiFiScanner();
+initSensorMutex();
 startWebServer();
-
-printWiFiConfig();
-
+initSSETimer();
 printConfig();  // ✅ Ver los valores actuales de configuración
 
   // Definir el nombre del código y la ubicación
@@ -114,19 +144,28 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForUpdates();
-  //checkForIndexUpdate();
-
-  sensorMutex = xSemaphoreCreateMutex();
-    if (sensorMutex == NULL) {
-        Serial.println("❌ Error al crear el semáforo");
-        while (1); // Bloquear ejecución si falla
-    }
+  // checkForUpdates();
+  // checkForIndexUpdate();
+  listSPIFFS();
 
 
   // Imprimir el encabezado
   output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
   Serial.println(output);
+
+  xTaskCreatePinnedToCore(
+    wifiScanTask,    // Función
+    "WiFiScanner",   // Nombre
+    4096,           // Stack size (suficiente para JSON)
+    NULL,           // Parámetros
+    1,              // Prioridad (1 = baja, debajo de WiFi/HTTP)
+    NULL,           // Handle
+    0               // Núcleo (evitar core donde corre AsyncTCP)
+);
+
+Serial.println("[WiFi] Escáner inicializado en Core 0");
+
+
 
   // Iniciar tarea FreeRTOS para enviar datos a ThingSpeak
   xTaskCreatePinnedToCore(
@@ -138,17 +177,27 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     &thingSpeakTaskHandle,  // Manejador de la tarea
     0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
   );
+
+  
+  sseTimer = xTimerCreate(
+    "SSETimer",
+    pdMS_TO_TICKS(5000),
+    pdTRUE,
+    (void*)0,
+    sendSSEData
+);
+xTimerStart(sseTimer, 0);
             
 }
 
 void loop() {
   checkWiFiConnection(); // Verificar la conexión WiFi y reconectar si es necesario
-
+  yield();
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        checkForUpdates();
-        //checkForIndexUpdate();
+        // checkForUpdates();
+        // checkForIndexUpdate();
         loadState();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
@@ -158,6 +207,13 @@ void loop() {
       yield(); // Alimenta el WDT
       return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
   }
+
+//   if (shouldScanNetworks) {
+//     shouldScanNetworks = false; // Resetear flag
+
+//     Serial.println("🔍 Iniciando escaneo WiFi...");
+//     WiFiManager::scanNetworks(networks); // Actualiza el vector global
+// }
    
   readSensorData();      // Leer datos del sensor
   

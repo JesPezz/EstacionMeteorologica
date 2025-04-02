@@ -1,6 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-
+#pragma once
 #include <Arduino.h>
 #include <FS.h>
 #include <SPIFFS.h>
@@ -8,12 +8,33 @@
 #include <bsec.h>
 #include <Preferences.h>
 #include <freertos/semphr.h>
+#include <freertos/FreeRTOS.h>
 #include <vector>
+#include <AsyncTCP.h>          
+#include <ESPAsyncWebServer.h>
 
+extern bool scanRequested;
+extern unsigned long lastScanTime;
+extern const int scanInterval;
+extern String scannedNetworks;
+extern TimerHandle_t sseTimer;  // Declaración externa
 extern std::vector<String> storedReadings;
 extern Preferences preferences;
-
 extern SemaphoreHandle_t sensorMutex;
+class AsyncEventSource;
+extern AsyncEventSource events;
+String getSensorJson();
+
+// Definir la estructura WiFiNetwork
+struct WiFiNetwork {
+    char ssid[32];
+    char password[64];
+    int rssi;
+    uint8_t encryptionType;
+};
+
+// Declarar el vector de redes como variable global
+extern std::vector<WiFiNetwork> networks;
 
 // ✅ Estructura global para datos del sensor
 struct SensorData {
@@ -46,33 +67,19 @@ extern const char nombreCodigo[];
 extern String githubAPIURL;
 
 
-
-
-// extern unsigned long lastUpdateCheck;  // Variable para almacenar el último tiempo de verificación
-// extern const unsigned long updateOta;  // Intervalo de actualización (6 horas)
-
-
-
-// ✅ Estructura para configuración general (config.json)
-
 struct Config {
     String googleSheetURL;
     String thingSpeakAPIKey;
-    unsigned long updateInterval;
-    unsigned long channelID;
-    unsigned long updateOta;
     String location;
     String telegramToken;
     String chatId;
-};
-
-// Estructura para almacenar redes WiFi en wifi.json
-struct WiFiConfig {
-    String ssid;
-    String password;
+    unsigned long updateInterval;
+    unsigned long channelID;
+    unsigned long updateOta;
 };
 
     extern Config config;
+
 
     // Timing
 extern unsigned long CHANNEL_UPDATE_INTERVAL;

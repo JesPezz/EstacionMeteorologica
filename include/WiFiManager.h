@@ -1,24 +1,25 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
-
-#include <WiFi.h>
+#pragma once
+#include <Arduino.h>
 #include <vector>
+#include <WiFi.h>
 #include <ArduinoJson.h>
+#include "config.h"
 
-struct WiFiNetwork {
-    String ssid;
-    String password;
-    int rssi;
+class WiFiManager {
+public:
+    static void scanNetworks(std::vector<WiFiNetwork>& networks);
+    static bool loadSavedNetworks(std::vector<WiFiNetwork>& networks);
+    static bool saveNetwork(const WiFiNetwork& network);
 };
 
 bool reconnectWiFi();
 void checkWiFiConnection();
 void scanWiFiNetworks();
 std::vector<WiFiNetwork> getAvailableNetworks();
-bool saveWiFiCredentialsToFile(const String &ssid, const String &password);
-void loadWiFiConfig();
 bool connectToBestWiFi();
 void startAPMode();
-void printWiFiConfig();
+void printWiFiNetwork();
 
 #endif

@@ -3,8 +3,13 @@
 #include "SPIFFS.h"
 #include <ArduinoJson.h>
 
-SemaphoreHandle_t sensorMutex = xSemaphoreCreateMutex(); // Crear el semáforo
+std::vector<WiFiNetwork> networks;
 
+unsigned long lastScanTime = 0;
+const int scanInterval = 15000; // Escaneo cada 15 segundos
+TimerHandle_t sseTimer = nullptr;
+SemaphoreHandle_t sensorMutex = xSemaphoreCreateMutex(); // Crear el semáforo
+String scannedNetworks = "[]";
 const char* configFilePath = "/config.json";
 
 const char* host = "raw.githubusercontent.com";
@@ -14,9 +19,9 @@ const char* etagFilePath = "/index_etag.txt";
 TaskHandle_t thingSpeakTaskHandle = NULL;
 
 const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/main/Data/index.html";
+String webUsername = "admin";
+String webPassword = "admin123";
 
-String webUsername = "admin";  // Usuario por defecto
-String webPassword = "admin123";  // Contraseña por defecto
 
 const char* version = "v3.3";
 const char nombreCodigo[] = "EstacionThingSpeak";
@@ -29,13 +34,6 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 Config config;
 
-
-String googleSheetURL;
-const char* ssid;
-const char* password;
-const char* thingSpeakAPIKey;
-unsigned long channelID;
-String location;
 unsigned long CHANNEL_UPDATE_INTERVAL = 60 * 1000;
 unsigned long MONTH_IN_SECONDS = 30 * 24 * 60 * 60;
 unsigned long STATE_SAVE_PERIOD = 360 * 60 * 1000;
@@ -51,7 +49,7 @@ String output;
 bool prevFiveMinutes = false;  // Para envío cada 5 minutos
 bool prevTenMinutes = false;   // Para envío cada 10 minutos
 bool prevMinuteZero = false;   // Para envío cada minuto
-
+bool scanRequested = false;
 void initSPIFFS() {
     if (!SPIFFS.begin(true)) {
         Serial.println("❌ Error al montar SPIFFS");
@@ -101,6 +99,7 @@ bool loadConfig() {
 }
 
 bool saveConfig(const Config& config) {
+
     JsonDocument doc;
 
     // Asignar valores al JSON
@@ -108,8 +107,8 @@ bool saveConfig(const Config& config) {
     doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
     doc["channelID"] = config.channelID;
     doc["location"] = config.location;
-    doc["webUsername"] = webUsername;
-    doc["webPassword"] = webPassword;
+    //doc["webUsername"] = webUsername;
+    //doc["webPassword"] = webPassword;
     doc["telegramToken"] = config.telegramToken;
     doc["chatId"] = config.chatId;
     doc["updateOta"] = config.updateOta / 3600000;  // 🔹 Guarda en horas

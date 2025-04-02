@@ -3,115 +3,390 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Estación Meteorológica - Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="/chart.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        input, label { display: block; width: 100%; margin: 10px 0; }
-        button { padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer; width: 100%; }
-        button:hover { background-color: #45a049; }
-        .status { font-size: 1.2em; margin-top: 20px; }
-        .status span { font-weight: bold; }
-        .version { position: absolute; top: 10px; right: 10px; font-size: 14px; }
-         canvas { max-width: 600px; margin: auto; }
+
+        /* Estilos para los botones */
+  .btn-primary {
+    background: #2196F3;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    flex: 1;
+  }
+  
+  .btn-secondary {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    flex: 1;
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000; /* Mayor que todo */
+    overflow: auto;
+}
+
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    margin: 20px auto;
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Inputs para móvil */
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px; /* Tamaño mínimo para evitar zoom */
+    box-sizing: border-box;
+}
+
+.modal-content button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Evitar zoom en iOS */
+@media screen and (max-width: 480px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+}
+
+        :root {
+            --primary: #2196F3;
+            --success: #4CAF50;
+            --error: #f44336;
+            --text: #2c3e50;
+            --background: #f5f6fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--background);
+            color: var(--text);
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+
+        .sensor-data {
+            font-size: 1.2rem;
+            margin: 15px 0;
+        }
+
+        .sensor-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .config-section {
+            grid-column: 1 / -1;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            place-items: center;
+            z-index: 1000;
+        }
+
+        /* Estilos adicionales para responsive design */
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .card {
+                padding: 15px;
+            }
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            display: none;
+            z-index: 1000;
+        }
+        .toast.success { background: #4CAF50; }
+        .toast.error { background: #f44336; }
+
+        body {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transition: none !important;
+        }
+
+        /* Prevenir flashes en móviles */
+        @media screen and (max-width: 768px) {
+            html, body {
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
+            }
+        }
+
+        .loading-spinner {
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #2196F3;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
     </style>
 </head>
 <body>
-    <div class="container">
-
-        <h2>📶 Configuración de WiFi</h2>
-
-            <button id="scanBtn" onclick="scanWiFi()">🔍 Escanear Redes</button>
-            <select id="wifiList">
-            <option value="">Selecciona una red...</option>
-            </select>
-
-            <input type="password" id="wifiPassword" placeholder="Ingrese la contraseña">
-            <button onclick="saveWiFi()">💾 Guardar y Conectar</button>
-
-            <p id="wifiStatus"></p>
-        <h2>Configuración del ESP32</h2>
-        <div class="status">
-            <p>📡 <b>Estado del ESP32</b></p>
-            <p>IP: <span id="esp-ip">Cargando...</span></p>
-            <p>WiFi: <span id="wifi-status">Cargando...</span></p>
-            <p>CPU: <span id="cpu-status">Cargando...</span></p>
-            <p>Memoria Libre: <span id="mem-status">Cargando...</span> KB</p>
-            <h2>ESP32 - Dashboard</h2>
-            <p>Temperatura: <span id="temp">Cargando...</span> °C</p>
-            <p>Humedad: <span id="humidity">Cargando...</span> %</p>
-            <p>Presión: <span id="pressure">Cargando...</span> hPa</p>
-            <p>Calidad del Aire: <span id="air">Cargando...</span></p>
-            <p>Precisión IAQ: <span id="precision">Cargando...</span></p>
-            <div class="version">Versión: <span id="version">Cargando...</span></div>
-            <canvas id="sensorChart"></canvas>
+    <div class="dashboard">
+        <!-- Sección de Estado en Tiempo Real -->
+        <div class="card realtime-status">
+            <h2><i class="fas fa-heartbeat"></i> Estado del Sistema</h2>
+            <div class="sensor-data">
+                <p>📡 <b>Estado del ESP32</b></p>
+                <p>IP: <span id="esp-ip">Cargando...</span></p>
+                <p>WiFi: <span id="wifi-status">Cargando...</span></p>
+                <p>CPU: <span id="cpu-status">Cargando...</span></p>
+                <p>Memoria Libre: <span id="mem-status">Cargando...</span> KB</p>
+                <h2>ESP32 - Dashboard</h2>
+                <p>Temperatura: <span class="sensor-value" id="temp">--</span> °C</p>
+                <p>Humedad: <span class="sensor-value" id="humidity">--</span> %</p>
+                <p>Presión: <span class="sensor-value" id="pressure">--</span> hPa</p>
+                <p>Calidad Aire: <span class="sensor-value" id="air_quality">--</span></p>
+                <p>Precisión IAQ: <span id="precision">Cargando...</span></p>
+                <div class="version">Versión: <span id="version">Cargando...</span></div>
+                <div class="chart-container" style="position: relative; height:300px; width:100%">
+                <canvas id="sensorChart"></canvas>
+            </div>
         </div>
 
-        <form action="/config" method="POST">
-            
-            <label for="googleSheetURL">Google Sheet URL:</label>
-            <input type="text" id="googleSheetURL" name="googleSheetURL">
+        <!-- Sección de Configuración WiFi -->
+        <div class="card wifi-config">
+            <h2><i class="fas fa-wifi"></i> Configuración WiFi</h2>
+            <div id="wifi-list" class="network-list"></div>
+        </div>
+        <!-- Sección de Configuración General -->
+        <div class="card config-section">
+            <h2><i class="fas fa-cog"></i> Configuración del Sistema</h2>
+            <form id="configForm" onsubmit="saveConfig(event)">
+                <!-- Campos de configuración -->
+                <div class="form-group">
+                    <label for="googleSheetURL">Google Sheet URL:</label>
+                    <input type="text" id="googleSheetURL" name="googleSheetURL">
+        
+                    <label for="thingSpeakAPIKey">ThingSpeak API Key:</label>
+                    <input type="text" id="thingSpeakAPIKey" name="thingSpeakAPIKey">
+        
+                    <label for="channelID">Channel ID:</label>
+                    <input type="number" id="channelID" name="channelID">
+        
+                    <label for="location">Ubicación:</label>
+                    <input type="text" id="location" name="location">
+        
+                    <label for="updateOta">Intervalo OTA (horas):</label>
+                    <input type="number" id="updateOta" name="updateOta" min="1" step="1">
+        
+                    <h3>Notificaciones</h3>
+                    <label for="telegramToken">Token de Telegram:</label>
+                    <input type="text" id="telegramToken" name="telegramToken">
+        
+                    <label for="chatId">Chat ID de Telegram:</label>
+                    <input type="text" id="chatId" name="chatId">        
+                </div>
+                <!-- Más campos de configuración -->
+                <button type="submit">Guardar Configuración</button>
+            </form>
+        </div>
 
-            <label for="thingSpeakAPIKey">ThingSpeak API Key:</label>
-            <input type="text" id="thingSpeakAPIKey" name="thingSpeakAPIKey">
-
-            <label for="channelID">Channel ID:</label>
-            <input type="number" id="channelID" name="channelID">
-
-            <label for="location">Ubicación:</label>
-            <input type="text" id="location" name="location">
-
-            <label for="updateOta">Intervalo OTA (horas):</label>
-            <input type="number" id="updateOta" name="updateOta" min="1" step="1">
-
-            <h3>Notificaciones</h3>
-            <label for="telegramToken">Token de Telegram:</label>
-            <input type="text" id="telegramToken" name="telegramToken">
-
-            <label for="chatId">Chat ID de Telegram:</label>
-            <input type="text" id="chatId" name="chatId">
-            
-            <button type="submit">Guardar Configuración</button>
-        </form>
-
-        <h2>Actualización OTA</h2>
-        <form id="otaForm">
-            <input type="file" id="firmwareFile">
-            <button type="button" onclick="uploadFirmware()">Subir Firmware</button>
-        </form>
-        <p id="status"></p>
-
-        <button onclick="restartESP32()">🔄 Reiniciar ESP32</button>
+        <!-- Sección de Actualización OTA -->
+        <div class="card ota-section">
+            <h2><i class="fas fa-cloud-upload-alt"></i> Actualización OTA</h2>
+            <input type="file" id="firmwareFile" accept=".bin">
+            <button onclick="uploadFirmware()">Subir Firmware</button>
+            <div id="otaStatus"></div>
+        </div>
     </div>
 
-    <script>
+    <!-- Modales y Overlays -->
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText"></div>
+    </div>
 
-function updateSensorData() {
-    fetch("/sensor_data")
-    .then(response => {
-        if (!response.ok) throw new Error("Error en la respuesta del servidor");
-        return response.json();
-    })
-    .then(data => {
-        document.getElementById("temp").innerText = data.temp || "N/A";
-        })
-        .catch(error => console.error("Error obteniendo datos del sensor:", error));
+    <div id="toast" class="toast"></div>
+
+    <div id="authModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>🔐 Iniciar Sesión</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="Usuario" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" placeholder="Contraseña" required autocomplete="current-password">
+                </div>
+                <button type="submit">Ingresar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="wifiModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2 id="wifiModalTitle">🔑 Ingrese Contraseña WiFi</h2>
+            <p>Conectando a: <span id="currentSSID"></span></p>
+            <input type="password" id="wifiPassword" placeholder="Escriba la contraseña">
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button id="connectWifiBtn" class="btn-primary">Conectar</button>
+                <button id="cancelWifiBtn" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let isSavingConfig = false;
+    let wifiScanInterval;
+    let isFrontendActive = true;
+    const SCAN_INTERVAL = 30000; // 30 segundos (ajustable)
+    const SCAN_DELAY = 8000; // 8 segundos para esperar resultados
+// Evitar cierre accidental del modal en móvil
+document.getElementById('authModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('authModal')) {
+        // Opcional: prevenir que el modal se cierre al tocar fuera
+        // e.stopPropagation();
     }
+});
 
+// Manejar teclado virtual en móvil
+window.addEventListener('resize', () => {
+    if (window.visualViewport) {
+        const modal = document.getElementById('authModal');
+        if (modal.style.display === 'flex') {
+            modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+});
 
-// Llamar a la función cada 5 segundos
-setInterval(updateSensorData, 5000);
+function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Bloquear scroll del body
+    
+    // Enfocar automáticamente el primer input
+    setTimeout(() => {
+        document.getElementById('username').focus();
+    }, 100);
+}
+
+// Ocultar modal
+function hideAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Restaurar scroll
+}
 
 
 function updateESPStatus() {
     fetch("/esp_status")
         .then(response => response.json())
         .then(data => {
-            ddocument.getElementById("esp-ip").textContent = data.ip || "No disponible";
-            document.getElementById("espWiFi").textContent = data.wifi || "No disponible";
-            document.getElementById("espCPU").textContent = data.cpu || "No disponible";
-            document.getElementById("espMemory").textContent = data.memory || "No disponible";
+            document.getElementById("esp-ip").textContent = data.ip || "No disponible";
+            document.getElementById("wifi-status").textContent = data.wifi || "No disponible";
+            document.getElementById("cpu-status").textContent = data.cpu || "No disponible";
+            document.getElementById("mem-status").textContent = data.memory || "No disponible";
         })
         .catch(error => console.error("Error al obtener estado del ESP32:", error));
 }
@@ -119,430 +394,609 @@ function updateESPStatus() {
 // Llamar a la función cada 5 segundos
 setInterval(updateESPStatus, 5000);
 
-function scanWiFi() {
-    fetch("/scanWiFi")
-        .then(response => response.json())
-        .then(data => {
-            let select = document.getElementById("wifiList");
-            select.innerHTML = '<option value="">Selecciona una red...</option>'; // Limpia opciones previas
-            data.forEach(network => {
-                let option = document.createElement("option");
-                option.value = network.ssid;
-                option.textContent = `${network.ssid} (${network.rssi} dBm)`;
-                select.appendChild(option);
-            });
-        })
-        .catch(error => console.error("Error al escanear WiFi:", error));
-}
+// Configuración inicial de Chart.js
+const ctx = document.getElementById('sensorChart').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Temperatura (°C)',
+            data: [],
+            borderColor: '#2196F3',
+            tension: 0.1
+        }, {
+            label: 'Humedad (%)',
+            data: [],
+            borderColor: '#4CAF50',
+            tension: 0.1
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
 
-// Llamar a la función cuando se presiona el botón "Escanear Redes"
-document.getElementById("scanBtn").addEventListener("click", scanWiFi);
-
-    function saveWiFi() {
-        let ssid = document.getElementById("wifiList").value;
-        let password = document.getElementById("wifiPassword").value;
-        if (!ssid || !password) {
-            alert("⚠️ Debes seleccionar una red e ingresar la contraseña.");
-            return;
-        }
-        
-        fetch('/saveWiFi', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`
-        })
-        .then(response => response.text())
-        .then(data => document.getElementById("wifiStatus").textContent = data)
-        .catch(error => console.error('Error al guardar WiFi:', error));
-    }
-
-async function fetchData() {
-    try {
-        const res = await fetch('/sensor_data');
-        if (!res.ok) throw new Error("Error en la respuesta del servidor");
-        const data = await res.json();
-        const precisionValue = data.precision || 0;
-        document.getElementById('temp').innerText = data.temp || "N/A";
-        document.getElementById('humidity').innerText = data.humidity || "N/A";
-        document.getElementById('pressure').innerText = data.pressure || "N/A";
-        document.getElementById('air').innerText = data.air_quality || "N/A";
-        document.getElementById('precision').innerText = data.precision || "No disponible";
-        document.getElementById('version').innerText = data.version || "N/A";
-        
-        updateChart(data);
-    } catch (error) {
-        console.error("Error obteniendo datos del sensor:", error);
-        document.getElementById('temp').innerText = "Error";
-        document.getElementById('humidity').innerText = "Error";
-        document.getElementById('pressure').innerText = "Error";
-        document.getElementById('air').innerText = "Error";
-        document.getElementById('precision').innerText = "Error";
-        document.getElementById('version').innerText = "Error";
-
-    }
-}
-        
+        // Función para actualizar el gráfico
 function updateChart(data) {
-    const maxDataPoints = 20; // Máximo de 20 puntos en la gráfica
-
-    if (chart.data.labels.length >= maxDataPoints) {
-        chart.data.labels.shift(); // Eliminar el primer punto
+    const now = new Date().toLocaleTimeString();
+    if (chart.data.labels.length > 15) {
+        chart.data.labels.shift();
         chart.data.datasets[0].data.shift();
         chart.data.datasets[1].data.shift();
     }
-
-    chart.data.labels.push(new Date().toLocaleTimeString());
+    chart.data.labels.push(now);
     chart.data.datasets[0].data.push(data.temp);
     chart.data.datasets[1].data.push(data.humidity);
     chart.update();
 }
 
-        const ctx = document.getElementById('sensorChart').getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [
-                    { label: 'Temperatura (°C)', borderColor: 'red', data: [] },
-                    { label: 'Humedad (%)', borderColor: 'blue', data: [] }
-                ]
-            }
+// Conexión SSE para recibir datos
+const eventSource = new EventSource('/events');
+eventSource.addEventListener('update', (e) => {
+    const data = JSON.parse(e.data);
+    updateChart(data);  // Actualiza el gráfico
+    console.log("Datos recibidos:", data);  // Para depuración
+});
+
+let authToken = null;
+
+// Función para login (llamada desde el modal)
+async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    if (!username || !password) {
+        showToast('Usuario y contraseña requeridos', 'error');
+        return;
+    }
+
+    toggleLoading(true, 'Verificando...');
+    
+    try {
+        authToken = btoa(`${username}:${password}`);
+        await testConnection();
+        const response = await fetch('/getConfig', {
+            headers: { 'Authorization': `Basic ${authToken}` }
         });
-
-        setInterval(fetchData, 5000);
-        fetchData();
-
-        function loadESPStatus() {
-            fetch("/esp_status")
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("esp-ip").textContent = data.ip || "Desconocido";
-                    document.getElementById("wifi-status").textContent = data.wifi || "Desconocido";
-                    document.getElementById("cpu-status").textContent = (data.cpu !== undefined ? data.cpu + " MHz" : "Desconocido");
-                    document.getElementById("mem-status").textContent = (data.memory !== undefined ? data.memory + " KB" : "Desconocido");
-                })
-                .catch(error => {
-                    console.error("Error obteniendo estado del ESP32:", error);
-                    document.getElementById("esp-ip").textContent = "Error";
-                    document.getElementById("wifi-status").textContent = "Error";
-                    document.getElementById("cpu-status").textContent = "Error";
-                    document.getElementById("mem-status").textContent = "Error";
-                });
-        }
-        document.addEventListener("DOMContentLoaded", loadESPStatus);
         
-    // Cargar configuración actual y ocultar datos sensibles
-    function loadConfig() {
-
-        let loadingMessage = document.getElementById("loadingMessage");
-        let form = document.querySelector("form");
-
-        // ✅ Mostrar el mensaje de carga y ocultar el formulario temporalmente
-        loadingMessage.style.display = "block";
-        form.style.display = "none";
-
-        fetch("/getConfig")
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("googleSheetURL").value = data.googleSheetURL || "";
-                document.getElementById("thingSpeakAPIKey").value = "*****";
-                document.getElementById("channelID").value = data.channelID || "";
-                document.getElementById("location").value = data.location || "";
-                document.getElementById("updateOta").value = data.updateOta || 1;
-                document.getElementById("telegramToken").value = "*****";
-                document.getElementById("chatId").value = data.chatId || "";
-
-                // Guardar configuración original para evitar sobrescribir valores vacío
-                window.originalConfig = data;
-
-                // ✅ Ocultar el mensaje de carga y mostrar el formulario cuando los datos estén listos
-                loadingMessage.style.display = "none";
-                form.style.display = "block";
-
-            })
-            .catch(error => {
-                console.error("Error cargando configuración:", error);
-                document.getElementById("loadingMessage").innerText = "❌ Error al cargar la configuración.";
-            });
+        if (!response.ok) throw new Error('Credenciales incorrectas');
+        
+        hideAuthModal();
+        await loadConfig();
+        showToast('Autenticación exitosa', 'success');
+    } catch (error) {
+        showToast(error.message, 'error');
+        document.getElementById('password').focus();
+    } finally {
+        toggleLoading(false);
     }
+}
 
+        // Función para cargar configuración
+async function loadConfig() {
+    try {
+        const response = await fetch('/getConfig', {
+            headers: { 'Authorization': `Basic ${authToken}` }
+        });
+        
+        if (!response.ok) throw new Error('Error cargando configuración');
+        
+        const config = await response.json();
+        
+        // Inicializar originalConfig aquí
+        window.originalConfig = {
+            googleSheetURL: config.googleSheetURL,
+            thingSpeakAPIKey: config.thingSpeakAPIKey,
+            channelID: config.channelID,
+            location: config.location,
+            updateOta: config.updateOta, // Guardar en ms
+            telegramToken: config.telegramToken,
+            chatId: config.chatId
+        };
+        
+        // Mostrar valores en el formulario
+        document.getElementById('googleSheetURL').value = config.googleSheetURL;
+        document.getElementById('thingSpeakAPIKey').value = "*****"; // Enmascarar
+        document.getElementById('channelID').value = config.channelID;
+        document.getElementById('location').value = config.location;
+        document.getElementById('updateOta').value = config.updateOta / 3600000; // Convertir a horas
+        document.getElementById('telegramToken').value = "*****";
+        document.getElementById('chatId').value = config.chatId;
 
-
-    function showToast(message, type = "success") {
-        let toast = document.getElementById("toast");
-        toast.className = "toast " + type;
-        toast.innerText = message;
-        toast.classList.add("show");
-        setTimeout(() => {
-            toast.classList.remove("show");
-        }, 4000);  // 🔹 Desaparece después de 4 segundos
+    } catch (error) {
+        console.error("Error en loadConfig:", error);
+        showToast(error.message, 'error');
     }
+}
 
-    function saveConfig(event) {
-        event.preventDefault();
+        // Guardar configuración (con validación)
+        async function saveConfig(event) {
+    event.preventDefault();
+    
+    // 1. Detener procesos interferentes
+    stopWiFiScans();
+    clearAllIntervals();
 
-        let botonGuardar = document.querySelector("button[type='submit']");
-        botonGuardar.disabled = true;
-        botonGuardar.innerHTML = "Guardando... <span class='loading-spinner'></span>";
+    const submitBtn = event.target.querySelector("button[type='submit']");
+    submitBtn.disabled = true;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = "Guardando...";
 
-        let formData = new URLSearchParams();
+    try {
+        // 2. Preparar datos como objeto JSON
+        const configData = {
+            googleSheetURL: document.getElementById('googleSheetURL').value.trim(),
+            thingSpeakAPIKey: document.getElementById('thingSpeakAPIKey').value.trim(),
+            channelID: parseInt(document.getElementById('channelID').value),
+            location: document.getElementById('location').value.trim(),
+            updateOta: parseInt(document.getElementById('updateOta').value),
+            telegramToken: document.getElementById('telegramToken').value.trim(),
+            chatId: document.getElementById('chatId').value.trim()
+        };
 
-        function processField(fieldId, originalValue) {
-            let value = document.getElementById(fieldId).value.trim();
-            if (value !== "" && value !== "*****") {
-                formData.append(fieldId, value);
-            } else {
-                formData.append(fieldId, originalValue);
-            }
+        // 3. Crear el cuerpo de la petición con el parámetro 'plain' que contiene el JSON
+        const formData = new URLSearchParams();
+        formData.append('plain', JSON.stringify(configData));
+
+        // 4. Enviar petición
+        console.log("Enviando datos:", formData.toString());
+        const response = await fetch('/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': `Basic ${authToken}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Error en el servidor");
         }
 
-    processField("googleSheetURL", window.originalConfig.googleSheetURL);
-    processField("thingSpeakAPIKey", window.originalConfig.thingSpeakAPIKey);
-    processField("channelID", window.originalConfig.channelID);
-    processField("location", window.originalConfig.location);
-    processField("updateOta", window.originalConfig.updateOta);
-    processField("telegramToken", window.originalConfig.telegramToken);
-    processField("chatId", window.originalConfig.chatId);
+        const result = await response.text();
+        showToast("¡Configuración guardada!", "success");
+        setTimeout(() => location.reload(), 5000);
 
-    fetch("/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: formData.toString()
-    })
-        .then(response => response.text())
-        .then(message => {
-            if (message.includes("✅")) {
-                showToast(message, "success");
-                setTimeout(() => location.reload(), 5000);
-            } else {
-                showToast("❌ " + message, "error");
+    } catch (error) {
+        console.error("Error:", error);
+        showToast(`Error: ${error.message}`, "error");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        startWiFiScans();
+    }
+}
+
+// Función para detener todos los intervalos
+function clearAllIntervals() {
+    const highestIntervalId = setTimeout(() => {}, 0);
+    for (let i = 1; i < highestIntervalId; i++) {
+        clearInterval(i);
+    }
+}
+ 
+        // Funciones para control de escaneos WiFi
+function stopWiFiScans() {
+    console.log("Deteniendo escaneos WiFi...");
+    clearInterval(wifiScanInterval);
+}
+
+function startWiFiScans() {
+    console.log("Reanudando escaneos WiFi...");
+    wifiScanInterval = setInterval(scanNetworksAutomatically, 30000);
+    scanNetworksAutomatically(); // Ejecutar inmediatamente
+}
+       
+        // Prueba de conexión básica
+async function testConnection() {
+    try {
+        const response = await fetch('/getConfig', {
+            headers: { 'Authorization': `Basic ${authToken}` }
+        });
+        console.log("Prueba de conexión:", response.status, await response.text());
+    } catch (error) {
+        console.error("Error de conexión:", error);
+    }
+}
+
+// Llama a esta función después del login
+testConnection();
+
+        // Función para subir firmware
+function uploadFirmware() {
+            const fileInput = document.getElementById('firmwareFile');
+            const file = fileInput.files[0];
+            
+            if (!file || !file.name.endsWith('.bin')) {
+                showToast('Seleccione un archivo .bin válido', 'error');
+                return;
             }
-        })
-        .catch(error => {
-            console.error("Error guardando configuración:", error);
-            showToast("❌ Error al guardar la configuración.", "error");
-        })
-        .finally(() => {
-            botonGuardar.disabled = false;
-            botonGuardar.innerHTML = "Guardar Configuración";
+
+            const formData = new FormData();
+            formData.append('update', file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/update', true);
+
+            xhr.upload.onprogress = (e) => {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                document.getElementById('otaStatus').textContent = `Subiendo: ${percent}%`;
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    showToast('Actualización exitosa. Reiniciando...');
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    showToast('Error en la actualización', 'error');
+                }
+            };
+
+            xhr.send(formData);
+        }
+
+// Función mejorada para escanear redes
+async function scanNetworksAutomatically() {
+    if (isSavingConfig) {
+        console.log("Escaneo pospuesto (guardado en progreso)");
+        return;
+    }
+    const wifiList = document.getElementById('wifi-list');
+    wifiList.innerHTML = '<div class="loading-spinner"></div> Escaneando redes...';
+    if (!isFrontendActive) return;
+    
+    try {
+        // Paso 1: Solicitar nuevo escaneo
+        await fetch('/api/wifi/scanInternal', {
+            headers: { 'Authorization': `Basic ${authToken}` }
+        });
+        
+        // Paso 2: Esperar tiempo de escaneo + margen de seguridad
+        await new Promise(resolve => setTimeout(resolve, SCAN_DELAY));
+        
+        // Paso 3: Obtener resultados actualizados
+        const response = await fetch('/api/wifi/scan', {
+            headers: { 'Authorization': `Basic ${authToken}` }
+        });
+        if (!response.ok) throw new Error('Error en escaneo');
+        
+        const networks = await response.json();
+        //const data = await response.json();
+        if (networks.length === 0) {
+            wifiList.innerHTML = '<p>No se encontraron redes WiFi</p>';
+        } else {
+            renderNetworkList(networks);
+        }
+        
+    } catch (error) {
+        console.error("Error al escanear redes:", error);
+        wifiList.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        showToast('Error al escanear redes', 'error');
+    }
+}
+
+// Control de actividad del frontend
+document.addEventListener('visibilitychange', () => {
+    isFrontendActive = !document.hidden;
+    manageScanInterval();
+});
+
+window.addEventListener('focus', () => {
+    isFrontendActive = true;
+    manageScanInterval();
+});
+
+window.addEventListener('blur', () => {
+    isFrontendActive = false;
+    manageScanInterval();
+});
+
+// Gestión del intervalo
+function manageScanInterval() {
+    clearInterval(wifiScanInterval);
+    
+    if (isFrontendActive) {
+        // Ejecutar inmediatamente y luego cada intervalo
+        scanNetworksAutomatically();
+        wifiScanInterval = setInterval(scanNetworksAutomatically, SCAN_INTERVAL);
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Mostrar modal de autenticación
+    showAuthModal();
+    
+    // 2. Configurar eventos del modal WiFi
+    document.getElementById('connectWifiBtn').addEventListener('click', connectToNetwork);
+    document.getElementById('cancelWifiBtn').addEventListener('click', () => hideModal('wifiModal'));
+    
+    // 3. Configurar formulario de login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await login();
+    });
+    
+    // 4. Configurar formulario de configuración
+    const configForm = document.getElementById('configForm');
+    if (configForm) {
+        configForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log("Formulario de configuración enviado");
+            await saveConfig(e);
         });
     }
+    
+    // 5. Iniciar gestión de escaneo WiFi
+    manageScanInterval();
+    
+    // 6. Cargar configuración si ya está autenticado
+    if (authToken) {
+        loadConfig();
+    }
+    
+    // 7. Iniciar actualización de datos de sensores
+    updateSensorData();
+    scanNetworksAutomatically();
+    setInterval(updateSensorData, 5000);
+    
+    // 8. Configurar evento para OTA
+    document.getElementById('firmwareFile').addEventListener('change', (e) => {
+        console.log("Archivo seleccionado para OTA:", e.target.files[0].name);
+    });
+});
 
+  // Variable para almacenar el SSID seleccionado
+let currentSSID = '';
+let selectedNetwork = null;
+// Función para mostrar el modal WiFi
+function showWifiModal(network) {
+    selectedNetwork = network;
+    document.getElementById('currentSSID').textContent = network.ssid;
+    document.getElementById('wifiModalTitle').textContent = `🔑 Conectar a ${network.ssid}`;
+    document.getElementById('wifiPassword').value = '';
+    document.getElementById('wifiModal').style.display = 'flex';
+    document.getElementById('wifiPassword').focus();
+}
 
-    // Subir firmware OTA
-    function uploadFirmware() {
-        let fileInput = document.getElementById("firmwareFile");
-        let file = fileInput.files[0];
-        if (!file) {
-            alert("Selecciona un archivo primero.");
-            return;
+// Función para ocultar el modal WiFi
+function hideWifiModal() {
+    document.getElementById('wifiModal').style.display = 'none';
+    selectedNetwork = null;
+}
+
+// Función para ocultar modales
+function hideModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+let selectedSSID = '';
+
+function renderNetworkList(networks) {
+    const wifiList = document.getElementById('wifi-list');
+    if (!wifiList) {
+        console.error("Elemento wifi-list no encontrado");
+        return;
+    }
+
+    // Limpiar lista existente
+    wifiList.innerHTML = '';
+    
+    // Crear contenedor
+    const container = document.createElement('div');
+    container.style.maxHeight = '300px';
+    container.style.overflowY = 'auto';
+    container.style.marginTop = '10px';
+    
+    // Título
+    const title = document.createElement('h3');
+    title.textContent = 'Redes Disponibles:';
+    title.style.marginBottom = '10px';
+    container.appendChild(title);
+    
+    if (!networks || networks.length === 0) {
+        const emptyMsg = document.createElement('p');
+        emptyMsg.textContent = 'No se encontraron redes WiFi';
+        emptyMsg.style.color = '#666';
+        container.appendChild(emptyMsg);
+        wifiList.appendChild(container);
+        return;
+    }
+    
+    // Crear lista
+    const list = document.createElement('ul');
+    list.style.listStyle = 'none';
+    list.style.padding = '0';
+    list.style.margin = '0';
+    
+    networks.forEach(network => {
+        // Verificar estructura mínima requerida
+        if (!network.ssid) return;
+        
+        const item = document.createElement('li');
+        item.style.margin = '8px 0';
+        item.style.padding = '12px';
+        item.style.border = '1px solid #e0e0e0';
+        item.style.borderRadius = '8px';
+        item.style.backgroundColor = '#f9f9f9';
+        item.style.cursor = 'pointer';
+        item.style.transition = 'all 0.2s';
+        
+        item.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1;">
+                    <strong style="font-size: 1.1rem;">${network.ssid || 'Red oculta'}</strong>
+                    <div style="font-size: 0.85rem; color: #555; margin-top: 4px;">
+                        <span>Señal: ${network.rssi || '?'} dBm</span>
+                        <span style="margin-left: 10px;">${network.secured ? '🔒 Protegida' : '🔓 Abierta'}</span>
+                    </div>
+                </div>
+                <div style="margin-left: 10px; font-size: 1.2rem;">
+                    ${network.secured ? '🔒' : '🔓'}
+                </div>
+            </div>
+        `;
+        
+        item.addEventListener('click', () => {
+            showWifiModal(network);
+        });
+        
+        item.addEventListener('mouseenter', () => {
+            item.style.backgroundColor = '#f0f0f0';
+            item.style.transform = 'translateX(2px)';
+        });
+        
+        item.addEventListener('mouseleave', () => {
+            item.style.backgroundColor = '#f9f9f9';
+            item.style.transform = 'none';
+        });
+        
+        list.appendChild(item);
+    });
+    
+    container.appendChild(list);
+    wifiList.appendChild(container);
+}
+
+// Función para conectar a la red WiFi
+async function connectToNetwork() {
+    if (!selectedNetwork) {
+        showToast('No se ha seleccionado ninguna red', 'error');
+        return;
+    }
+
+    const password = document.getElementById('wifiPassword').value.trim();
+    
+    if (selectedNetwork.secured && !password) {
+        showToast('La contraseña no puede estar vacía', 'error');
+        return;
+    }
+
+    toggleLoading(true, `Conectando a ${selectedNetwork.ssid}...`);
+    
+    try {
+        const response = await fetch('/saveWiFi', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${authToken}`
+            },
+            body: JSON.stringify({ 
+                ssid: selectedNetwork.ssid, 
+                password: password 
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Error al conectar");
         }
 
-        let formData = new FormData();
-        formData.append("firmware", file);
+        const result = await response.json();
+        
+        if (result.status === "connected") {
+            showToast(`¡Conectado a ${selectedNetwork.ssid}!`, 'success');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            throw new Error(result.error || "Error en la conexión");
+        }
+    } catch (error) {
+        showToast(error.message, 'error');
+        console.error("Error al conectar:", error);
+    } finally {
+        toggleLoading(false);
+        hideWifiModal();
+    }
+}
+       
+    // Manejar envío del formulario de login
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await login();
+});
 
-        let xhr = new XMLHttpRequest();
-        xhr.open("POST", "/update", true);
-
-        xhr.upload.onprogress = function(event) {
-            let percent = Math.round((event.loaded / event.total) * 100);
-            document.getElementById("status").innerText = "Subiendo: " + percent + "%";
+        // Controlador de estado global
+        let appState = {
+            isConnected: false,
+            config: {},
+            networks: []
         };
 
-        xhr.onload = function() {
-            if (xhr.status == 200) {
-                document.getElementById("status").innerText = "✅ Actualización completada. Reiniciando...";
-                setTimeout(() => {
-                    location.reload();
-                }, 3000);
-            } else {
-                document.getElementById("status").innerText = "❌ Error en la actualización.";
+        // Función para mostrar/ocultar loading
+        const toggleLoading = (show, text = 'Cargando...') => {
+            const loader = document.getElementById('loading');
+            loader.style.display = show ? 'grid' : 'none';
+            document.getElementById('loadingText').textContent = text;
+        };
+
+        // Actualizar datos de sensores
+        const updateSensorData = async () => {
+            try {
+                const response = await fetch('/sensor_data');
+                const data = await response.json();
+                
+                document.getElementById('temp').textContent = data.temp.toFixed(1);
+                document.getElementById('humidity').textContent = data.humidity.toFixed(1);
+                document.getElementById('pressure').textContent = data.pressure.toFixed(1);
+                document.getElementById('precision').textContent = data.precision;
+                document.getElementById('air_quality').textContent = data.air_quality.toFixed(1);
+                document.getElementById('version').textContent = data.version || "No disponible";
+                
+            } catch (error) {
+                console.error('Error fetching sensor data:', error);
+                showToast('Error obteniendo datos del sensor', 'error');
             }
         };
 
-        xhr.send(formData);
-    }
+        // Controlador de configuración
+        const handleConfig = {
+            load: async () => {
+                toggleLoading(true);
+                try {
+                    const response = await fetch('/getConfig');
+                    appState.config = await response.json();
+                    // Actualizar campos del formulario
+                } catch (error) {
+                    showToast('Error cargando configuración', 'error');
+                } finally {
+                    toggleLoading(false);
+                }
+            },
+            
+            save: async (event) => {
+                event.preventDefault();
+                toggleLoading(true, 'Guardando configuración...');
+                
+                try {
+                    const response = await fetch('/config', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(appState.config)
+                    });
+                    
+                    if (!response.ok) throw new Error(response.statusText);
+                    showToast('Configuración guardada exitosamente', 'success');
+                } catch (error) {
+                    showToast('Error guardando configuración', 'error');
+                } finally {
+                    toggleLoading(false);
+                }
+            }
+        };
 
-    // Reiniciar ESP32
-    function restartESP32() {
-        fetch("/restart", { method: "POST" })
-            .then(() => {
-                alert("🔄 ESP32 se reiniciará...");
-            })
-            .catch(error => console.error("Error al reiniciar:", error));
-    }
 
-    // Cargar datos al cargar la página
-    document.addEventListener("DOMContentLoaded", function() {
-        loadConfig();
-        document.querySelector("form").addEventListener("submit", saveConfig);
-        loadESPStatus();
-    });
+        // Función para mostrar notificaciones
+        const showToast = (message, type = 'info') => {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        };
+
     </script>
-    <style>
-        /* 🔹 Diseño general */
-    body {
-        font-family: 'Arial', sans-serif;
-        text-align: center;
-        background-color: #f4f4f4;
-        margin: 0;
-        padding: 0;
-    }
-
-    .container {
-        max-width: 500px;
-        margin: 20px auto;
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        animation: fadeIn 0.5s ease-in-out;
-    }
-
-    h2 {
-        color: #333;
-        font-size: 22px;
-        margin-bottom: 15px;
-    }
-
-    label {
-        display: block;
-        text-align: left;
-        font-weight: bold;
-        margin-top: 10px;
-        font-size: 14px;
-        color: #555;
-    }
-
-    input {
-        width: 100%;
-        padding: 10px;
-        margin-top: 5px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 14px;
-        transition: all 0.3s ease-in-out;
-    }
-
-    input:focus {
-        border-color: #4CAF50;
-        outline: none;
-        box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
-    }
-
-    button {
-        width: 100%;
-        padding: 12px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-        margin-top: 15px;
-        transition: background 0.3s;
-    }
-
-    button:hover {
-        background-color: #45a049;
-    }
-
-    /* 🔹 Mejor diseño para el spinner */
-    .loading-spinner {
-        display: inline-block;
-        width: 18px;
-        height: 18px;
-        border: 3px solid white;
-        border-radius: 50%;
-        border-top: 3px solid transparent;
-        animation: spin 1s linear infinite;
-        vertical-align: middle;
-        margin-left: 8px;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* 🔹 Diseño responsivo */
-    @media (max-width: 600px) {
-        .container {
-            width: 90%;
-            padding: 15px;
-        }
-
-        h2 {
-            font-size: 20px;
-        }
-
-        button {
-            font-size: 14px;
-        }
-    }
-
-        /* 🔹 Estilos para el mensaje flotante */
-    .toast {
-        visibility: hidden;
-        min-width: 250px;
-        margin-left: -125px;
-        background-color: #333;
-        color: #fff;
-        text-align: center;
-        border-radius: 5px;
-        padding: 16px;
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        font-size: 17px;
-        opacity: 0;
-        transition: opacity 0.5s ease-in-out, top 0.5s ease-in-out;
-    }
-
-    .toast.show {
-        visibility: visible;
-        opacity: 1;
-        top: 50px;
-    }
-
-    .toast.success { background-color: #4CAF50; }  /* Verde */
-    .toast.error { background-color: #f44336; }    /* Rojo */
-
-    /* 🔄 Estilos para el indicador de carga */
-    .loading {
-        text-align: center;
-        font-size: 18px;
-        color: #666;
-        margin: 20px 0;
-    }
-
-    .spinner {
-        display: inline-block;
-        width: 24px;
-        height: 24px;
-        border: 3px solid #666;
-        border-radius: 50%;
-        border-top: 3px solid transparent;
-        animation: spin 1s linear infinite;
-        vertical-align: middle;
-        margin-left: 10px;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    </style>
-    <div id="toast" class="toast"></div>
-    <div id="loadingMessage" class="loading">Cargando configuración... <span class="spinner"></span></div>
-
-</body>
-</html>
+ </body>
+ </html>
