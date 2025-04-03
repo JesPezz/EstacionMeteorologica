@@ -24,15 +24,6 @@
 #include "notifications.h"
 #include "web_server.h"
 #include <freertos/timers.h>
-// #include <Ticker.h>
-
-// Ticker scanTicker;
-// bool shouldScanNetworks = false;
-
-// // Función para escanear redes (llamada por el Ticker)
-// void triggerNetworkScan() {
-//     shouldScanNetworks = true; // Activa el flag para el loop()
-// }
 
 void setup() {
 
@@ -144,8 +135,8 @@ printConfig();  // ✅ Ver los valores actuales de configuración
 
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  // checkForUpdates();
-  // checkForIndexUpdate();
+  checkForIndexUpdate();
+  checkForUpdates();
   listSPIFFS();
 
 
@@ -196,8 +187,8 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        // checkForUpdates();
-        // checkForIndexUpdate();
+        checkForIndexUpdate();
+        checkForUpdates();
         loadState();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
@@ -207,13 +198,6 @@ void loop() {
       yield(); // Alimenta el WDT
       return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
   }
-
-//   if (shouldScanNetworks) {
-//     shouldScanNetworks = false; // Resetear flag
-
-//     Serial.println("🔍 Iniciando escaneo WiFi...");
-//     WiFiManager::scanNetworks(networks); // Actualiza el vector global
-// }
    
   readSensorData();      // Leer datos del sensor
   
