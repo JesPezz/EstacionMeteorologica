@@ -6,29 +6,55 @@
     <title>Estación Meteorológica - Dashboard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Variable global para controlar el estado
+        window.chartJSLoaded = false;
+      </script>
     <style>
+        
+        .modal {
+    transition: opacity 0.3s ease, visibility 0.3s ease !important;
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal.hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
 
         /* Estilos para los botoness */
-  .btn-primary {
-    background: #2196F3;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    flex: 1;
-  }
-  
-  .btn-secondary {
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            flex: 1;
+        }
+        
+        .btn-secondary {
     background: #f44336;
     color: white;
     border: none;
     padding: 10px 15px;
     border-radius: 5px;
     flex: 1;
-  }
+}
 
-  .modal {
+.modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -87,15 +113,15 @@
     }
 }
 
-        :root {
-            --primary: #2196F3;
-            --success: #4CAF50;
-            --error: #f44336;
-            --text: #2c3e50;
-            --background: #f5f6fa;
+:root {
+    --primary: #2196F3;
+    --success: #4CAF50;
+    --error: #f44336;
+    --text: #2c3e50;
+    --background: #f5f6fa;
             --card-bg: #ffffff;
         }
-
+        
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
             margin: 0;
@@ -103,7 +129,7 @@
             background: var(--background);
             color: var(--text);
         }
-
+        
         .dashboard {
             max-width: 1200px;
             margin: 0 auto;
@@ -111,7 +137,7 @@
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
-
+        
         .card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -119,12 +145,12 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             transition: transform 0.2s;
         }
-
+        
         .card:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.1);
         }
-
+        
         .sensor-data {
             font-size: 1.2rem;
             margin: 15px 0;
@@ -134,15 +160,15 @@
             font-weight: 600;
             color: var(--primary);
         }
-
+        
         .config-section {
             grid-column: 1 / -1;
         }
-
+        
         .form-group {
             margin-bottom: 1rem;
         }
-
+        
         input, select, button {
             width: 100%;
             padding: 12px;
@@ -151,7 +177,7 @@
             border-radius: 8px;
             font-size: 1rem;
         }
-
+        
         button {
             background: var(--primary);
             color: white;
@@ -159,12 +185,12 @@
             cursor: pointer;
             transition: opacity 0.3s;
         }
-
+        
         button:disabled {
             opacity: 0.7;
             cursor: not-allowed;
         }
-
+        
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -200,13 +226,13 @@
         }
         .toast.success { background: #4CAF50; }
         .toast.error { background: #f44336; }
-
+        
         body {
             opacity: 1 !important;
             visibility: visible !important;
             transition: none !important;
         }
-
+        
         /* Prevenir flashes en móviles */
         @media screen and (max-width: 768px) {
             html, body {
@@ -216,21 +242,82 @@
         }
 
         .loading-spinner {
-    border: 3px solid rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
-    border-top: 3px solid #2196F3;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #2196F3;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .modal {
+    transition: opacity 0.3s ease;
+    /* Asegurar que esté por encima de todo */
+    z-index: 9999; 
+    position: fixed;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* Animación de cierre */
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
-    </style>
+.modal {
+    transition: opacity 0.3s ease !important;
+    opacity: 1;
+}
+
+.modal[style*="none"] {
+    display: none !important;
+}
+
+/* Añade esto a tu sección de estilos */
+.modal {
+    transition: all 0.3s ease !important;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal.hiding {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Animaciones */
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    margin: 20px 0;
+}
+
+.alert {
+    padding: 10px;
+    background: #ffeb3b;
+    color: #000;
+    border-radius: 4px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+        </style>
 </head>
 <body>
     <div class="dashboard">
@@ -254,7 +341,7 @@
                 <canvas id="sensorChart"></canvas>
             </div>
         </div>
-
+        
         <!-- Sección de Configuración WiFi -->
         <div class="card wifi-config">
             <h2><i class="fas fa-wifi"></i> Configuración WiFi</h2>
@@ -268,23 +355,23 @@
                 <div class="form-group">
                     <label for="googleSheetURL">Google Sheet URL:</label>
                     <input type="text" id="googleSheetURL" name="googleSheetURL">
-        
+                    
                     <label for="thingSpeakAPIKey">ThingSpeak API Key:</label>
                     <input type="text" id="thingSpeakAPIKey" name="thingSpeakAPIKey">
-        
+                    
                     <label for="channelID">Channel ID:</label>
                     <input type="number" id="channelID" name="channelID">
-        
+                    
                     <label for="location">Ubicación:</label>
                     <input type="text" id="location" name="location">
-        
+                    
                     <label for="updateOta">Intervalo OTA (horas):</label>
                     <input type="number" id="updateOta" name="updateOta" min="1" step="1">
         
                     <h3>Notificaciones</h3>
                     <label for="telegramToken">Token de Telegram:</label>
                     <input type="text" id="telegramToken" name="telegramToken">
-        
+                    
                     <label for="chatId">Chat ID de Telegram:</label>
                     <input type="text" id="chatId" name="chatId">        
                 </div>
@@ -292,7 +379,7 @@
                 <button type="submit">Guardar Configuración</button>
             </form>
         </div>
-
+        
         <!-- Sección de Actualización OTA -->
         <div class="card ota-section">
             <h2><i class="fas fa-cloud-upload-alt"></i> Actualización OTA</h2>
@@ -307,9 +394,9 @@
         <div class="spinner"></div>
         <div id="loadingText"></div>
     </div>
-
+    
     <div id="toast" class="toast"></div>
-
+    
     <div id="authModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>🔐 Iniciar Sesión</h2>
@@ -324,7 +411,7 @@
             </form>
         </div>
     </div>
-
+    
     <div id="wifiModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2 id="wifiModalTitle">🔑 Ingrese Contraseña WiFi</h2>
@@ -336,13 +423,298 @@
             </div>
         </div>
     </div>
-
+    
 <script>
     let isSavingConfig = false;
     let wifiScanInterval;
     let isFrontendActive = true;
-    const SCAN_INTERVAL = 30000; // 30 segundos (ajustable)
+    let currentSSID = '';
+    let selectedNetwork = null;
+    const SCAN_INTERVAL = 600000; // 10 minutos
     const SCAN_DELAY = 8000; // 8 segundos para esperar resultados
+    let authToken = null;
+    let chart = null;
+    let sensorChart = null;
+
+function showAuthModal() {
+        const modal = document.getElementById('authModal');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Bloquear scroll del body
+        
+        // Enfocar automáticamente el primer input
+        setTimeout(() => {
+        document.getElementById('username').focus();
+    }, 100);
+}
+
+// Función para login (llamada desde el modal)
+async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    // Validación básica del frontend
+    if (!username || !password) {
+        showToast('Ingrese usuario y contraseña', 'error');
+        return;
+    }
+
+    toggleLoading(true, 'Verificando credenciales...');
+    
+    try {
+        // Crear token de autenticación (Base64)
+        authToken = btoa(`${username}:${password}`);
+        
+        // Intentar obtener la configuración (que sirve como verificación de credenciales)
+        console.log('Enviando autenticación:', {
+    headers: {
+        'Authorization': `Basic ${btoa(username + ':' + password)}`,
+        'Content-Type': 'application/json'
+    }
+});
+        const response = await fetch('/getConfig', {
+            headers: { 
+                'Authorization': `Basic ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 5000 // Timeout de 5 segundos
+        });
+        
+        // Manejar respuesta del servidor
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('Credenciales incorrectas');
+            }
+            throw new Error(`Error del servidor (${response.status})`);
+        }
+        console.log('Respuesta del servidor:', {
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+    body: await response.clone().text() // clone() para poder leer después
+});
+        // Autenticación exitosa
+        const configData = await response.json();
+        console.log('Configuración recibida:', configData);
+        
+        // Verificar coincidencia con credenciales del backend
+        if (configData.webUsername !== username || configData.webPassword !== password) {
+            throw new Error('Credenciales no coinciden con configuración');
+        }
+        
+        // Cierre del modal y flujo post-login
+        hideAuthModal();
+        showToast(`Bienvenido a ${configData.location}`, 'success');
+        
+        // Cargar configuración y datos
+        await loadConfig();
+        startSystemUpdates();
+        
+    } catch (error) {
+        console.error('Error en login:', error);
+        
+        // Mensajes de error específicos
+        let errorMessage = 'Error de autenticación';
+        if (error.message.includes('Failed to fetch') || error.message.includes('timeout')) {
+            errorMessage = 'No se pudo conectar al servidor';
+        } else if (error.message.includes('incorrectas') || error.message.includes('coinciden')) {
+            errorMessage = 'Usuario o contraseña incorrectos';
+        }
+        
+        showToast(errorMessage, 'error');
+        document.getElementById('password').select();
+    } finally {
+        toggleLoading(false);
+    }
+}
+
+// Función de validación local (mientras no hay conexión)
+function isValidCredentials(user, pass) {
+    // Modo emergencia: credenciales hardcodeadas
+    const validUsers = {
+        'admin': 'admin123',  // Cambiar en producción
+        'user': 'pass123'
+    };
+    return validUsers[user] === pass;
+}
+
+function initBasicSystem() {
+    // 1. Funciones esenciales (siempre disponibles)
+    updateSensorData();
+    setInterval(updateSensorData, 5000);
+    scanNetworksAutomatically();
+    
+    // 2. Gráfico: SOLO si está el archivo en el ESP32
+    loadChartDynamically(); // <- Carga bajo demanda
+}
+
+function loadChartDynamically() {
+    // Intento 1: Cargar desde CDN
+    const cdnScript = document.createElement('script');
+    cdnScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    cdnScript.integrity = 'sha384-...'; // Opcional: añadir SRI hash
+    cdnScript.crossOrigin = 'anonymous';
+    
+    cdnScript.onload = () => {
+        console.log("Chart.js cargado desde CDN");
+        window.chartJSLoaded = true;
+        initChart();
+    };
+    
+    cdnScript.onerror = () => {
+        console.warn("Falló CDN, intentando cargar local...");
+        loadLocalChart();
+    };
+    
+    document.head.appendChild(cdnScript);
+}
+
+function loadLocalChart() {
+    const localScript = document.createElement('script');
+    localScript.src = '/chart.umd.min.js';
+    
+    localScript.onload = () => {
+        console.log("Chart.js cargado desde local");
+        window.chartJSLoaded = true;
+        initChart();
+    };
+    
+    localScript.onerror = () => {
+        console.error("No se pudo cargar Chart.js");
+        handleChartError();
+    };
+    
+    document.head.appendChild(localScript);
+}
+
+function handleChartError() {
+    const chartContainer = document.getElementById('sensorChart');
+    if (chartContainer) {
+        chartContainer.style.display = 'none';
+        // Mensaje alternativo
+        chartContainer.insertAdjacentHTML('afterend', 
+            '<div class="alert">Gráfico no disponible. Intente conectarse a internet.</div>');
+    }
+}
+
+function initChart() {
+    if (!window.chartJSLoaded) {
+        console.warn("Chart.js no está cargado");
+        return;
+    }
+    
+    const ctx = document.getElementById('sensorChart')?.getContext('2d');
+    if (!ctx) {
+        console.error("Contexto del canvas no disponible");
+        return;
+    }
+    
+    sensorChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Temperatura (°C)',
+                    data: [],
+                    borderColor: '#2196F3',
+                    tension: 0.1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Humedad (%)',
+                    data: [],
+                    borderColor: '#4CAF50',
+                    tension: 0.1,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: 'Temperatura (°C)' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: 'Humedad (%)' },
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+}
+
+// Función para iniciar actualizaciones post-login
+function startSystemUpdates() {
+
+    // 1. Cargar Chart.js inteligentemente
+    if (typeof Chart === 'undefined') {
+        loadChartDynamically();
+    } else {
+        window.chartJSLoaded = true;
+        initChart();
+    }
+    // Actualizar datos inmediatamente
+    updateSensorData();
+    updateESPStatus();
+    // 3. Configurar SSE
+    setupEventSource();
+    // Establecer intervalos regulares
+    setInterval(updateSensorData, 5000);
+    setInterval(updateESPStatus, 10000);
+    
+    // Escanear redes WiFi
+    scanNetworksAutomatically();
+}
+
+function setupEventSource() {
+    if (!window.eventSource) {
+        window.eventSource = new EventSource('/events');
+        window.eventSource.addEventListener('update', (e) => {
+            const data = JSON.parse(e.data);
+            updateChart(data);
+        });
+    }
+}
+
+// Función robusta para ocultar el modal
+function hideAuthModal() {
+    try {
+        // Método 1: Buscar por ID exacto
+        const modal = document.getElementById('authModal');
+        
+        if (modal) {
+            // Animación de desvanecimiento
+            modal.style.opacity = '0';
+            modal.style.transition = 'opacity 0.3s ease';
+            
+            // Ocultar completamente después de la animación
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }, 300);
+        } else {
+            // Método de emergencia
+            document.querySelectorAll('.modal').forEach(m => {
+                m.style.display = 'none';
+                m.style.opacity = '0';
+            });
+        }
+    } catch (error) {
+        console.error('Error al ocultar modal:', error);
+        // Último recurso
+        const modals = document.getElementsByClassName('modal');
+        for (let m of modals) m.remove();
+    }
+}
+            
 // Evitar cierre accidental del modal en móvil
 document.getElementById('authModal').addEventListener('click', (e) => {
     if (e.target === document.getElementById('authModal')) {
@@ -361,24 +733,6 @@ window.addEventListener('resize', () => {
     }
 });
 
-function showAuthModal() {
-    const modal = document.getElementById('authModal');
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden'; // Bloquear scroll del body
-    
-    // Enfocar automáticamente el primer input
-    setTimeout(() => {
-        document.getElementById('username').focus();
-    }, 100);
-}
-
-// Ocultar modal
-function hideAuthModal() {
-    document.getElementById('authModal').style.display = 'none';
-    document.body.style.overflow = 'auto'; // Restaurar scroll
-}
-
-
 function updateESPStatus() {
     fetch("/esp_status")
         .then(response => response.json())
@@ -389,44 +743,32 @@ function updateESPStatus() {
             document.getElementById("mem-status").textContent = data.memory || "No disponible";
         })
         .catch(error => console.error("Error al obtener estado del ESP32:", error));
-}
-
+    }
+    
 // Llamar a la función cada 5 segundos
 setInterval(updateESPStatus, 5000);
-
+    
 // Configuración inicial de Chart.js
 const ctx = document.getElementById('sensorChart').getContext('2d');
-const chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: [],
-        datasets: [{
-            label: 'Temperatura (°C)',
-            data: [],
-            borderColor: '#2196F3',
-            tension: 0.1
-        }, {
-            label: 'Humedad (%)',
-            data: [],
-            borderColor: '#4CAF50',
-            tension: 0.1
-        }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-});
 
-        // Función para actualizar el gráfico
+// Función para actualizar el gráfico
 function updateChart(data) {
-    const now = new Date().toLocaleTimeString();
-    if (chart.data.labels.length > 15) {
-        chart.data.labels.shift();
-        chart.data.datasets[0].data.shift();
-        chart.data.datasets[1].data.shift();
+    if (!sensorChart || !data) return;
+    
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Limitar datos a 20 puntos
+    if (sensorChart.data.labels.length >= 20) {
+        sensorChart.data.labels.shift();
+        sensorChart.data.datasets.forEach(dataset => dataset.data.shift());
     }
-    chart.data.labels.push(now);
-    chart.data.datasets[0].data.push(data.temp);
-    chart.data.datasets[1].data.push(data.humidity);
-    chart.update();
+    
+    // Añadir nuevos datos
+    sensorChart.data.labels.push(now);
+    sensorChart.data.datasets[0].data.push(parseFloat(data.temp) || 0);
+    sensorChart.data.datasets[1].data.push(parseFloat(data.humidity) || 0);
+    
+    sensorChart.update();
 }
 
 // Conexión SSE para recibir datos
@@ -437,41 +779,8 @@ eventSource.addEventListener('update', (e) => {
     console.log("Datos recibidos:", data);  // Para depuración
 });
 
-let authToken = null;
 
-// Función para login (llamada desde el modal)
-async function login() {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    
-    if (!username || !password) {
-        showToast('Usuario y contraseña requeridos', 'error');
-        return;
-    }
-
-    toggleLoading(true, 'Verificando...');
-    
-    try {
-        authToken = btoa(`${username}:${password}`);
-        await testConnection();
-        const response = await fetch('/getConfig', {
-            headers: { 'Authorization': `Basic ${authToken}` }
-        });
-        
-        if (!response.ok) throw new Error('Credenciales incorrectas');
-        
-        hideAuthModal();
-        await loadConfig();
-        showToast('Autenticación exitosa', 'success');
-    } catch (error) {
-        showToast(error.message, 'error');
-        document.getElementById('password').focus();
-    } finally {
-        toggleLoading(false);
-    }
-}
-
-        // Función para cargar configuración
+// Función para cargar configuración
 async function loadConfig() {
     try {
         const response = await fetch('/getConfig', {
@@ -501,21 +810,21 @@ async function loadConfig() {
         document.getElementById('updateOta').value = config.updateOta / 3600000; // Convertir a horas
         document.getElementById('telegramToken').value = "*****";
         document.getElementById('chatId').value = config.chatId;
-
+        
     } catch (error) {
         console.error("Error en loadConfig:", error);
         showToast(error.message, 'error');
     }
 }
 
-        // Guardar configuración (con validación)
-        async function saveConfig(event) {
+// Guardar configuración (con validación)
+async function saveConfig(event) {
     event.preventDefault();
     
     // 1. Detener procesos interferentes
     stopWiFiScans();
     clearAllIntervals();
-
+    
     const submitBtn = event.target.querySelector("button[type='submit']");
     submitBtn.disabled = true;
     const originalText = submitBtn.innerHTML;
@@ -532,11 +841,11 @@ async function loadConfig() {
             telegramToken: document.getElementById('telegramToken').value.trim(),
             chatId: document.getElementById('chatId').value.trim()
         };
-
+        
         // 3. Crear el cuerpo de la petición con el parámetro 'plain' que contiene el JSON
         const formData = new URLSearchParams();
         formData.append('plain', JSON.stringify(configData));
-
+        
         // 4. Enviar petición
         console.log("Enviando datos:", formData.toString());
         const response = await fetch('/config', {
@@ -547,16 +856,16 @@ async function loadConfig() {
             },
             body: formData
         });
-
+        
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(errorText || "Error en el servidor");
         }
-
+        
         const result = await response.text();
         showToast("¡Configuración guardada!", "success");
         setTimeout(() => location.reload(), 5000);
-
+        
     } catch (error) {
         console.error("Error:", error);
         showToast(`Error: ${error.message}`, "error");
@@ -574,8 +883,8 @@ function clearAllIntervals() {
         clearInterval(i);
     }
 }
- 
-        // Funciones para control de escaneos WiFi
+
+// Funciones para control de escaneos WiFi
 function stopWiFiScans() {
     console.log("Deteniendo escaneos WiFi...");
     clearInterval(wifiScanInterval);
@@ -587,7 +896,7 @@ function startWiFiScans() {
     scanNetworksAutomatically(); // Ejecutar inmediatamente
 }
        
-        // Prueba de conexión básica
+// Prueba de conexión básica
 async function testConnection() {
     try {
         const response = await fetch('/getConfig', {
@@ -602,27 +911,27 @@ async function testConnection() {
 // Llama a esta función después del login
 testConnection();
 
-        // Función para subir firmware
+// Función para subir firmware
 function uploadFirmware() {
-            const fileInput = document.getElementById('firmwareFile');
-            const file = fileInput.files[0];
-            
-            if (!file || !file.name.endsWith('.bin')) {
+    const fileInput = document.getElementById('firmwareFile');
+    const file = fileInput.files[0];
+    
+    if (!file || !file.name.endsWith('.bin')) {
                 showToast('Seleccione un archivo .bin válido', 'error');
                 return;
             }
-
+            
             const formData = new FormData();
             formData.append('update', file);
-
+            
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/update', true);
-
+            
             xhr.upload.onprogress = (e) => {
                 const percent = Math.round((e.loaded / e.total) * 100);
                 document.getElementById('otaStatus').textContent = `Subiendo: ${percent}%`;
             };
-
+            
             xhr.onload = () => {
                 if (xhr.status === 200) {
                     showToast('Actualización exitosa. Reiniciando...');
@@ -631,17 +940,17 @@ function uploadFirmware() {
                     showToast('Error en la actualización', 'error');
                 }
             };
-
+            
             xhr.send(formData);
         }
-
+        
 // Función mejorada para escanear redes
 async function scanNetworksAutomatically() {
-    if (isSavingConfig) {
-        console.log("Escaneo pospuesto (guardado en progreso)");
-        return;
-    }
-    const wifiList = document.getElementById('wifi-list');
+            if (isSavingConfig) {
+                console.log("Escaneo pospuesto (guardado en progreso)");
+                return;
+            }
+            const wifiList = document.getElementById('wifi-list');
     wifiList.innerHTML = '<div class="loading-spinner"></div> Escaneando redes...';
     if (!isFrontendActive) return;
     
@@ -702,53 +1011,6 @@ function manageScanInterval() {
     }
 }
 
-
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Mostrar modal de autenticación
-    showAuthModal();
-    
-    // 2. Configurar eventos del modal WiFi
-    document.getElementById('connectWifiBtn').addEventListener('click', connectToNetwork);
-    document.getElementById('cancelWifiBtn').addEventListener('click', () => hideModal('wifiModal'));
-    
-    // 3. Configurar formulario de login
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await login();
-    });
-    
-    // 4. Configurar formulario de configuración
-    const configForm = document.getElementById('configForm');
-    if (configForm) {
-        configForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            console.log("Formulario de configuración enviado");
-            await saveConfig(e);
-        });
-    }
-    
-    // 5. Iniciar gestión de escaneo WiFi
-    manageScanInterval();
-    
-    // 6. Cargar configuración si ya está autenticado
-    if (authToken) {
-        loadConfig();
-    }
-    
-    // 7. Iniciar actualización de datos de sensores
-    updateSensorData();
-    scanNetworksAutomatically();
-    setInterval(updateSensorData, 5000);
-    
-    // 8. Configurar evento para OTA
-    document.getElementById('firmwareFile').addEventListener('change', (e) => {
-        console.log("Archivo seleccionado para OTA:", e.target.files[0].name);
-    });
-});
-
-  // Variable para almacenar el SSID seleccionado
-let currentSSID = '';
-let selectedNetwork = null;
 // Función para mostrar el modal WiFi
 function showWifiModal(network) {
     selectedNetwork = network;
@@ -778,7 +1040,7 @@ function renderNetworkList(networks) {
         console.error("Elemento wifi-list no encontrado");
         return;
     }
-
+    
     // Limpiar lista existente
     wifiList.innerHTML = '';
     
@@ -830,21 +1092,21 @@ function renderNetworkList(networks) {
                         <span>Señal: ${network.rssi || '?'} dBm</span>
                         <span style="margin-left: 10px;">${network.secured ? '🔒 Protegida' : '🔓 Abierta'}</span>
                     </div>
-                </div>
-                <div style="margin-left: 10px; font-size: 1.2rem;">
-                    ${network.secured ? '🔒' : '🔓'}
-                </div>
-            </div>
-        `;
-        
-        item.addEventListener('click', () => {
-            showWifiModal(network);
-        });
-        
-        item.addEventListener('mouseenter', () => {
-            item.style.backgroundColor = '#f0f0f0';
-            item.style.transform = 'translateX(2px)';
-        });
+                    </div>
+                    <div style="margin-left: 10px; font-size: 1.2rem;">
+                        ${network.secured ? '🔒' : '🔓'}
+                        </div>
+                        </div>
+                        `;
+                        
+                        item.addEventListener('click', () => {
+                            showWifiModal(network);
+                        });
+                        
+                        item.addEventListener('mouseenter', () => {
+                            item.style.backgroundColor = '#f0f0f0';
+                            item.style.transform = 'translateX(2px)';
+                        });
         
         item.addEventListener('mouseleave', () => {
             item.style.backgroundColor = '#f9f9f9';
@@ -864,14 +1126,14 @@ async function connectToNetwork() {
         showToast('No se ha seleccionado ninguna red', 'error');
         return;
     }
-
+    
     const password = document.getElementById('wifiPassword').value.trim();
     
     if (selectedNetwork.secured && !password) {
         showToast('La contraseña no puede estar vacía', 'error');
         return;
     }
-
+    
     toggleLoading(true, `Conectando a ${selectedNetwork.ssid}...`);
     
     try {
@@ -891,7 +1153,7 @@ async function connectToNetwork() {
             const error = await response.json();
             throw new Error(error.error || "Error al conectar");
         }
-
+        
         const result = await response.json();
         
         if (result.status === "connected") {
@@ -908,29 +1170,29 @@ async function connectToNetwork() {
         hideWifiModal();
     }
 }
-       
-    // Manejar envío del formulario de login
+
+// Manejar envío del formulario de login
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     await login();
 });
 
-        // Controlador de estado global
-        let appState = {
-            isConnected: false,
-            config: {},
-            networks: []
-        };
+// Controlador de estado global
+let appState = {
+    isConnected: false,
+    config: {},
+    networks: []
+};
 
-        // Función para mostrar/ocultar loading
-        const toggleLoading = (show, text = 'Cargando...') => {
-            const loader = document.getElementById('loading');
-            loader.style.display = show ? 'grid' : 'none';
+// Función para mostrar/ocultar loading
+const toggleLoading = (show, text = 'Cargando...') => {
+    const loader = document.getElementById('loading');
+    loader.style.display = show ? 'grid' : 'none';
             document.getElementById('loadingText').textContent = text;
         };
-
-        // Actualizar datos de sensores
-        const updateSensorData = async () => {
+        
+// Actualizar datos de sensores
+const updateSensorData = async () => {
             try {
                 const response = await fetch('/sensor_data');
                 const data = await response.json();
@@ -947,9 +1209,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 showToast('Error obteniendo datos del sensor', 'error');
             }
         };
-
-        // Controlador de configuración
-        const handleConfig = {
+        
+// Controlador de configuración
+const handleConfig = {
             load: async () => {
                 toggleLoading(true);
                 try {
@@ -983,10 +1245,10 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 }
             }
         };
-
-
-        // Función para mostrar notificaciones
-        const showToast = (message, type = 'info') => {
+        
+        
+// Función para mostrar notificaciones
+const showToast = (message, type = 'info') => {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
@@ -997,6 +1259,51 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             }, 3000);
         };
 
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Mostrar modal de autenticación
+    showAuthModal();
+    // Configuración del login (nunca bloqueante)
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        login();
+    });
+    
+    // 2. Configurar eventos del modal WiFi
+    document.getElementById('connectWifiBtn').addEventListener('click', connectToNetwork);
+    document.getElementById('cancelWifiBtn').addEventListener('click', () => hideModal('wifiModal'));
+    
+    
+    // 4. Configurar formulario de configuración
+    const configForm = document.getElementById('configForm');
+    if (configForm) {
+        configForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log("Formulario de configuración enviado");
+            await saveConfig(e);
+        });
+    }
+    
+    // 5. Iniciar gestión de escaneo WiFi
+    manageScanInterval();
+    
+    // 5. Cargar configuración y datos SI el usuario está autenticado
+    if (authToken) {
+        loadConfig(); // Cargar configuración guardada
+        
+        // Iniciar actualización de datos de sensores
+        updateSensorData();
+        setInterval(updateSensorData, 5000); // Actualizar cada 5 segundos
+        
+        // Escanear redes WiFi disponibles
+        scanNetworksAutomatically();
+        manageScanInterval(); // Gestionar escaneos periódicos
+    }
+        
+    // 6. Configurar evento para OTA
+    document.getElementById('firmwareFile').addEventListener('change', (e) => {
+        console.log("Archivo seleccionado para OTA:", e.target.files[0].name);
+    });
+});
     </script>
  </body>
  </html>

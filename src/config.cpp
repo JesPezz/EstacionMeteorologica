@@ -23,7 +23,7 @@ String webUsername = "admin";
 String webPassword = "admin123";
 
 
-const char* version = "v3.3";
+const char* version = "v3.5";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
@@ -107,8 +107,8 @@ bool saveConfig(const Config& config) {
     doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
     doc["channelID"] = config.channelID;
     doc["location"] = config.location;
-    //doc["webUsername"] = webUsername;
-    //doc["webPassword"] = webPassword;
+    doc["webUsername"] = webUsername;
+    doc["webPassword"] = webPassword;
     doc["telegramToken"] = config.telegramToken;
     doc["chatId"] = config.chatId;
     doc["updateOta"] = config.updateOta / 3600000;  // 🔹 Guarda en horas
@@ -149,3 +149,9 @@ void testFlash() {
         Serial.println("✅ SPIFFS funcionando correctamente.");
     }
 }
+
+
+
+
+  
+  

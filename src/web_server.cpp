@@ -449,6 +449,8 @@ void startWebServer() {
         doc["location"] = config.location;
         doc["telegramToken"] = config.telegramToken;
         doc["chatId"] = config.chatId;
+        doc["webUsername"] = webUsername;
+        doc["webPassword"] = webPassword;
     
         // ✅ Campos que no son cadenas C-style:
         doc["channelID"] = config.channelID;

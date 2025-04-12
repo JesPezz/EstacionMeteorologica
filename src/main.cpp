@@ -35,31 +35,32 @@ void setup() {
     Serial.println("✅ SPIFFS montado correctamente");
 
 
-  Serial.println("📂 Verificando existencia de /index.html...");
-if (SPIFFS.exists("/index.html")) {
-    Serial.println("✅ Archivo encontrado.");
-} else {
-    Serial.println("❌ El archivo no existe en SPIFFS.");
-}
+   // Verifica espacio libre
+   size_t total = SPIFFS.totalBytes();
+   size_t used = SPIFFS.usedBytes();
+   Serial.printf("SPIFFS: %d/%d bytes usados\n", used, total);
+   
+   if (total - used < 250000) { // 250KB mínimo recomendado
+    Serial.println("Espacio insuficiente en SPIFFS");
+    return;
+  }
+  
+  loadConfig();
+   // Definir el nombre del código y la ubicación
+  Serial.print("Version: ");
+  Serial.print(nombreCodigo);
+  Serial.print(" ");
+  Serial.println(version);
+  Serial.println("Ubicacion: " + config.location);
 
 
 
 EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
 
 printWiFiNetwork();
-if (!otaInProgress) {  // 🔹 Evitar iniciar procesos si hay OTA en curso
-  Serial.println("✅ Iniciando procesos después de OTA...");
-  WiFi.begin("SSID", "PASSWORD");
-}
-
-
-loadConfig();
   
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
   Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
-
-  const esp_partition_t* running = esp_ota_get_running_partition();
-  Serial.printf("📌 Arrancando desde la partición: %s\n", running->label);
 
   // Obtener el tamaño total de la Flash
   Serial.printf("📦 Tamaño total de la Flash: %u bytes (%.2f MB)\n", ESP.getFlashChipSize(), ESP.getFlashChipSize() / (1024.0 * 1024.0));
@@ -70,23 +71,9 @@ loadConfig();
 
   testFlash();
 
-  
   setupBsecSensor();
 
-  if (!loadConfig()) {
-    Serial.println("No hay configuración guardada. Iniciando en modo AP...");
-}
 startAPMode();
-
-// ✅ Verificar que los valores cargados sean correctos
-Serial.println("📜 CONFIGURACIÓN CARGADA DESDE config.json:");
-Serial.println("Google Sheet URL: " + config.googleSheetURL);
-Serial.println("ThingSpeak API Key: " + config.thingSpeakAPIKey);
-Serial.println("updateOta: " + String(config.updateOta / 3600000) + " Horas");
-Serial.println("Channel ID: " + String(config.channelID));
-Serial.println("Location: " + config.location);
-Serial.println("chatId: " + config.chatId);
-Serial.println("telegramToken: " + config.telegramToken);
 
 // scanTicker.attach(15.0, triggerNetworkScan);
 WiFiManager::scanNetworks(networks);
@@ -96,12 +83,7 @@ startWebServer();
 initSSETimer();
 printConfig();  // ✅ Ver los valores actuales de configuración
 
-  // Definir el nombre del código y la ubicación
-  Serial.print("Version: ");
-  Serial.print(nombreCodigo);
-  Serial.print(" ");
-  Serial.println(version);
-  Serial.println("Ubicacion: " + config.location);
+  
   pinMode(LED_BUILTIN, OUTPUT);
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
@@ -113,9 +95,8 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   // Sincronizar el reloj una vez al mes
   syncClock();
-  sendTelegramMessage("ℹ️ Estado del ESP32", config);
-
-
+  
+  
   // Configurar sensores
   bsec_virtual_sensor_t sensorList[13] = {
     BSEC_OUTPUT_IAQ,
@@ -132,14 +113,16 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
     BSEC_OUTPUT_GAS_PERCENTAGE
   };
-
+  
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
   checkForIndexUpdate();
   checkForUpdates();
+  Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
-
-
+  sendTelegramMessage("ℹ️ Estado del ESP32", config);
+  
+  
   // Imprimir el encabezado
   output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
   Serial.println(output);
