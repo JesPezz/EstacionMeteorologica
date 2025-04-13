@@ -59,7 +59,6 @@ void setup() {
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
 
   printWiFiNetwork();
-  Serial.println();
 
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
   Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
@@ -120,8 +119,8 @@ Serial.println();
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForIndexUpdate();
-  checkForUpdates();
+  // checkForIndexUpdate();
+  // checkForUpdates();
   Serial.println();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
@@ -176,8 +175,8 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        checkForIndexUpdate();
-        checkForUpdates();
+        // checkForIndexUpdate();
+        // checkForUpdates();
         loadState();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();

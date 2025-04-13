@@ -317,6 +317,51 @@
     margin-top: 10px;
 }
 
+#otaStatus {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+    color: var(--primary);
+    transition: width 0.3s;
+}
+
+/* Barra de progreso opcional */
+.progress-bar {
+    height: 5px;
+    background: #e0e0e0;
+    margin-top: 5px;
+    border-radius: 3px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 3px;
+    width: 0%;
+}
+
+.progress-status {
+    display: block;
+    margin: 10px 0;
+    font-weight: bold;
+    color: var(--primary);
+    text-align: center;
+}
+
+.progress-bar {
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    width: 0%;
+    transition: width 0.3s ease;
+}
         </style>
 </head>
 <body>
@@ -385,9 +430,14 @@
             <h2><i class="fas fa-cloud-upload-alt"></i> Actualización OTA</h2>
             <input type="file" id="firmwareFile" accept=".bin">
             <button onclick="uploadFirmware()">Subir Firmware</button>
-            <div id="otaStatus"></div>
+            <div id="otaStatus">0%</div>
+            <div class="progress-bar">
+            <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
         </div>
     </div>
+
+    
 
     <!-- Modales y Overlays -->
     <div class="loading-overlay" id="loading">
@@ -435,7 +485,11 @@
     let authToken = null;
     let chart = null;
     let sensorChart = null;
-
+    let uploadInProgress = false; // Bandera para controlar procesos durante OTA
+    let sensorUpdateInterval;
+    let fileSelected = false;
+    let activeScanAbort = null;
+    
 function showAuthModal() {
         const modal = document.getElementById('authModal');
         modal.style.display = 'flex';
@@ -734,6 +788,12 @@ window.addEventListener('resize', () => {
 });
 
 function updateESPStatus() {
+
+    if (uploadInProgress || isSavingConfig) {
+        console.log("Escaneo pospuesto (OTA en progreso)");
+        return;
+    }
+
     fetch("/esp_status")
         .then(response => response.json())
         .then(data => {
@@ -753,6 +813,12 @@ const ctx = document.getElementById('sensorChart').getContext('2d');
 
 // Función para actualizar el gráfico
 function updateChart(data) {
+
+    if (uploadInProgress || isSavingConfig) {
+        console.log("Escaneo pospuesto (OTA en progreso)");
+        return;
+    }
+
     if (!sensorChart || !data) return;
     
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -911,76 +977,149 @@ async function testConnection() {
 // Llama a esta función después del login
 testConnection();
 
-// Función para subir firmware
 function uploadFirmware() {
-    const fileInput = document.getElementById('firmwareFile');
-    const file = fileInput.files[0];
+    if (!fileSelected) {
+        showToast('Seleccione un archivo primero', 'error');
+        return;
+    }
+
+    uploadInProgress = true;
+    stopAllProcesses();
     
-    if (!file || !file.name.endsWith('.bin')) {
-                showToast('Seleccione un archivo .bin válido', 'error');
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('update', file);
-            
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/update', true);
-            
-            xhr.upload.onprogress = (e) => {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                document.getElementById('otaStatus').textContent = `Subiendo: ${percent}%`;
-            };
-            
-            xhr.onload = () => {
-                if (xhr.status === 200) {
-                    showToast('Actualización exitosa. Reiniciando...');
-                    setTimeout(() => location.reload(), 3000);
-                } else {
-                    showToast('Error en la actualización', 'error');
-                }
-            };
-            
-            xhr.send(formData);
+    const file = document.getElementById('firmwareFile').files[0];
+    const formData = new FormData();
+    formData.append('update', file);
+
+    // Deshabilitar UI y resetear estado
+    document.getElementById('firmwareFile').disabled = true;
+    document.querySelector('.ota-section button').disabled = true;
+    document.getElementById('otaStatus').textContent = '0%';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/update', true);
+
+    // Evento de progreso (actualiza porcentaje)
+    xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        document.getElementById('otaStatus').textContent = `${percent}%`;
+        document.getElementById('progressFill').style.width = `${percent}%`;
+    }
+};
+
+    xhr.onload = () => {
+        if (xhr.status === 200) {
+            showToast('¡Firmware actualizado! Reiniciando...', 'success');
+            document.getElementById('otaStatus').textContent = '100%';
+        } else {
+            showToast(`Error: ${xhr.statusText}`, 'error');
         }
+        cleanupAfterUpload();
+    };
+
+    xhr.onerror = () => {
+        showToast('Error de conexión', 'error');
+        cleanupAfterUpload();
+    };
+
+    xhr.send(formData);
+}
+
+// Función para limpieza post-subida
+function cleanupAfterUpload() {
+    uploadInProgress = false;
+    fileSelected = false;
+    
+    // Resetear UI
+    document.getElementById('firmwareFile').value = '';
+    document.getElementById('firmwareFile').disabled = false;
+    document.querySelector('.ota-section button').disabled = false;
+    
+    // Reiniciar procesos
+    manageScanInterval();
+    sensorUpdateInterval = setInterval(updateSensorData, 5000);
+    setupEventSource();
+    
+    console.log("Procesos reiniciados después de OTA");
+}
+
+
+// Función mejorada para detener procesos
+function stopAllProcesses() {
+    console.log("Deteniendo todos los procesos...");
+    clearInterval(wifiScanInterval);
+    clearInterval(sensorUpdateInterval);
+    
+    if (window.eventSource) {
+        window.eventSource.close();
+        window.eventSource = null;
+    }
+    
+    // Cancelar escaneo activo si existe
+    if (activeScanAbort) {
+        activeScanAbort.abort();
+        activeScanAbort = null;
+    }
+}
+
+
+function restartAllProcesses() {
+    uploadInProgress = false;
+    
+    // Reactivar UI
+    document.getElementById('firmwareFile').disabled = false;
+    document.querySelector('.ota-section button').disabled = false;
+    
+    // Reiniciar solo si no hay otra OTA en curso
+    if (!uploadInProgress) {
+        sensorUpdateInterval = setInterval(updateSensorData, 5000);
+        manageScanInterval(); // Gestiona el intervalo de escaneos WiFi
+    }
+}
         
 // Función mejorada para escanear redes
 async function scanNetworksAutomatically() {
-            if (isSavingConfig) {
-                console.log("Escaneo pospuesto (guardado en progreso)");
-                return;
-            }
-            const wifiList = document.getElementById('wifi-list');
+    if (uploadInProgress || fileSelected || !isFrontendActive) {
+        console.log("Escaneo pospuesto (OTA/selección en progreso)");
+        return;
+    }
+
+    const wifiList = document.getElementById('wifi-list');
+    if (!wifiList) return;
+    
     wifiList.innerHTML = '<div class="loading-spinner"></div> Escaneando redes...';
-    if (!isFrontendActive) return;
     
     try {
-        // Paso 1: Solicitar nuevo escaneo
+        const controller = new AbortController();
+        activeScanAbort = controller;
+
+        // Paso 1: Solicitar escaneo
         await fetch('/api/wifi/scanInternal', {
+            signal: controller.signal,
             headers: { 'Authorization': `Basic ${authToken}` }
         });
         
-        // Paso 2: Esperar tiempo de escaneo + margen de seguridad
+        // Paso 2: Esperar resultados
         await new Promise(resolve => setTimeout(resolve, SCAN_DELAY));
         
-        // Paso 3: Obtener resultados actualizados
+        // Paso 3: Obtener redes
         const response = await fetch('/api/wifi/scan', {
+            signal: controller.signal,
             headers: { 'Authorization': `Basic ${authToken}` }
         });
+        
         if (!response.ok) throw new Error('Error en escaneo');
         
         const networks = await response.json();
-        //const data = await response.json();
-        if (networks.length === 0) {
-            wifiList.innerHTML = '<p>No se encontraron redes WiFi</p>';
-        } else {
-            renderNetworkList(networks);
-        }
+        renderNetworkList(networks);
         
     } catch (error) {
-        console.error("Error al escanear redes:", error);
-        wifiList.innerHTML = `<p class="error">Error: ${error.message}</p>`;
-        showToast('Error al escanear redes', 'error');
+        if (error.name !== 'AbortError') {
+            console.error("Error al escanear:", error);
+            wifiList.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        }
+    } finally {
+        activeScanAbort = null;
     }
 }
 
@@ -1004,10 +1143,17 @@ window.addEventListener('blur', () => {
 function manageScanInterval() {
     clearInterval(wifiScanInterval);
     
-    if (isFrontendActive) {
-        // Ejecutar inmediatamente y luego cada intervalo
-        scanNetworksAutomatically();
-        wifiScanInterval = setInterval(scanNetworksAutomatically, SCAN_INTERVAL);
+    if (!uploadInProgress && !fileSelected && isFrontendActive) {
+        wifiScanInterval = setInterval(() => {
+            if (!uploadInProgress && !fileSelected) {
+                scanNetworksAutomatically();
+            }
+        }, SCAN_INTERVAL);
+        
+        // Escanear inmediatamente si no hay operaciones en curso
+        if (!uploadInProgress && !fileSelected) {
+            scanNetworksAutomatically();
+        }
     }
 }
 
@@ -1193,6 +1339,8 @@ const toggleLoading = (show, text = 'Cargando...') => {
         
 // Actualizar datos de sensores
 const updateSensorData = async () => {
+    if (uploadInProgress) return;
+
             try {
                 const response = await fetch('/sensor_data');
                 const data = await response.json();
@@ -1209,6 +1357,8 @@ const updateSensorData = async () => {
                 showToast('Error obteniendo datos del sensor', 'error');
             }
         };
+
+sensorUpdateInterval = setInterval(updateSensorData, 5000);
         
 // Controlador de configuración
 const handleConfig = {
@@ -1300,9 +1450,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
         
     // 6. Configurar evento para OTA
-    document.getElementById('firmwareFile').addEventListener('change', (e) => {
-        console.log("Archivo seleccionado para OTA:", e.target.files[0].name);
-    });
+    document.getElementById('firmwareFile').addEventListener('change', function(e) {
+    if (!e.target.files[0]) return;
+    
+    fileSelected = true;
+    stopAllProcesses();
+    console.log("Preparando para OTA - Escaneos detenidos");
+});
+
+
 });
     </script>
  </body>

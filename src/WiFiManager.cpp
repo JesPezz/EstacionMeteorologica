@@ -16,7 +16,7 @@ void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
         Serial.println("⚠️ OTA en progreso, no se puede escanear redes.");
         return;
     }
-
+    Serial.println();
     Serial.println("🔍 Escaneando redes WiFi...");
     
     int numNetworks = WiFi.scanNetworks();
