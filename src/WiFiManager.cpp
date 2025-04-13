@@ -42,21 +42,41 @@ void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
 }
 
 bool WiFiManager::saveNetwork(const WiFiNetwork& network) {
-    // Leer redes existentes
+    // 1. Leer redes existentes
     std::vector<WiFiNetwork> existingNetworks;
-    loadSavedNetworks(existingNetworks);
-
-    // Evitar duplicados
-    for (const auto& net : existingNetworks) {
-        if (strcmp(net.ssid, network.ssid) == 0) return false;
+    if (!loadSavedNetworks(existingNetworks)) {
+        Serial.println("❌ Error al cargar redes existentes");
+        return false;
     }
 
-    // Añadir nueva red
-    existingNetworks.push_back(network);
+    if (!loadSavedNetworks(existingNetworks)) {
+        existingNetworks.clear(); // Limpiar si hay error
+        Serial.println("⚠️ Usando lista vacía (fallo al cargar)");
+    }
 
-    // Guardar todo el array
+    // 2. Buscar y actualizar red existente (si existe)
+    bool found = false;
+    for (auto& net : existingNetworks) {
+        if (strcmp(net.ssid, network.ssid) == 0) {
+            strlcpy(net.password, network.password, sizeof(net.password));
+            found = true;
+            Serial.printf("✅ Red '%s' actualizada\n", network.ssid);
+            break;
+        }
+    }
+
+    // 3. Si no existe, añadirla
+    if (!found) {
+        existingNetworks.push_back(network);
+        Serial.printf("✅ Red '%s' añadida\n", network.ssid);
+    }
+
+    // 4. Guardar todo el array actualizado
     File file = SPIFFS.open("/wifi.json", "w");
-    if (!file) return false;
+    if (!file) {
+        Serial.println("❌ Error al abrir wifi.json para escritura");
+        return false;
+    }
 
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
@@ -67,7 +87,12 @@ bool WiFiManager::saveNetwork(const WiFiNetwork& network) {
         obj["password"] = net.password;
     }
 
-    serializeJson(doc, file);
+    if (serializeJson(doc, file) == 0) {
+        Serial.println("❌ Error al serializar JSON");
+        file.close();
+        return false;
+    }
+
     file.close();
     return true;
 }

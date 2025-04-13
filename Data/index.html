@@ -373,6 +373,7 @@
                 <p>📡 <b>Estado del ESP32</b></p>
                 <p>IP: <span id="esp-ip">Cargando...</span></p>
                 <p>WiFi: <span id="wifi-status">Cargando...</span></p>
+                <p>Red WiFi: <span id="wifi-ssid">Cargando...</span></p>
                 <p>CPU: <span id="cpu-status">Cargando...</span></p>
                 <p>Memoria Libre: <span id="mem-status">Cargando...</span> KB</p>
                 <h2>ESP32 - Dashboard</h2>
@@ -809,6 +810,7 @@ function updateESPStatus() {
         .then(data => {
             document.getElementById("esp-ip").textContent = data.ip || "No disponible";
             document.getElementById("wifi-status").textContent = data.wifi || "No disponible";
+            document.getElementById("wifi-ssid").textContent = data.ssid || "No disponible";
             document.getElementById("cpu-status").textContent = data.cpu || "No disponible";
             document.getElementById("mem-status").textContent = data.memory || "No disponible";
         })

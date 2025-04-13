@@ -325,6 +325,7 @@ void handleESPStatus(AsyncWebServerRequest *request) {
     
     doc["ip"] = WiFi.localIP().toString();
     doc["wifi"] = WiFi.status() == WL_CONNECTED ? "Conectado" : "Desconectado";
+    doc["ssid"] = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "Desconectado";
     doc["cpu"] = ESP.getCpuFreqMHz();
     doc["memory"] = ESP.getFreeHeap() / 1024;
 

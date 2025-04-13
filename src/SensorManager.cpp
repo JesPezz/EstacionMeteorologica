@@ -54,7 +54,7 @@ void readSensorData() {
       output += ", " + String(iaqSensor.temperature);
       output += ", " + String(iaqSensor.humidity);
       output += ", " + String(iaqSensor.gasPercentage);
-      Serial.println(output);
+      //Serial.println(output);
 
       updateState();
     } else {
