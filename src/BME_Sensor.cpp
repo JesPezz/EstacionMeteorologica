@@ -47,7 +47,7 @@ void loadState(void)
 {
   if (EEPROM.read(0) == BSEC_MAX_STATE_BLOB_SIZE) {
     // Existing state in EEPROM
-    Serial.println("Reading state from EEPROM");
+    Serial.println("📂 Reading state from EEPROM");
 
     for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
       bsecState[i] = EEPROM.read(i + 1);
@@ -58,7 +58,7 @@ void loadState(void)
     checkIaqSensorStatus();
   } else {
     // Erase the EEPROM with zeroes
-    Serial.println("Erasing EEPROM");
+    Serial.println("🔥 Erasing EEPROM");
 
     for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE + 1; i++)
       EEPROM.write(i, 0);
@@ -93,6 +93,7 @@ void updateState(void)
     for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE ; i++) {
       EEPROM.write(i + 1, bsecState[i]);
       Serial.print(bsecState[i], HEX);
+      Serial.println();
     }
 
     EEPROM.write(0, BSEC_MAX_STATE_BLOB_SIZE);

@@ -12,6 +12,11 @@ bool APmode = false;
 
 
 void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
+    if(otaInProgress) {
+        Serial.println("⚠️ OTA en progreso, no se puede escanear redes.");
+        return;
+    }
+
     Serial.println("🔍 Escaneando redes WiFi...");
     
     int numNetworks = WiFi.scanNetworks();

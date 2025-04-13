@@ -23,7 +23,7 @@ String webUsername = "admin";
 String webPassword = "admin123";
 
 
-const char* version = "v3.5";
+const char* version = "v3.5.1";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0

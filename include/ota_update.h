@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include "config.h"
 
-void disableWatchdog();
-void enableWatchdog();
+void disableWatchdog(); // Desactiva el Watchdog y suspende la tarea
+void enableWatchdog(); // Reactiva el Watchdog y reanuda la tarea 
 void checkForUpdates();
 void downloadAndUpdate();
 void checkForIndexUpdate();

@@ -234,6 +234,12 @@ bool parseRequestJSON(AsyncWebServerRequest* request, JsonDocument& doc) {
 }
 
 void handleWiFiScan(AsyncWebServerRequest* request) { //envia la lista de redes WiFi disponibles de networks de WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks)
+    
+    if(otaInProgress) {
+        request->send(503, "text/plain", "Actualización OTA en progreso. Intente más tarde.");
+        return;
+    }
+
     Serial.println("📤 Enviando lista de redes WiFi almacenadas...");
 
     JsonDocument doc;
@@ -264,7 +270,7 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     Serial.println("📩 JSON Recibido:");
     Serial.println(body);
 
-    StaticJsonDocument<200> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, body);
     if (error) {
         Serial.print("❌ Error de parseo JSON: ");
@@ -343,17 +349,17 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
 
     if (!index) {
         Serial.println("🚨 🔄 Suspendiendo procesos...");
-        otaInProgress = true;
-
+        void disableWatchdog(); // Desactiva el Watchdog y suspende la tarea
+        
         size_t firmwareSize = request->contentLength();
         Serial.printf("📥 Iniciando OTA: %s (%d bytes)\n", filename.c_str(), firmwareSize);
         ledInProgress();
-
+        
         if (!Update.begin(firmwareSize, U_FLASH)) {
             Serial.println("❌ No se pudo iniciar la OTA");
             errLeds();
             request->send(500, "text/plain", "Error al iniciar actualización");
-            otaInProgress = false;
+            void enableWatchdog(); // Reactiva el Watchdog y reanuda la tarea 
             return;
         }
         totalSize = 0;
@@ -511,7 +517,7 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
     Serial.println("Body recibido: " + body);
     Serial.println();
     // Parsear JSON
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, body);
     if(error) {
         Serial.println();
@@ -532,22 +538,22 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
         Serial.printf("Nuevo updateOta: %ld ms (%d horas)\n", newConfig.updateOta, otaValue);
         Serial.println();
     }
-        if (doc.containsKey("googleSheetURL")) {
+        if (!doc["googleSheetURL"].isNull()) {
             newConfig.googleSheetURL = doc["googleSheetURL"].as<String>();
         }
-        if (doc.containsKey("thingSpeakAPIKey")) {
+        if (!doc["thingSpeakAPIKey"].isNull()) {
             newConfig.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
         }
-        if (doc.containsKey("channelID")) {
+        if (!doc["channelID"].isNull()) {
             newConfig.channelID = doc["channelID"];
         }
-        if (doc.containsKey("location")) {
+        if (!doc["location"].isNull()) {
             newConfig.location = doc["location"].as<String>();
         }
-        if (doc.containsKey("telegramToken")) {
+        if (!doc["telegramToken"].isNull()) {
             newConfig.telegramToken = doc["telegramToken"].as<String>();
         }
-        if (doc.containsKey("chatId")) {
+        if (!doc["chatId"].isNull()) {
             newConfig.chatId = doc["chatId"].as<String>();
         }
     

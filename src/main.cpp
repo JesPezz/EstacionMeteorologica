@@ -93,7 +93,6 @@ Serial.println();
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
   Serial.println(output);
   Serial.println();
-  checkIaqSensorStatus();
   Serial.println();
   loadState();
   Serial.println("loadState() se ha cargado.");
