@@ -73,9 +73,9 @@ void setup() {
 
   Serial.println();
   setupBsecSensor();
-  Serial.println();
-  startAPMode();
-  Serial.println();
+
+startAPMode();
+
 // scanTicker.attach(15.0, triggerNetworkScan);
 WiFiManager::scanNetworks(networks);
 Serial.println();
