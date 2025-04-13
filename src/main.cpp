@@ -75,6 +75,7 @@ void setup() {
   setupBsecSensor();
 
 startAPMode();
+startWebServer();
 
 // scanTicker.attach(15.0, triggerNetworkScan);
 WiFiManager::scanNetworks(networks);
