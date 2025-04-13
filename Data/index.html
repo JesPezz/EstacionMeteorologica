@@ -489,7 +489,8 @@
     let sensorUpdateInterval;
     let fileSelected = false;
     let activeScanAbort = null;
-    
+    let loginInProgress = false;
+
 function showAuthModal() {
         const modal = document.getElementById('authModal');
         modal.style.display = 'flex';
@@ -503,6 +504,8 @@ function showAuthModal() {
 
 // Función para login (llamada desde el modal)
 async function login() {
+    if (loginInProgress) return;
+    loginInProgress = true;
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     
@@ -578,6 +581,7 @@ async function login() {
         document.getElementById('password').select();
     } finally {
         toggleLoading(false);
+        loginInProgress = false;
     }
 }
 
@@ -604,8 +608,8 @@ function initBasicSystem() {
 function loadChartDynamically() {
     // Intento 1: Cargar desde CDN
     const cdnScript = document.createElement('script');
-    cdnScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    cdnScript.integrity = 'sha384-...'; // Opcional: añadir SRI hash
+    cdnScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    //cdnScript.integrity = 'sha384-...'; // Opcional: añadir SRI hash
     cdnScript.crossOrigin = 'anonymous';
     
     cdnScript.onload = () => {
@@ -660,6 +664,11 @@ function initChart() {
     if (!ctx) {
         console.error("Contexto del canvas no disponible");
         return;
+    }
+
+    // Destruir gráfico existente
+    if (sensorChart) {
+        sensorChart.destroy();
     }
     
     sensorChart = new Chart(ctx, {
@@ -729,6 +738,7 @@ function startSystemUpdates() {
 }
 
 function setupEventSource() {
+    if (window.eventSource) return;
     if (!window.eventSource) {
         window.eventSource = new EventSource('/events');
         window.eventSource.addEventListener('update', (e) => {
@@ -842,7 +852,7 @@ const eventSource = new EventSource('/events');
 eventSource.addEventListener('update', (e) => {
     const data = JSON.parse(e.data);
     updateChart(data);  // Actualiza el gráfico
-    console.log("Datos recibidos:", data);  // Para depuración
+    console.log('Datos recibidos:', JSON.stringify(data, null, 2));  // Para depuración
 });
 
 
