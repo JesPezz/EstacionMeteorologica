@@ -414,8 +414,9 @@ void startWebServer() {
             request->send(404, "text/plain", "File Not Found");
             return;
         }
-    
+        Serial.println();
         Serial.println("📤 Enviando index.html...");
+        Serial.println();
         request->send(SPIFFS, "/index.html", "text/html");
     });
     
@@ -486,8 +487,9 @@ server.on("/config", HTTP_OPTIONS, [](AsyncWebServerRequest *request){
 
 // 2. Manejador POST mejorado
 server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
+    Serial.println();
     Serial.println("\n--- PETICIÓN CONFIG RECIBIDA ---");
-    
+    Serial.println();
     // Verificar autenticación
     if(!isAuthenticated(request)) {
         request->send(401, "text/plain", "Acceso no autorizado");
@@ -496,21 +498,26 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
 
     // Verificar si tiene body
     if(!request->hasParam("plain", true)) {
+        Serial.println();
         Serial.println("ERROR: No se recibió parámetro 'plain'");
+        Serial.println();
         request->send(400, "text/plain", "No se recibieron datos");
         return;
     }
 
     // Procesar el body
     String body = request->getParam("plain", true)->value();
+    Serial.println();
     Serial.println("Body recibido: " + body);
-
+    Serial.println();
     // Parsear JSON
     DynamicJsonDocument doc(1024);
     DeserializationError error = deserializeJson(doc, body);
     if(error) {
+        Serial.println();
         Serial.print("ERROR parseando JSON: ");
         Serial.println(error.c_str());
+        Serial.println();
         request->send(400, "text/plain", "Error en formato JSON");
         return;
     }
@@ -521,7 +528,9 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
     if(!doc["updateOta"].isNull()) {
         long otaValue = doc["updateOta"];
         newConfig.updateOta = (otaValue < 100) ? otaValue * 3600000 : otaValue;
+        Serial.println();
         Serial.printf("Nuevo updateOta: %ld ms (%d horas)\n", newConfig.updateOta, otaValue);
+        Serial.println();
     }
         if (doc.containsKey("googleSheetURL")) {
             newConfig.googleSheetURL = doc["googleSheetURL"].as<String>();
@@ -552,7 +561,9 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
     }
 }, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
     // Manejador para recibir el cuerpo RAW
+    Serial.println();
     Serial.printf("Recibiendo datos: %d/%d bytes\n", index + len, total);
+    Serial.println();
 });
 
 server.on("/test", HTTP_POST, [](AsyncWebServerRequest *request){
@@ -599,14 +610,17 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
     mbedtls_base64_decode(decoded, sizeof(decoded), &len, (const unsigned char*)authHeader.c_str(), authHeader.length());
     String decodedAuth = String((char*)decoded).substring(0, len);
     decodedAuth.trim();  // 🔹 Asegurar que no tenga espacios extra
-
+    Serial.println();
     Serial.println("🔍 authHeader (Base64): " + authHeader);
     Serial.println("🔍 decodedAuth: " + decodedAuth);
     Serial.println("🔍 expectedAuth: " + authData);
+    Serial.println();
 
     // 🔹 Comparar credenciales
     if (decodedAuth != authData) {
+        Serial.println();
         Serial.println("❌ Autenticación fallida");
+        Serial.println();
         request->send(403, "text/plain", "Forbidden");
         return false;
     }
@@ -617,7 +631,9 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
 
 // 🔄 ✅ Función compatible con FreeRTOS para reiniciar ESP32 sin bloquear el servidor
 void restartESP32Task(void *parameter) {
+    Serial.println();
     Serial.println("Reiniciando en 3 segundos...");
+    Serial.println();
     vTaskDelay(pdMS_TO_TICKS(3000));
     ESP.restart();
     vTaskDelete(NULL);
@@ -651,7 +667,9 @@ void handleSensorData(AsyncWebServerRequest *request) {
 void initWiFiScanner() {
     wifiMutex = xSemaphoreCreateMutex();
     if (!wifiMutex) {
+        Serial.println();
         Serial.println("[CRITICAL] Fallo al crear wifiMutex");
+        Serial.println();
         ESP.restart();
     }
 }
@@ -659,7 +677,9 @@ void initWiFiScanner() {
 void initSensorMutex() {
     sensorMutex = xSemaphoreCreateMutex();
     if (sensorMutex == NULL) {
+        Serial.println();
         Serial.println("❌ Error creando mutex de sensores");
+        Serial.println();
     }
 }
 
@@ -674,6 +694,7 @@ void listSPIFFS() {
   }
 
   void logConfig(const char* title, const Config &config) {
+    Serial.println();
     Serial.println(title);
     Serial.println("----------------------------");
     Serial.printf("GoogleSheetURL: %s\n", config.googleSheetURL.c_str());
@@ -685,4 +706,5 @@ void listSPIFFS() {
     Serial.printf("TelegramToken: %s\n", config.telegramToken.c_str());
     Serial.printf("ChatID: %s\n", config.chatId.c_str());
     Serial.println("----------------------------");
+    Serial.println();
 }

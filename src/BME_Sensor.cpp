@@ -13,24 +13,32 @@ void checkIaqSensorStatus(void)
   if (iaqSensor.bsecStatus != BSEC_OK) {
     if (iaqSensor.bsecStatus < BSEC_OK) {
       output = "BSEC error code : " + String(iaqSensor.bsecStatus);
+      Serial.println();
       Serial.println(output);
+      Serial.println();
       for (;;)
         errLeds(); /* Halt in case of failure */
     } else {
       output = "BSEC warning code : " + String(iaqSensor.bsecStatus);
+      Serial.println();
       Serial.println(output);
+      Serial.println();
     }
   }
 
   if (iaqSensor.bme68xStatus != BME68X_OK) {
     if (iaqSensor.bme68xStatus < BME68X_OK) {
       output = "BME68X error code : " + String(iaqSensor.bme68xStatus);
+      Serial.println();
       Serial.println(output);
+      Serial.println();
       for (;;)
         errLeds(); /* Halt in case of failure */
     } else {
       output = "BME68X warning code : " + String(iaqSensor.bme68xStatus);
+      Serial.println();
       Serial.println(output);
+      Serial.println();
     }
   }
 }

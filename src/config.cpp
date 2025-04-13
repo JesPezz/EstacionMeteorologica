@@ -94,7 +94,7 @@ bool loadConfig() {
         config.updateOta = 3600000;  // 🔹 1 hora por defecto
     }
 
-    Serial.printf("✅ updateOta cargado desde config.json: %lu ms\n", config.updateOta);
+    //Serial.printf("✅ updateOta cargado desde config.json: %lu ms\n", config.updateOta);
     return true;
 }
 

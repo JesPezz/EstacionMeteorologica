@@ -28,11 +28,12 @@
 void setup() {
 
   Serial.begin(115200);
-    if (!SPIFFS.begin(true)) {
-        Serial.println("❌ Error al montar SPIFFS");
-        return;
-    }
-    Serial.println("✅ SPIFFS montado correctamente");
+  if (!SPIFFS.begin(true)) {
+    Serial.println("❌ Error al montar SPIFFS");
+    return;
+  }
+
+  testFlash();
 
 
    // Verifica espacio libre
@@ -52,13 +53,14 @@ void setup() {
   Serial.print(" ");
   Serial.println(version);
   Serial.println("Ubicacion: " + config.location);
+  Serial.println();
 
 
+  EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
 
-EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
+  printWiFiNetwork();
+  Serial.println();
 
-printWiFiNetwork();
-  
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
   Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
 
@@ -69,27 +71,29 @@ printWiFiNetwork();
   Serial.printf("📦 Tamaño de la partición actual: %u bytes (%.2f MB)\n", ESP.getSketchSize(), ESP.getSketchSize() / (1024.0 * 1024.0));
   Serial.printf("📦 Espacio libre para OTA: %u bytes (%.2f MB)\n", ESP.getFreeSketchSpace(), ESP.getFreeSketchSpace() / (1024.0 * 1024.0));
 
-  testFlash();
-
+  Serial.println();
   setupBsecSensor();
-
-startAPMode();
-
+  Serial.println();
+  startAPMode();
+  Serial.println();
 // scanTicker.attach(15.0, triggerNetworkScan);
 WiFiManager::scanNetworks(networks);
+Serial.println();
 initWiFiScanner();
 initSensorMutex();
 startWebServer();
 initSSETimer();
+Serial.println();
 printConfig();  // ✅ Ver los valores actuales de configuración
-
+Serial.println();
   
   pinMode(LED_BUILTIN, OUTPUT);
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
   Serial.println(output);
+  Serial.println();
   checkIaqSensorStatus();
-
+  Serial.println();
   loadState();
   Serial.println("loadState() se ha cargado.");
   
@@ -118,8 +122,10 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   checkIaqSensorStatus();
   checkForIndexUpdate();
   checkForUpdates();
+  Serial.println();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
+  Serial.println();
   sendTelegramMessage("ℹ️ Estado del ESP32", config);
   
   
