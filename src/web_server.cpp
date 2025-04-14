@@ -73,11 +73,11 @@ void wifiScanTask(void *pvParameters) {
                 scanRequested = false; // Resetear primero para evitar pérdidas
                 xSemaphoreGive(wifiMutex);
                 
-                std::vector<WiFiNetwork> newNetworks;
-                WiFiManager::scanNetworks(newNetworks);
-                if (!newNetworks.empty()) {
+                //std::vector<WiFiNetwork> newNetworks;
+                WiFiManager::scanNetworks(networks);
+                if (!networks.empty()) {
                     if(xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(2000))) {
-                        wifiNetworks = newNetworks;
+                        wifiNetworks = networks;
                         xSemaphoreGive(wifiMutex);
                         Serial.printf("[WiFi] Escaneo completado. %d redes\n", wifiNetworks.size());
                     }

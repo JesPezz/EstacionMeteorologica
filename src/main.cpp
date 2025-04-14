@@ -89,9 +89,6 @@ if (!testFile) {
   
   startAPMode();
   startWebServer();
-  // scanTicker.attach(15.0, triggerNetworkScan);
-WiFiManager::scanNetworks(networks);
-Serial.println();
   Serial.println();
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   setupBsecSensor();
@@ -130,8 +127,8 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForIndexUpdate();
-  checkForUpdates();
+  // checkForIndexUpdate();
+  // checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
   Serial.println();
@@ -181,8 +178,8 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        checkForIndexUpdate();
-        checkForUpdates();
+        // checkForIndexUpdate();
+        // checkForUpdates();
         loadState();
         Serial.println();
         Serial.println("loadState() se ha cargado.");
