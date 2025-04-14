@@ -362,6 +362,67 @@
     width: 0%;
     transition: width 0.3s ease;
 }
+.network-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.wifi-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.btn-refresh {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #2196F3;
+}
+
+.network-item {
+    padding: 12px;
+    margin: 5px 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.network-info {
+    flex-grow: 1;
+}
+
+.network-ssid {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.network-saved {
+    color: #4CAF50;
+}
+
+.network-rssi {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 4px;
+}
+
+.network-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
         </style>
 </head>
 <body>
@@ -391,7 +452,13 @@
         <!-- Sección de Configuración WiFi -->
         <div class="card wifi-config">
             <h2><i class="fas fa-wifi"></i> Configuración WiFi</h2>
-            <div id="wifi-list" class="network-list"></div>
+            <div id="wifi-list" class="network-list">
+                <div class="wifi-list-header">
+                    <span>Redes disponibles</span>
+                    <button id="refresh-wifi" class="btn-refresh"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div id="wifi-list-container"></div>
+            </div>
         </div>
         <!-- Sección de Configuración General -->
         <div class="card config-section">
@@ -477,20 +544,16 @@
     
 <script>
     let isSavingConfig = false;
-    let wifiScanInterval;
-    let isFrontendActive = true;
     let currentSSID = '';
     let selectedNetwork = null;
-    const SCAN_INTERVAL = 600000; // 10 minutos
-    const SCAN_DELAY = 8000; // 8 segundos para esperar resultados
     let authToken = null;
     let chart = null;
     let sensorChart = null;
     let uploadInProgress = false; // Bandera para controlar procesos durante OTA
     let sensorUpdateInterval;
     let fileSelected = false;
-    let activeScanAbort = null;
     let loginInProgress = false;
+    let savedNetworks = []; // Almacenará las redes guardadas
 
 function showAuthModal() {
         const modal = document.getElementById('authModal');
@@ -600,7 +663,7 @@ function initBasicSystem() {
     // 1. Funciones esenciales (siempre disponibles)
     updateSensorData();
     setInterval(updateSensorData, 5000);
-    scanNetworksAutomatically();
+    scanNetworks();
     
     // 2. Gráfico: SOLO si está el archivo en el ESP32
     loadChartDynamically(); // <- Carga bajo demanda
@@ -735,7 +798,7 @@ function startSystemUpdates() {
     setInterval(updateESPStatus, 10000);
     
     // Escanear redes WiFi
-    scanNetworksAutomatically();
+    scanNetworks();
 }
 
 function setupEventSource() {
@@ -900,7 +963,6 @@ async function saveConfig(event) {
     event.preventDefault();
     
     // 1. Detener procesos interferentes
-    stopWiFiScans();
     clearAllIntervals();
     
     const submitBtn = event.target.querySelector("button[type='submit']");
@@ -950,7 +1012,6 @@ async function saveConfig(event) {
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
-        startWiFiScans();
     }
 }
 
@@ -960,18 +1021,6 @@ function clearAllIntervals() {
     for (let i = 1; i < highestIntervalId; i++) {
         clearInterval(i);
     }
-}
-
-// Funciones para control de escaneos WiFi
-function stopWiFiScans() {
-    console.log("Deteniendo escaneos WiFi...");
-    clearInterval(wifiScanInterval);
-}
-
-function startWiFiScans() {
-    console.log("Reanudando escaneos WiFi...");
-    wifiScanInterval = setInterval(scanNetworksAutomatically, 30000);
-    scanNetworksAutomatically(); // Ejecutar inmediatamente
 }
        
 // Prueba de conexión básica
@@ -1048,7 +1097,6 @@ function cleanupAfterUpload() {
     document.querySelector('.ota-section button').disabled = false;
     
     // Reiniciar procesos
-    manageScanInterval();
     sensorUpdateInterval = setInterval(updateSensorData, 5000);
     setupEventSource();
     
@@ -1059,113 +1107,23 @@ function cleanupAfterUpload() {
 // Función mejorada para detener procesos
 function stopAllProcesses() {
     console.log("Deteniendo todos los procesos...");
-    clearInterval(wifiScanInterval);
     clearInterval(sensorUpdateInterval);
     
     if (window.eventSource) {
         window.eventSource.close();
         window.eventSource = null;
     }
-    
-    // Cancelar escaneo activo si existe
-    if (activeScanAbort) {
-        activeScanAbort.abort();
-        activeScanAbort = null;
-    }
 }
 
-
-function restartAllProcesses() {
-    uploadInProgress = false;
-    
-    // Reactivar UI
-    document.getElementById('firmwareFile').disabled = false;
-    document.querySelector('.ota-section button').disabled = false;
-    
-    // Reiniciar solo si no hay otra OTA en curso
-    if (!uploadInProgress) {
-        sensorUpdateInterval = setInterval(updateSensorData, 5000);
-        manageScanInterval(); // Gestiona el intervalo de escaneos WiFi
-    }
-}
-        
-// Función mejorada para escanear redes
-async function scanNetworksAutomatically() {
-    if (uploadInProgress || fileSelected || !isFrontendActive) {
-        console.log("Escaneo pospuesto (OTA/selección en progreso)");
-        return;
-    }
-
-    const wifiList = document.getElementById('wifi-list');
-    if (!wifiList) return;
-    
-    wifiList.innerHTML = '<div class="loading-spinner"></div> Escaneando redes...';
-    
+async function scanNetworks() {
     try {
-        const controller = new AbortController();
-        activeScanAbort = controller;
-
-        // Paso 1: Solicitar escaneo
-        await fetch('/api/wifi/scanInternal', {
-            signal: controller.signal,
-            headers: { 'Authorization': `Basic ${authToken}` }
-        });
-        
-        // Paso 2: Esperar resultados
-        await new Promise(resolve => setTimeout(resolve, SCAN_DELAY));
-        
-        // Paso 3: Obtener redes
         const response = await fetch('/api/wifi/scan', {
-            signal: controller.signal,
             headers: { 'Authorization': `Basic ${authToken}` }
         });
-        
-        if (!response.ok) throw new Error('Error en escaneo');
-        
         const networks = await response.json();
         renderNetworkList(networks);
-        
     } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error("Error al escanear:", error);
-            wifiList.innerHTML = `<p class="error">Error: ${error.message}</p>`;
-        }
-    } finally {
-        activeScanAbort = null;
-    }
-}
-
-// Control de actividad del frontend
-document.addEventListener('visibilitychange', () => {
-    isFrontendActive = !document.hidden;
-    manageScanInterval();
-});
-
-window.addEventListener('focus', () => {
-    isFrontendActive = true;
-    manageScanInterval();
-});
-
-window.addEventListener('blur', () => {
-    isFrontendActive = false;
-    manageScanInterval();
-});
-
-// Gestión del intervalo
-function manageScanInterval() {
-    clearInterval(wifiScanInterval);
-    
-    if (!uploadInProgress && !fileSelected && isFrontendActive) {
-        wifiScanInterval = setInterval(() => {
-            if (!uploadInProgress && !fileSelected) {
-                scanNetworksAutomatically();
-            }
-        }, SCAN_INTERVAL);
-        
-        // Escanear inmediatamente si no hay operaciones en curso
-        if (!uploadInProgress && !fileSelected) {
-            scanNetworksAutomatically();
-        }
+        console.error("Error scanning networks:", error);
     }
 }
 
@@ -1192,90 +1150,53 @@ function hideModal(modalId) {
 
 let selectedSSID = '';
 
-function renderNetworkList(networks) {
-    const wifiList = document.getElementById('wifi-list');
-    if (!wifiList) {
-        console.error("Elemento wifi-list no encontrado");
-        return;
-    }
-    
-    // Limpiar lista existente
-    wifiList.innerHTML = '';
-    
-    // Crear contenedor
-    const container = document.createElement('div');
-    container.style.maxHeight = '300px';
-    container.style.overflowY = 'auto';
-    container.style.marginTop = '10px';
-    
-    // Título
-    const title = document.createElement('h3');
-    title.textContent = 'Redes Disponibles:';
-    title.style.marginBottom = '10px';
-    container.appendChild(title);
-    
-    if (!networks || networks.length === 0) {
-        const emptyMsg = document.createElement('p');
-        emptyMsg.textContent = 'No se encontraron redes WiFi';
-        emptyMsg.style.color = '#666';
-        container.appendChild(emptyMsg);
-        wifiList.appendChild(container);
-        return;
-    }
-    
-    // Crear lista
-    const list = document.createElement('ul');
-    list.style.listStyle = 'none';
-    list.style.padding = '0';
-    list.style.margin = '0';
-    
-    networks.forEach(network => {
-        // Verificar estructura mínima requerida
-        if (!network.ssid) return;
-        
-        const item = document.createElement('li');
-        item.style.margin = '8px 0';
-        item.style.padding = '12px';
-        item.style.border = '1px solid #e0e0e0';
-        item.style.borderRadius = '8px';
-        item.style.backgroundColor = '#f9f9f9';
-        item.style.cursor = 'pointer';
-        item.style.transition = 'all 0.2s';
-        
-        item.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="flex: 1;">
-                    <strong style="font-size: 1.1rem;">${network.ssid || 'Red oculta'}</strong>
-                    <div style="font-size: 0.85rem; color: #555; margin-top: 4px;">
-                        <span>Señal: ${network.rssi || '?'} dBm</span>
-                        <span style="margin-left: 10px;">${network.secured ? '🔒 Protegida' : '🔓 Abierta'}</span>
-                    </div>
-                    </div>
-                    <div style="margin-left: 10px; font-size: 1.2rem;">
-                        ${network.secured ? '🔒' : '🔓'}
-                        </div>
-                        </div>
-                        `;
-                        
-                        item.addEventListener('click', () => {
-                            showWifiModal(network);
-                        });
-                        
-                        item.addEventListener('mouseenter', () => {
-                            item.style.backgroundColor = '#f0f0f0';
-                            item.style.transform = 'translateX(2px)';
-                        });
-        
-        item.addEventListener('mouseleave', () => {
-            item.style.backgroundColor = '#f9f9f9';
-            item.style.transform = 'none';
+// Cargar redes guardadas al inicio
+async function loadSavedNetworks() {
+    try {
+        const response = await fetch('/api/savedNetworks', {
+            headers: { 'Authorization': `Basic ${authToken}` }
         });
+        savedNetworks = await response.json();
+    } catch (error) {
+        console.error("Error loading saved networks:", error);
+    }
+}
+
+function renderNetworkList(networks) {
+    const container = document.getElementById('wifi-list-container');
+    if (!container) return;
+
+    // Crear elementos de red
+    container.innerHTML = networks.map(network => {
+        const isSaved = savedNetworks.some(saved => saved.ssid === network.ssid);
         
-        list.appendChild(item);
+        return `
+            <div class="network-item">
+                <div class="network-info">
+                    <div class="network-ssid">
+                        ${isSaved ? '<span class="network-saved">✓</span>' : ''}
+                        ${network.ssid || 'Red oculta'}
+                    </div>
+                    <div class="network-rssi">
+                        Señal: ${network.rssi || '?'} dBm | 
+                        ${network.secured ? '🔒 Protegida' : '🔓 Abierta'}
+                    </div>
+                </div>
+                <div class="network-status">
+                    ${network.secured ? '🔒' : '🔓'}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Añadir event listeners a los elementos de red
+    document.querySelectorAll('.network-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const ssid = item.querySelector('.network-ssid').textContent.trim();
+            const network = networks.find(n => n.ssid === ssid);
+            if (network) showWifiModal(network);
+        });
     });
-    
-    container.appendChild(list);
-    wifiList.appendChild(container);
 }
 
 // Función para conectar a la red WiFi
@@ -1421,56 +1342,44 @@ const showToast = (message, type = 'info') => {
             }, 3000);
         };
 
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Mostrar modal de autenticación
+        document.addEventListener('DOMContentLoaded', () => {
+    // 1. Autenticación
     showAuthModal();
-    // Configuración del login (nunca bloqueante)
     document.getElementById('loginForm').addEventListener('submit', (e) => {
         e.preventDefault();
         login();
     });
-    
-    // 2. Configurar eventos del modal WiFi
+
+    // 2. WiFi
     document.getElementById('connectWifiBtn').addEventListener('click', connectToNetwork);
     document.getElementById('cancelWifiBtn').addEventListener('click', () => hideModal('wifiModal'));
-    
-    
-    // 4. Configurar formulario de configuración
+    document.getElementById('refresh-wifi').addEventListener('click', scanNetworks);
+
+    // 3. Configuración
     const configForm = document.getElementById('configForm');
     if (configForm) {
         configForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            console.log("Formulario de configuración enviado");
             await saveConfig(e);
         });
     }
-    
-    // 5. Iniciar gestión de escaneo WiFi
-    manageScanInterval();
-    
-    // 5. Cargar configuración y datos SI el usuario está autenticado
+
+    // 4. OTA
+    document.getElementById('firmwareFile').addEventListener('change', (e) => {
+        if (!e.target.files[0]) return;
+        fileSelected = true;
+        stopAllProcesses();
+    });
+
+    // 5. Inicialización del sistema (si ya está autenticado)
     if (authToken) {
-        loadConfig(); // Cargar configuración guardada
-        
-        // Iniciar actualización de datos de sensores
-        updateSensorData();
-        setInterval(updateSensorData, 5000); // Actualizar cada 5 segundos
-        
-        // Escanear redes WiFi disponibles
-        scanNetworksAutomatically();
-        manageScanInterval(); // Gestionar escaneos periódicos
+        loadConfig();
+        loadSavedNetworks();
+        scanNetworks();
+        setInterval(updateSensorData, 5000);
+    } else {
+        initBasicSystem(); // Carga mínima sin autenticación
     }
-        
-    // 6. Configurar evento para OTA
-    document.getElementById('firmwareFile').addEventListener('change', function(e) {
-    if (!e.target.files[0]) return;
-    
-    fileSelected = true;
-    stopAllProcesses();
-    console.log("Preparando para OTA - Escaneos detenidos");
-});
-
-
 });
     </script>
  </body>

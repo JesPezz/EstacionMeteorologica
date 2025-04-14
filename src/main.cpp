@@ -28,10 +28,22 @@
 void setup() {
 
   Serial.begin(115200);
-  if (!SPIFFS.begin(true)) {
-    Serial.println("❌ Error al montar SPIFFS");
-    return;
+  if(!SPIFFS.begin(true)) {
+    Serial.println("Error al montar SPIFFS");
+    delay(1000);
+    ESP.restart();
   }
+  Serial.println("SPIFFS montado correctamente");
+
+  // Test de escritura SPIFFS
+File testFile = SPIFFS.open("/test.txt", FILE_WRITE);
+if (!testFile) {
+  Serial.println("¡Error crítico! SPIFFS no permite escritura");
+} else {
+  testFile.println("Prueba");
+  testFile.close();
+  SPIFFS.remove("/test.txt");
+}
 
   testFlash();
 

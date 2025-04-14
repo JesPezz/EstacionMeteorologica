@@ -310,14 +310,38 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     
 
     if (saved) {
-        request->send(200, "application/json", "{\"status\":\"✅ Red WiFi guardada correctamente\"}");
+        request->send(200, "application/json", "{\"status\":\"success\"}");
         delay(1000);
-        ESP.restart(); // Reiniciar después de guardar
-    } else {
-        request->send(400, "application/json", "{\"error\":\"⚠️ No se pudo guardar la red WiFi\"}");
+        ESP.restart();
+      } else {
+        // Nuevo: Enviar motivo específico del error
+        String errorMsg = "{\"error\":\"No se pudo guardar\",\"details\":\"";
+            WiFiManager wifiManager; // Crea una instancia si no existe
+            errorMsg += wifiManager.getLastError();        errorMsg += "\",\"spiffs\":";
+        errorMsg += SPIFFS.totalBytes() - SPIFFS.usedBytes(); // Espacio libre
+        errorMsg += "}";
+        request->send(500, "application/json", errorMsg);
+      }
     }
-}
 
+    const char* WiFiManager::getLastError() {
+        if (!SPIFFS.exists("/wifi.json")) {  // Cambiado a wifi.json
+            return "Archivo wifi.json no existe";
+        }
+        
+        File file = SPIFFS.open("/wifi.json", FILE_READ);
+        if (!file) {
+            return "No se pudo abrir wifi.json";
+        }
+        
+        if (file.size() == 0) {
+            file.close();
+            return "wifi.json está vacío";
+        }
+        
+        file.close();
+        return "Error desconocido al guardar en wifi.json";
+    }
 
 void handleESPStatus(AsyncWebServerRequest *request) {
     AsyncWebServerResponse* response = prepareCORSResponse(request, 200, "application/json");

@@ -42,6 +42,19 @@ void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
 }
 
 bool WiFiManager::saveNetwork(const WiFiNetwork& network) {
+
+    // Crear archivo si no existe
+    if (!SPIFFS.exists("/wifi.json")) {
+        File file = SPIFFS.open("/wifi.json", FILE_WRITE);
+        if (!file) {
+            Serial.println("❌ Error al crear wifi.json inicial");
+            return false;
+        }
+        file.print("[]"); // Array JSON vacío
+        file.close();
+        Serial.println("✅ Creado wifi.json inicial");
+    }
+    
     // 1. Leer redes existentes
     std::vector<WiFiNetwork> existingNetworks;
     if (!loadSavedNetworks(existingNetworks)) {

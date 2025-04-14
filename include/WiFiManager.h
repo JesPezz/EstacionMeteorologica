@@ -9,6 +9,7 @@
 
 class WiFiManager {
 public:
+    const char* getLastError();
     static void scanNetworks(std::vector<WiFiNetwork>& networks);
     static bool loadSavedNetworks(std::vector<WiFiNetwork>& networks);
     static bool saveNetwork(const WiFiNetwork& network);
