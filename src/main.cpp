@@ -26,13 +26,15 @@
 #include <freertos/timers.h>
 
 void setup() {
-
+  
+  EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
   if(!SPIFFS.begin(true)) {
     Serial.println("Error al montar SPIFFS");
     delay(1000);
     ESP.restart();
   }
+  Serial.println();
   Serial.println("SPIFFS montado correctamente");
 
   // Test de escritura SPIFFS
@@ -60,53 +62,50 @@ if (!testFile) {
   
   loadConfig();
    // Definir el nombre del código y la ubicación
+  Serial.println();
   Serial.print("Version: ");
   Serial.print(nombreCodigo);
   Serial.print(" ");
   Serial.println(version);
   Serial.println("Ubicacion: " + config.location);
-  Serial.println();
 
-
-  EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
-
-  printWiFiNetwork();
-
-  esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
-  Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
-
-  // Obtener el tamaño total de la Flash
-  Serial.printf("📦 Tamaño total de la Flash: %u bytes (%.2f MB)\n", ESP.getFlashChipSize(), ESP.getFlashChipSize() / (1024.0 * 1024.0));
-
-  // Obtener el tamaño de la partición OTA
-  Serial.printf("📦 Tamaño de la partición actual: %u bytes (%.2f MB)\n", ESP.getSketchSize(), ESP.getSketchSize() / (1024.0 * 1024.0));
-  Serial.printf("📦 Espacio libre para OTA: %u bytes (%.2f MB)\n", ESP.getFreeSketchSpace(), ESP.getFreeSketchSpace() / (1024.0 * 1024.0));
-
-  Serial.println();
-  setupBsecSensor();
-
-startAPMode();
-startWebServer();
-
-// scanTicker.attach(15.0, triggerNetworkScan);
-WiFiManager::scanNetworks(networks);
-Serial.println();
-initWiFiScanner();
-initSensorMutex();
-startWebServer();
-initSSETimer();
-Serial.println();
-printConfig();  // ✅ Ver los valores actuales de configuración
-Serial.println();
-  
-  pinMode(LED_BUILTIN, OUTPUT);
-  iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
   Serial.println(output);
   Serial.println();
+
+  
+  printWiFiNetwork();
   Serial.println();
-  loadState();
+  
+  esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
+  Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
+  
+  // Obtener el tamaño total de la Flash
+  Serial.printf("📦 Tamaño total de la Flash: %u bytes (%.2f MB)\n", ESP.getFlashChipSize(), ESP.getFlashChipSize() / (1024.0 * 1024.0));
+  
+  // Obtener el tamaño de la partición OTA
+  Serial.printf("📦 Tamaño de la partición actual: %u bytes (%.2f MB)\n", ESP.getSketchSize(), ESP.getSketchSize() / (1024.0 * 1024.0));
+  Serial.printf("📦 Espacio libre para OTA: %u bytes (%.2f MB)\n", ESP.getFreeSketchSpace(), ESP.getFreeSketchSpace() / (1024.0 * 1024.0));
+  
+  startAPMode();
+  startWebServer();
+  // scanTicker.attach(15.0, triggerNetworkScan);
+WiFiManager::scanNetworks(networks);
+Serial.println();
+  Serial.println();
+  iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
+  setupBsecSensor();
   Serial.println("loadState() se ha cargado.");
+  Serial.println();
+
+initWiFiScanner();
+initSensorMutex();
+initSSETimer();
+Serial.println();
+printConfig();  // ✅ Ver los valores actuales de configuración
+  
+  pinMode(LED_BUILTIN, OUTPUT);
+  
   
   // Sincronizar el reloj una vez al mes
   syncClock();
@@ -131,19 +130,18 @@ Serial.println();
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  // checkForIndexUpdate();
-  // checkForUpdates();
-  Serial.println();
+  checkForIndexUpdate();
+  checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
   Serial.println();
   sendTelegramMessage("ℹ️ Estado del ESP32", config);
+  Serial.println();
   
-  
-  // Imprimir el encabezado
-  output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
-  Serial.println(output);
-
+  // // Imprimir el encabezado
+  // output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
+  // Serial.println(output);
+  // Serial.println();
   xTaskCreatePinnedToCore(
     wifiScanTask,    // Función
     "WiFiScanner",   // Nombre
@@ -153,10 +151,6 @@ Serial.println();
     NULL,           // Handle
     0               // Núcleo (evitar core donde corre AsyncTCP)
 );
-
-Serial.println("[WiFi] Escáner inicializado en Core 0");
-
-
 
   // Iniciar tarea FreeRTOS para enviar datos a ThingSpeak
   xTaskCreatePinnedToCore(
@@ -187,9 +181,10 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        // checkForIndexUpdate();
-        // checkForUpdates();
+        checkForIndexUpdate();
+        checkForUpdates();
         loadState();
+        Serial.println();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
     }

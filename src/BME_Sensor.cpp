@@ -53,7 +53,7 @@ void loadState(void)
       bsecState[i] = EEPROM.read(i + 1);
       Serial.print(bsecState[i], HEX);
     }
-
+    Serial.println();
     iaqSensor.setState(bsecState);
     checkIaqSensorStatus();
   } else {
@@ -93,9 +93,8 @@ void updateState(void)
     for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE ; i++) {
       EEPROM.write(i + 1, bsecState[i]);
       Serial.print(bsecState[i], HEX);
-      Serial.print("\n");
     }
-
+    Serial.println();
     EEPROM.write(0, BSEC_MAX_STATE_BLOB_SIZE);
     EEPROM.commit();
   }

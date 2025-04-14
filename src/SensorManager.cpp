@@ -21,6 +21,7 @@ void setupBsecSensor() {
   // Inicializar el sensor BME680
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   checkIaqSensorStatus();
+  Serial.println();
   loadState();
 }
 

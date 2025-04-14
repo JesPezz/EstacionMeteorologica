@@ -64,6 +64,7 @@ void googlesheet(void) {
 
     Serial.print("🔍 googleSheetURL actual: ");
     Serial.println(config.googleSheetURL);
+    Serial.println();
 
     GoogleSheetManager::url = config.googleSheetURL;
     GoogleSheetManager::url += "?location=" + config.location;  
@@ -84,6 +85,7 @@ void googlesheet(void) {
 
     Serial.print("🌍 URL final: ");
     Serial.println(GoogleSheetManager::url);
+    Serial.println();
 
     http.begin(GoogleSheetManager::url);
     http.setTimeout(10000); // Aumenta el tiempo de espera
@@ -100,9 +102,11 @@ void googlesheet(void) {
             break; // Éxito, sal del bucle
         } else if (httpResponseCode == 302) { // Código 302: Redirección
             Serial.println("Redirección detectada");
+            Serial.println();
             String newUrl = http.getLocation();
             Serial.print("Nueva URL: ");
             Serial.println(newUrl);
+            Serial.println();
 
                     // Si no se encuentra la cabecera Location, intenta extraer la URL de la respuesta HTML
             if (newUrl.length() == 0) {
@@ -110,6 +114,7 @@ void googlesheet(void) {
                 newUrl = extractRedirectUrl(htmlResponse); // Extrae la URL de redirección del HTML
                 Serial.print("URL de redirección extraída del HTML: ");
                 Serial.println(newUrl);
+                Serial.println();
             }
 
             if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
@@ -124,26 +129,32 @@ void googlesheet(void) {
                 }
             } else {
                 Serial.println("⚠️ URL de redirección inválida.");
+                Serial.println();
             }
         } else {
             Serial.println("Error en la solicitud HTTP. Código: " + String(httpResponseCode));
+            Serial.println();
         }
 
         retryCount--;
         Serial.println("Reintentando... Intentos restantes: " + String(retryCount));
+        Serial.println();
         delay(1000); // Espera 1 segundo antes de reintentar
     }
 
     if (dataSent) {
         Serial.print("Datos enviados al Google Sheet. Código de respuesta HTTP: ");
         Serial.println(httpResponseCode);
+        Serial.println();
         String response = http.getString();
         Serial.println("Respuesta del servidor:");
         Serial.println(response);
+        Serial.println();
         ledSuccess();
     } else {
         Serial.print("Error al enviar datos. Código de respuesta HTTP: ");
         Serial.println(httpResponseCode);
+        Serial.println();
         errLeds();
         saveAndSendData(); // Guarda los datos para enviarlos más tarde
     }
@@ -151,6 +162,7 @@ void googlesheet(void) {
     http.end();
   } else {
     Serial.println("Error: No WiFi connection");
+    Serial.println();
     saveAndSendData();
   }
 }
@@ -213,8 +225,10 @@ void saveAndSendData() {
     preferences.end(); // Cierra el espacio de almacenamiento
 
     Serial.println("Datos guardados en memoria no volátil: " + url);
+    Serial.println();
   } else {
     Serial.println("Error: No se pudo construir la URL.");
+    Serial.println();
   }
 // Si hay conexión WiFi, intenta enviar los datos almacenados
 if (WiFi.status() == WL_CONNECTED) {
@@ -240,6 +254,7 @@ void sendAllReadingsToGoogleSheet() {
       if (storedUrl.startsWith("http://") || storedUrl.startsWith("https://")) {
         Serial.print("Enviando URL almacenada: ");
         Serial.println(storedUrl);
+        Serial.println();
 
       // Envía la URL a Google Sheets
       GoogleSheetManager::url = storedUrl;
@@ -249,6 +264,7 @@ void sendAllReadingsToGoogleSheet() {
       preferences.remove(key.c_str());
     } else {
         Serial.println("⚠️ URL almacenada inválida: " + storedUrl);
+        Serial.println();
         preferences.remove(key.c_str()); // Elimina la URL inválida
     }
 
@@ -257,6 +273,7 @@ void sendAllReadingsToGoogleSheet() {
 
 preferences.end(); // Cierra el espacio de almacenamiento
 Serial.println("Todas las lecturas almacenadas en memoria no volátil enviadas y borradas.");
+Serial.println();
 }
 
 
@@ -273,6 +290,7 @@ void sendReadingToGoogleSheet() {
 
         while (retryCount > 0 && !dataSent) {
             Serial.println("📡 Intentando enviar datos a: " + currentUrl);
+            Serial.println();
             http.begin(currentUrl);
             http.addHeader("User-Agent", "ESP32");
             http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -284,17 +302,20 @@ void sendReadingToGoogleSheet() {
                 break;
             } else if (httpResponseCode == HTTP_CODE_FOUND) {
                 Serial.println("🔄 Redirección detectada");
+                Serial.println();
                 String newUrl = http.getLocation();
                 
                 // Si no se encuentra la cabecera Location, intenta extraer del HTML
                 if (newUrl.length() == 0) {
                     Serial.println("⚠️ No se encontró la cabecera Location, extrayendo desde el HTML...");
+                    Serial.println();
                     String htmlResponse = http.getString();
                     newUrl = extractRedirectUrl(htmlResponse);
                 }
                 
                 if (newUrl.length() > 0 && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
                     Serial.println("🌍 Nueva URL redirigida: " + newUrl);
+                    Serial.println();
                     currentUrl = newUrl;
                     http.end(); // Finaliza la conexión actual antes de hacer una nueva petición
                     Serial.println("⌛ Esperando 3s antes de reintentar la redirección...");
@@ -302,38 +323,47 @@ void sendReadingToGoogleSheet() {
                     continue; // Reintentar con la nueva URL
                 } else {
                     Serial.println("⚠️ Error: URL de redirección inválida.");
+                    Serial.println();
                 }
             } else {
                 Serial.println("❌ Error HTTP: " + String(httpResponseCode));
                 Serial.println("📡 URL: " + currentUrl);
+                Serial.println();
                 
                 if (httpResponseCode == 400) {
                     Serial.println("⚠️ Datos incorrectos en la URL. Verifica los valores enviados.");
+                    Serial.println();
                 } else if (httpResponseCode == -2) {
                     Serial.println("⚠️ Error de conexión SSL. Intentando reconectar WiFi...");
+                    Serial.println();
                     reconnectWiFi();
                 }
             }
             retryCount--;
             Serial.println("🔄 Reintentando... Intentos restantes: " + String(retryCount));
+            Serial.println();
             delay(3000);
         }
 
         if (dataSent) {
             Serial.println("✅ Datos enviados a Google Sheets");
+            Serial.println();
             String response = http.getString();
             Serial.println("📄 Respuesta del servidor:");
             Serial.println(response);
+            Serial.println();
             ledSuccess();
         } else {
             Serial.print("❌ Fallo al enviar datos. Código HTTP: ");
             Serial.println(httpResponseCode);
+            Serial.println();
             errLeds();
         }
 
         http.end();
     } else {
         Serial.println("⚠️ No hay datos para enviar.");
+        Serial.println();
     }
 }
 

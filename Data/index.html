@@ -1117,6 +1117,14 @@ function stopAllProcesses() {
 
 async function scanNetworks() {
     try {
+
+        // 1. Iniciar el escaneo
+        await fetch('/api/wifi/scanInternal', {
+            headers: { 'Authorization': `Basic ${authToken}` }
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
         const response = await fetch('/api/wifi/scan', {
             headers: { 'Authorization': `Basic ${authToken}` }
         });

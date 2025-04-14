@@ -32,9 +32,11 @@ void taskSendToThingSpeak(void *pvParameters) {
         if (httpResponseCode > 0) {
           Serial.print("Datos enviados a ThingSpeak. Código de respuesta HTTP: ");
           Serial.println(httpResponseCode);
+          Serial.println();
         } else {
           Serial.print("Error al enviar datos a ThingSpeak. Código de respuesta HTTP: ");
           Serial.println(httpResponseCode);
+          Serial.println();
         }
   
         // Cerrar la conexión HTTP
