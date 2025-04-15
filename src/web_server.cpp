@@ -108,14 +108,6 @@ void handleWiFiScanInternal(AsyncWebServerRequest *request) {
     }
 }
 
-void handleWiFiScanAPI(AsyncWebServerRequest *request) {
-    // Solo actualizamos la variable global
-    WiFiManager::scanNetworks(networks); // Actualiza el vector global
-    
-    // Respuesta muy básica
-    request->send(200, "text/plain", "Redes escaneadas y actualizadas");
-}
-
 // Función para validar URLs
 bool isValidURL(String url, const char* domain) {
     return url.indexOf(domain) != -1 && url.startsWith("https://");
@@ -167,52 +159,6 @@ void sendSSEData(TimerHandle_t xTimer) {
 void sendSensorData() {
     String jsonData = getSensorJson(); // Usa tu función existente
     events.send(jsonData.c_str(), "update");
-}
-
-void handleWiFiConnect(AsyncWebServerRequest *request) {
-    // 1. Parsear JSON de la solicitud
-    JsonDocument requestDoc;
-    if (!parseRequestJSON(request, requestDoc)) return;
-
-    String ssid = requestDoc["ssid"] | "";
-    String password = requestDoc["password"] | "";
-
-    if (ssid.isEmpty() || password.isEmpty()) {
-        request->send(400, "application/json", "{\"error\":\"SSID/Password requeridos\"}");
-        return;
-    }
-
-    handleWiFiSave(request, nullptr, 0, 0, 0); // 🔥 Guarda en SPIFFS
-
-    // 3. Conectar a la red
-    WiFi.disconnect(true);
-    delay(100);
-    WiFi.begin(ssid.c_str(), password.c_str());
-
-    // Esperar conexión (con timeout)
-    unsigned long startTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
-        delay(500);
-        Serial.print(".");
-    }
-
-    // 4. Responder al cliente
-    JsonDocument responseDoc;
-    if (WiFi.status() == WL_CONNECTED) {
-        responseDoc["status"] = "connected";
-        responseDoc["ip"] = WiFi.localIP().toString();
-    } else {
-        responseDoc["status"] = "failed";
-        responseDoc["error"] = "Timeout de conexión";
-    }
-
-    String responseJson;
-    serializeJson(responseDoc, responseJson);
-    request->send(200, "application/json", responseJson);
-
-    // 5. Reiniciar para aplicar cambios (opcional)
-    delay(1000);
-    ESP.restart();
 }
 
 // Función auxiliar para parsear JSON
@@ -464,7 +410,6 @@ void startWebServer() {
         handleWiFiScanInternal(request);
     });
     server.on("/api/wifi/scan", HTTP_GET, handleWiFiScan);
-    server.on("/api/wifi/connect", HTTP_POST, handleWiFiConnect);
     server.on("/saveWiFi", HTTP_POST, [](AsyncWebServerRequest *request) {},
           NULL, handleWiFiSave);
     
@@ -493,20 +438,7 @@ void startWebServer() {
         request->send(200, "application/json", response);
     });
 
-    server.on("/debug", HTTP_POST, [](AsyncWebServerRequest *request){
-        String response = "Método: " + String(request->methodToString()) + "\n";
-        response += "Content-Type: " + request->contentType() + "\n";
-        response += "Content-Length: " + String(request->contentLength()) + "\n";
-        response += "Headers:\n";
-        
-        for(size_t i=0; i<request->headers(); i++){
-            const AsyncWebHeader* h = request->getHeader(i);
-            response += "  " + h->name() + ": " + h->value() + "\n";
-        }
-        
-        request->send(200, "text/plain", response);
-    });
-
+    
     // 1. Manejador OPTIONS para CORS
 server.on("/config", HTTP_OPTIONS, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse *response = request->beginResponse(204);
@@ -595,15 +527,6 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
     Serial.println();
     Serial.printf("Recibiendo datos: %d/%d bytes\n", index + len, total);
     Serial.println();
-});
-
-server.on("/test", HTTP_POST, [](AsyncWebServerRequest *request){
-    if(request->hasParam("plain", true)) {
-        String body = request->getParam("plain", true)->value();
-        request->send(200, "text/plain", "Recibido: " + body);
-    } else {
-        request->send(200, "text/plain", "No se recibió body");
-    }
 });
 
     // 🔹 Ruta para subir firmware OTA
