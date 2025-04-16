@@ -92,7 +92,6 @@ if (!testFile) {
   Serial.println();
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   setupBsecSensor();
-  Serial.println("loadState() se ha cargado.");
   Serial.println();
 
 initWiFiScanner();
@@ -127,18 +126,18 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  // checkForIndexUpdate();
-  // checkForUpdates();
+  checkForIndexUpdate();
+  checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
   Serial.println();
   sendTelegramMessage("ℹ️ Estado del ESP32", config);
   Serial.println();
   
-  // // Imprimir el encabezado
-  // output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
-  // Serial.println(output);
-  // Serial.println();
+  // Imprimir el encabezado
+  output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
+  Serial.println(output);
+  Serial.println();
   xTaskCreatePinnedToCore(
     wifiScanTask,    // Función
     "WiFiScanner",   // Nombre
@@ -178,8 +177,8 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        // checkForIndexUpdate();
-        // checkForUpdates();
+        checkForIndexUpdate();
+        checkForUpdates();
         loadState();
         Serial.println();
         Serial.println("loadState() se ha cargado.");

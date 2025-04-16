@@ -3,8 +3,11 @@
 #include <Preferences.h>
 #include <EEPROM.h>
 #include "led.h"
+#include <bsec.h>
 
-
+#define STATE_SAVE_PERIOD 360  // Intervalo en minutos (360 = 6 horas)
+byte lastStoredAccuracy = 0xFF; // Valor inicial inválido
+Preferences bsecPrefs;
 
 // Implementa checkIaqSensorStatus, loadState, updateState, etc. (copiar código original)
 
@@ -43,60 +46,95 @@ void checkIaqSensorStatus(void)
   }
 }
 
-void loadState(void)
-{
-  if (EEPROM.read(0) == BSEC_MAX_STATE_BLOB_SIZE) {
-    // Existing state in EEPROM
-    Serial.println("📂 Reading state from EEPROM");
-
-    for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
-      bsecState[i] = EEPROM.read(i + 1);
-      Serial.print(bsecState[i], HEX);
+void printHexDump(const uint8_t* data, size_t size, uint8_t bytesPerLine = 16) {
+  for (size_t i = 0; i < size; i += bytesPerLine) {
+    // Dirección
+    Serial.printf("%04X: ", i);
+    
+    // Bytes en HEX
+    for (size_t j = 0; j < bytesPerLine; j++) {
+      if (i + j < size) {
+        Serial.printf("%02X ", data[i + j]);
+      } else {
+        Serial.print("   ");
+      }
+    }
+    
+    // Caracteres ASCII (si son imprimibles)
+    Serial.print(" ");
+    for (size_t j = 0; j < bytesPerLine; j++) {
+      if (i + j < size) {
+        uint8_t c = data[i + j];
+        Serial.write((c >= 32 && c <= 126) ? c : '.');
+      }
     }
     Serial.println();
-    iaqSensor.setState(bsecState);
-    checkIaqSensorStatus();
-  } else {
-    // Erase the EEPROM with zeroes
-    Serial.println("🔥 Erasing EEPROM");
-
-    for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE + 1; i++)
-      EEPROM.write(i, 0);
-
-    EEPROM.commit();
+    if (i + bytesPerLine >= size) break;
   }
 }
 
-void updateState(void)
-{
-  bool update = false;
-  if (stateUpdateCounter == 0) {
-    /* First state update when IAQ accuracy is >= 3 */
-    if (iaqSensor.iaqAccuracy >= 3 || iaqSensor.iaqAccuracy == 1 || iaqSensor.iaqAccuracy == 2) {
-      update = true;
-      stateUpdateCounter++;
-    }
+void loadState() {
+  bsecPrefs.begin("bsec_data", true); // Modo lectura
+  
+  if (bsecPrefs.isKey("state")) {
+      size_t stateSize = bsecPrefs.getBytes("state", bsecState, BSEC_MAX_STATE_BLOB_SIZE);
+      if (stateSize == BSEC_MAX_STATE_BLOB_SIZE) {
+          Serial.println("\n✅ Estado de calibración cargado desde NVS");
+          Serial.printf("📦 Tamaño: %d bytes\n", stateSize);
+          Serial.println("📝 Primeros 32 bytes (hexdump):");
+          printHexDump(bsecState, 32); // Muestra solo los primeros 32 bytes
+          iaqSensor.setState(bsecState);  // Aplica el estado directamente
+          Serial.println("✅ Estado aplicado al sensor BSEC");
+          checkIaqSensorStatus();
+      } else {
+          Serial.printf("⚠ Tamaño incorrecto: %d (esperado %d)\n", stateSize, BSEC_MAX_STATE_BLOB_SIZE);
+      }
   } else {
-    /* Update every STATE_SAVE_PERIOD minutes */
-    if ((stateUpdateCounter * STATE_SAVE_PERIOD) < millis()) {
-      update = true;
-      stateUpdateCounter++;
-    }
+      Serial.println("⚠ No hay estado guardado en NVS. Iniciando calibración desde cero.");
   }
-
-  if (update) {
-    iaqSensor.getState(bsecState);
-    checkIaqSensorStatus();
-
-    Serial.println("Writing state to EEPROM");
-
-    for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE ; i++) {
-      EEPROM.write(i + 1, bsecState[i]);
-      Serial.print(bsecState[i], HEX);
-    }
-    Serial.println();
-    EEPROM.write(0, BSEC_MAX_STATE_BLOB_SIZE);
-    EEPROM.commit();
-  }
+  
+  bsecPrefs.end();
 }
 
+void updateState() {
+  bool shouldUpdate = false;
+  byte currentAccuracy = iaqSensor.iaqAccuracy;
+
+  // 1. Guardar en cambios de precisión
+  if ((lastStoredAccuracy != currentAccuracy) && 
+      (currentAccuracy == 1 || currentAccuracy == 2 || currentAccuracy == 3)) {
+      shouldUpdate = true;
+      Serial.printf("\n🔄 Cambio de precisión %d→%d\n", lastStoredAccuracy, currentAccuracy);
+      lastStoredAccuracy = currentAccuracy;
+  }
+
+  // 2. Guardado periódico
+  if (currentAccuracy >= 3) {
+      if ((stateUpdateCounter * STATE_SAVE_PERIOD * 60000UL) < millis()) {
+          shouldUpdate = true;
+          stateUpdateCounter++;
+          Serial.println("\n⏰ Guardado periódico programado");
+      }
+  }
+
+  if (shouldUpdate) {
+      iaqSensor.getState(bsecState);
+      checkIaqSensorStatus();
+
+      Serial.println("💾 Guardando estado actual:");
+      Serial.printf("🔢 Precisión: %d\n", currentAccuracy);
+      Serial.println("📝 Primeros 32 bytes a guardar:");
+      printHexDump(bsecState, 32);
+
+      bsecPrefs.begin("bsec_data", false);
+      bool saveResult = bsecPrefs.putBytes("state", bsecState, BSEC_MAX_STATE_BLOB_SIZE);
+      bsecPrefs.end();
+
+      if (saveResult) {
+          Serial.println("✅ Guardado en NVS exitoso");
+          //uploadCalibrationToServer(); // Descomenta para subir al servidor
+      } else {
+          Serial.println("❌ Error al guardar en NVS");
+      }
+  }
+}
