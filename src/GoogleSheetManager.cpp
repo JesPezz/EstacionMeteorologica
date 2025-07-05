@@ -367,12 +367,6 @@ void sendReadingToGoogleSheet() {
     }
 }
 
-
-
-
-
-
-
 String extractRedirectUrl(const String &htmlResponse) {
     // Busca la etiqueta <A HREF="..."> en la respuesta HTML
     int hrefStart = htmlResponse.indexOf("HREF=\"");

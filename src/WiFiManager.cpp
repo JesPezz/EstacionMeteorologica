@@ -9,7 +9,31 @@
 #include <ArduinoJson.h>
 
 bool APmode = false;
+unsigned long lastConnectionAttempt = 0;
+const int maxConnectionAttempts = 5;  // 5 intentos (antes: 1)
+const int connectionAttemptDelay = 10000; // 10 segundos entre intentos
+const int apModeTimeout = 120000; // 2 minutos (para salir del modo AP)
 
+// 🔹 Función mejorada para conectar a WiFi con múltiples intentos
+bool connectWithRetries(const char* ssid, const char* password) {
+    for (int i = 0; i < maxConnectionAttempts; i++) {
+        Serial.printf("📡 Intento %d/%d para conectar a %s...\n", i + 1, maxConnectionAttempts, ssid);
+        WiFi.begin(ssid, password);
+        
+        unsigned long startTime = millis();
+        while (WiFi.status() != WL_CONNECTED && (millis() - startTime < connectionAttemptDelay)) {
+            delay(500);
+            Serial.print(".");
+            yield();
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.printf("\n✅ ¡Conectado a %s!\nIP: %s\n", ssid, WiFi.localIP().toString().c_str());
+            return true;
+        }
+    }
+    return false;
+}
 
 void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
     if(otaInProgress) {
@@ -164,111 +188,109 @@ std::vector<WiFiNetwork> getAvailableNetworks() {
     return networks;
 }
 
-// 🔹 Conectarse a la mejor red disponible
+// 🔹 Función mejorada para seleccionar y conectar a la mejor red
 bool connectToBestWiFi() {
     std::vector<WiFiNetwork> savedNetworks;
     WiFiManager::loadSavedNetworks(savedNetworks);
 
-    // Si no hay redes guardadas, no intentar conexión
     if (savedNetworks.empty()) {
         Serial.println("⚠️ No hay redes WiFi guardadas");
-        return false; // AP ya está activo desde el setup()
+        return false;
     }
 
-    // Escanear redes disponibles
+    // 1. Escanear redes disponibles y emparejarlas con las guardadas
     std::vector<WiFiNetwork> availableNetworks;
     WiFiManager::scanNetworks(availableNetworks);
 
-    // Buscar la mejor red guardada disponible
-    WiFiNetwork bestNetwork;
-    int bestRssi = -1000;
-    bool found = false;
-
+    // 2. Ordenar las redes guardadas por mejor señal (RSSI)
+    std::vector<WiFiNetwork> prioritizedNetworks;
     for (const auto& saved : savedNetworks) {
         for (const auto& available : availableNetworks) {
-            if (strcmp(saved.ssid, available.ssid) == 0 && available.rssi > bestRssi) {
-                bestRssi = available.rssi;
-                bestNetwork = saved;
-                found = true;
+            if (strcmp(saved.ssid, available.ssid) == 0) {
+                WiFiNetwork prioritized = saved;
+                prioritized.rssi = available.rssi; // Actualizar RSSI del escaneo
+                prioritizedNetworks.push_back(prioritized);
+                break;
             }
         }
     }
 
-    if (found) {
-        WiFi.begin(bestNetwork.ssid, bestNetwork.password);
-        if (WiFi.waitForConnectResult(10000) == WL_CONNECTED) {
-            return true;
+    // 3. Ordenar de mayor a menor RSSI
+    std::sort(prioritizedNetworks.begin(), prioritizedNetworks.end(), 
+        [](const WiFiNetwork& a, const WiFiNetwork& b) { return a.rssi > b.rssi; });
+
+    // 4. Intentar conexión con cada red guardada (en orden de prioridad)
+    for (const auto& net : prioritizedNetworks) {
+        Serial.printf("\n🔁 Intentando conectar a %s (%d dBm)...\n", net.ssid, net.rssi);
+        if (connectWithRetries(net.ssid, net.password)) {
+            return true; // ¡Éxito!
         }
     }
 
-    // Intentar conexión
-    Serial.printf("\n📡 Intentando conectar a: %s\n", bestNetwork.ssid);
-    WiFi.begin(bestNetwork.ssid, bestNetwork.password);
-
-    // Timeout de conexión mejorado
-    unsigned long startTime = millis();
-    while (WiFi.status() != WL_CONNECTED && (millis() - startTime < 20000)) {
-        delay(500);
-        Serial.print(".");
-        yield();
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.printf("\n✅ Conectado exitosamente!\nIP: %s\n", WiFi.localIP().toString().c_str());
-        WiFi.mode(WIFI_STA);
-        return true;
-    }
-
-    Serial.println("\n❌ Falló la conexión");
+    // 5. Si todas fallan, retornar false (activará modo AP)
     return false;
 }
 
+
+// 🔹 Función mejorada para iniciar el modo AP
 void startAPMode() {
     WiFi.disconnect(true);
     delay(100);
 
-    // Intenta conectar a la mejor red guardada
-    if (connectToBestWiFi()) {
-        Serial.println("✅ Conectado a WiFi. No es necesario activar AP.");
-        return;  // Sale de la función si la conexión es exitosa
+    // 1. Verificar si hay redes guardadas
+    std::vector<WiFiNetwork> savedNetworks;
+    WiFiManager::loadSavedNetworks(savedNetworks);
+
+    // 2. Si NO hay redes guardadas, activar AP indefinidamente
+    if (savedNetworks.empty()) {
+        WiFi.mode(WIFI_AP);
+        WiFi.softAP(webUsername, webPassword);
+        APmode = true;
+        Serial.println("⚠️ No hay redes WiFi guardadas. Modo AP activado indefinidamente.");
+        return; // 🔹 ¡Salir aquí para evitar reintentos!
     }
 
-    // Si no se conecta, activa el modo AP
-    WiFi.mode(WIFI_AP_STA);
+    // 3. Si hay redes guardadas, intentar conexión
+    if (connectToBestWiFi()) {
+        APmode = false;
+        Serial.println("✅ WiFi conectado. Modo AP desactivado.");
+        return;
+    }
+
+    // 4. Si las redes guardadas fallan, activar AP temporalmente (con timeout)
+    WiFi.mode(WIFI_AP);
     WiFi.softAP(webUsername, webPassword);
     APmode = true;
-
-    Serial.println("⚠️ No se pudo conectar a WiFi. Modo AP activo en: " + WiFi.softAPIP().toString());
+    lastConnectionAttempt = millis();
+    Serial.printf("⚠️ Modo AP activado (timeout: %d minutos). IP: %s\n", apModeTimeout / 60000, WiFi.softAPIP().toString().c_str());
 }
 
+
+// 🔹 Función de reconexión (mantener compatibilidad)
 bool reconnectWiFi() {
-    if (APmode) return false;
-
-    Serial.println("Intentando reconexión WiFi...");
-    WiFi.disconnect();
-    delay(100);
-    
-    unsigned long start = millis();
-    while (millis() - start < 30000) { // 30 segundos máximo
-        if (connectToBestWiFi()) return true;
-        delay(5000);
-    }
-    return false;
+    return connectToBestWiFi();
 }
 
+
+// 🔹 Función mejorada para verificar WiFi y manejar reconexiones
 void checkWiFiConnection() {
-    if (APmode) return;  // Si el AP está activo, no forzar reconexión
+    if (WiFi.status() == WL_CONNECTED) return;
 
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("⚠️ WiFi desconectado. Esperando un poco antes de reconectar...");
-
-        delay(5000);  // Esperar 5 segundos antes de intentar reconectar
-
-        if (WiFi.status() != WL_CONNECTED) {  // Si sigue desconectado, reconectar
-            Serial.println("🔄 Intentando reconectar a WiFi...");
-            reconnectWiFi();
-        } else {
-            Serial.println("✅ Falsa alarma, WiFi sigue conectado.");
+    if (APmode) {
+        // Si está en modo AP y ha pasado el timeout, intentar reconectar
+        if (millis() - lastConnectionAttempt > apModeTimeout) {
+            Serial.println("🔄 Timeout de modo AP. Intentando reconectar a WiFi...");
+            APmode = false;
+            WiFi.softAPdisconnect(true);
+            startAPMode(); // Reinicia el proceso
+        }
+    } else {
+        // Si no está en modo AP, reintentar conexión periódicamente
+        if (millis() - lastConnectionAttempt > 30000) { // Cada 30 segundos
+            Serial.println("🔄 Intentando reconexión WiFi...");
+            lastConnectionAttempt = millis();
+            startAPMode(); // Llama a la función que maneja los reintentos
         }
     }
 }
+
