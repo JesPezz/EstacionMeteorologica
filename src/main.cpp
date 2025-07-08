@@ -31,6 +31,7 @@ void setup() {
   Serial.begin(115200);
   if(!SPIFFS.begin(true)) {
     Serial.println("Error al montar SPIFFS");
+    writeLog("❌ Error al montar SPIFFS");
     delay(1000);
     ESP.restart();
   }
@@ -41,6 +42,7 @@ void setup() {
 File testFile = SPIFFS.open("/test.txt", FILE_WRITE);
 if (!testFile) {
   Serial.println("¡Error crítico! SPIFFS no permite escritura");
+  writeLog("❌ ¡Error crítico! SPIFFS no permite escritura");
 } else {
   testFile.println("Prueba");
   testFile.close();
@@ -48,6 +50,34 @@ if (!testFile) {
 }
 
   testFlash();
+
+
+// // Prueba de logging con marca de tiempo
+//     writeLog("=================================");
+//     writeLog("    Prueba de sistema de logs    ");
+//     writeLog("Fecha: " + getDateTimeString());
+//     writeLog("=================================");
+
+//     // Verificar si se escribió correctamente
+//     if(SPIFFS.exists(LOG_FILE)) {
+//         File logFile = SPIFFS.open(LOG_FILE, "r");
+//         Serial.println("Contenido del log:");
+//         while(logFile.available()) {
+//             Serial.write(logFile.read());
+//         }
+//         logFile.close();
+//     } else {
+//         Serial.println("No se creó el archivo de log");
+//     }
+
+//     Serial.println("=== Prueba de SPIFFS ===");
+// File file = SPIFFS.open(LOG_FILE, "r");
+// if(file){
+//     Serial.printf("Tamaño del log: %d bytes\n", file.size());
+//     file.close();
+// } else {
+//     Serial.println("¡No se pudo abrir el archivo!");
+// }
 
 
    // Verifica espacio libre

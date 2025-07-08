@@ -30,6 +30,32 @@ const char* sensorDataFile = "/sensor_data.json";
 void restartESP32Task(void *parameter);
 bool otaInProgress = false;  // 🔹 Indica si una OTA está en proceso
 
+// Handler para descargar el log
+void handleDownloadLog(AsyncWebServerRequest *request) {
+    if (!SPIFFS.exists(LOG_FILE)) {
+        request->send(404, "text/plain", "No hay archivo de log disponible");
+        return;
+    }
+
+    File file = SPIFFS.open(LOG_FILE, "r");
+    if (!file || file.isDirectory()) {
+        request->send(500, "text/plain", "Error al abrir el archivo");
+        return;
+    }
+
+    // Configurar los headers correctamente
+    AsyncWebServerResponse *response = request->beginResponse(
+        SPIFFS, 
+        LOG_FILE, 
+        "text/plain", 
+        false  // No descargar como adjunto
+    );
+    
+    response->addHeader("Content-Disposition", "attachment; filename=esp32_log.txt");
+    response->addHeader("Cache-Control", "no-cache");
+    request->send(response);
+}
+
 struct NetworkConfig {
     char ssid[32];       // Tamaño fijo para SSID
     char password[64];    // Tamaño fijo para contraseña
@@ -83,6 +109,7 @@ void wifiScanTask(void *pvParameters) {
                     }
                 } else {
                     Serial.println("[WiFi] Error en escaneo");
+                    writeLog("[WiFi] Error en escaneo de redes");
                 }
             } else {
                 xSemaphoreGive(wifiMutex);
@@ -105,6 +132,7 @@ void handleWiFiScanInternal(AsyncWebServerRequest *request) {
         }
     } else {
         request->send(503, "text/plain", "Error de sistema");
+        writeLog("[WiFi] Error al tomar el mutex de escaneo");
     }
 }
 
@@ -148,6 +176,7 @@ void handleSavedNetworks(AsyncWebServerRequest* request) { //WiFiManager::loadSa
         request->send(200, "application/json", jsonResponse);
     } else {
         request->send(500, "text/plain", "Error cargando redes guardadas");
+        writeLog("[WiFi] Error al cargar redes guardadas");
     }
 }
 
@@ -221,6 +250,7 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     if (error) {
         Serial.print("❌ Error de parseo JSON: ");
         Serial.println(error.f_str());
+        writeLog("❌ Error de parseo JSON: " + String(error.f_str()));
         request->send(400, "application/json", "{\"error\":\"Invalid JSON format\"}");
         return;
     }
@@ -253,6 +283,7 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     bool saved = WiFiManager::saveNetwork(wifiNet);
     Serial.print("🔎 Resultado de saveNetwork: ");
     Serial.println(saved ? "ÉXITO" : "FALLÓ");
+    writeLog(saved ? "✅ Red WiFi guardada correctamente." : "❌ Error al guardar la red WiFi.");
     
 
     if (saved) {
@@ -272,16 +303,19 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 
     const char* WiFiManager::getLastError() {
         if (!SPIFFS.exists("/wifi.json")) {  // Cambiado a wifi.json
+            writeLog("❌ Archivo wifi.json no existe");
             return "Archivo wifi.json no existe";
         }
         
         File file = SPIFFS.open("/wifi.json", FILE_READ);
         if (!file) {
+            writeLog("❌ No se pudo abrir wifi.json");
             return "No se pudo abrir wifi.json";
         }
         
         if (file.size() == 0) {
             file.close();
+            writeLog("❌ wifi.json está vacío");
             return "wifi.json está vacío";
         }
         
@@ -328,6 +362,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         
         if (!Update.begin(firmwareSize, U_FLASH)) {
             Serial.println("❌ No se pudo iniciar la OTA");
+            writeLog("❌ No se pudo iniciar la OTA");
             errLeds();
             request->send(500, "text/plain", "Error al iniciar actualización");
             void enableWatchdog(); // Reactiva el Watchdog y reanuda la tarea 
@@ -341,6 +376,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
 
     if (written != len) {
         Serial.println("❌ Error al escribir en Flash");
+        writeLog("❌ Error al escribir en Flash");
         errLeds();
         request->send(500, "text/plain", "Error al escribir en Flash");
         otaInProgress = false;
@@ -352,6 +388,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
 
         if (Update.hasError()) {
             Serial.println("❌ Error en la transferencia OTA.");
+            writeLog("❌ Error en la transferencia OTA.");
             errLeds();
             request->send(500, "text/plain", "Error en la transferencia OTA.");
             otaInProgress = false;
@@ -366,6 +403,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
             ESP.restart();
         } else {
             Serial.println("❌ Error finalizando OTA");
+            writeLog("❌ Error finalizando OTA.");
             errLeds();
             request->send(500, "text/plain", "Error finalizando OTA.");
             otaInProgress = false;
@@ -388,6 +426,7 @@ void startWebServer() {
         Serial.println("📂 Petición recibida para /");
         if (!SPIFFS.exists("/index.html")) {
             Serial.println("❌ index.html no encontrado en SPIFFS");
+            writeLog("❌ index.html no encontrado en SPIFFS");
             request->send(404, "text/plain", "File Not Found");
             return;
         }
@@ -416,7 +455,17 @@ void startWebServer() {
     server.on("/sensor_data", HTTP_GET, handleSensorData);
     server.on("/esp_status", HTTP_GET, handleESPStatus);
     server.on("/restart", HTTP_POST, handleRestart);
-
+    server.on("/downloadLog", HTTP_GET, [](AsyncWebServerRequest *request){
+    if(!isAuthenticated(request)) return;
+    handleDownloadLog(request);
+});
+server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
+    if(SPIFFS.exists(LOG_FILE)) {
+        request->send(SPIFFS, LOG_FILE, "text/plain");
+    } else {
+        request->send(200, "text/plain", "El archivo de log no existe");
+    }
+});
     server.on("/getConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
     
@@ -464,6 +513,7 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
         Serial.println();
         Serial.println("ERROR: No se recibió parámetro 'plain'");
         Serial.println();
+        writeLog("❌ No se recibió parámetro 'plain' en la petición de configuración");
         request->send(400, "text/plain", "No se recibieron datos");
         return;
     }
@@ -481,6 +531,7 @@ server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
         Serial.print("ERROR parseando JSON: ");
         Serial.println(error.c_str());
         Serial.println();
+        writeLog("❌ Error parseando JSON: " + String(error.c_str()));
         request->send(400, "text/plain", "Error en formato JSON");
         return;
     }
@@ -575,6 +626,7 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
         Serial.println();
         Serial.println("❌ Autenticación fallida");
         Serial.println();
+        writeLog("❌ Autenticación fallida en la petición de configuración");
         request->send(403, "text/plain", "Forbidden");
         return false;
     }
@@ -624,6 +676,7 @@ void initWiFiScanner() {
         Serial.println();
         Serial.println("[CRITICAL] Fallo al crear wifiMutex");
         Serial.println();
+        writeLog("[CRITICAL] Fallo al crear wifiMutex");
         ESP.restart();
     }
 }
@@ -634,6 +687,7 @@ void initSensorMutex() {
         Serial.println();
         Serial.println("❌ Error creando mutex de sensores");
         Serial.println();
+        writeLog("❌ Error creando mutex de sensores");
     }
 }
 

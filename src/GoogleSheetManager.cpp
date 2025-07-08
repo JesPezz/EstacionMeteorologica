@@ -308,6 +308,7 @@ void sendReadingToGoogleSheet() {
                 // Si no se encuentra la cabecera Location, intenta extraer del HTML
                 if (newUrl.length() == 0) {
                     Serial.println("⚠️ No se encontró la cabecera Location, extrayendo desde el HTML...");
+                    writeLog("⚠️ No se encontró la cabecera Location, extrayendo desde el HTML...");
                     Serial.println();
                     String htmlResponse = http.getString();
                     newUrl = extractRedirectUrl(htmlResponse);
@@ -323,19 +324,23 @@ void sendReadingToGoogleSheet() {
                     continue; // Reintentar con la nueva URL
                 } else {
                     Serial.println("⚠️ Error: URL de redirección inválida.");
+                    writeLog("⚠️ Error: URL de redirección inválida.");
                     Serial.println();
                 }
             } else {
                 Serial.println("❌ Error HTTP: " + String(httpResponseCode));
                 Serial.println("📡 URL: " + currentUrl);
                 Serial.println();
+                writeLog("❌ Error HTTP: " + String(httpResponseCode) + " en URL: " + currentUrl);
                 
                 if (httpResponseCode == 400) {
                     Serial.println("⚠️ Datos incorrectos en la URL. Verifica los valores enviados.");
                     Serial.println();
+                    writeLog("⚠️ Datos incorrectos en la URL. Verifica los valores enviados.");
                 } else if (httpResponseCode == -2) {
                     Serial.println("⚠️ Error de conexión SSL. Intentando reconectar WiFi...");
                     Serial.println();
+                    writeLog("⚠️ Error de conexión SSL. Intentando reconectar WiFi...");
                     reconnectWiFi();
                 }
             }
@@ -357,6 +362,7 @@ void sendReadingToGoogleSheet() {
             Serial.print("❌ Fallo al enviar datos. Código HTTP: ");
             Serial.println(httpResponseCode);
             Serial.println();
+            writeLog("❌ Fallo al enviar datos. Código HTTP: " + String(httpResponseCode));
             errLeds();
         }
 
@@ -364,6 +370,7 @@ void sendReadingToGoogleSheet() {
     } else {
         Serial.println("⚠️ No hay datos para enviar.");
         Serial.println();
+        writeLog("⚠️ No hay datos para enviar.");
     }
 }
 

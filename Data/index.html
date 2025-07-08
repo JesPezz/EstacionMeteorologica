@@ -431,6 +431,7 @@
         <div class="card realtime-status">
             <h2><i class="fas fa-heartbeat"></i> Estado del Sistema</h2>
             <div class="sensor-data">
+                <p>📍 <b>Ubicación:</b> <span id="location-display">Cargando...</span></p>
                 <p>📡 <b>Estado del ESP32</b></p>
                 <p>IP: <span id="esp-ip">Cargando...</span></p>
                 <p>WiFi: <span id="wifi-status">Cargando...</span></p>
@@ -491,6 +492,16 @@
                 <!-- Más campos de configuración -->
                 <button type="submit">Guardar Configuración</button>
             </form>
+
+                        <div class="card">
+                <h2><i class="fas fa-bug"></i> Registro de Errores</h2>
+                <button onclick="downloadLog()" class="btn-secondary">
+                 <i class="fas fa-download"></i> Descargar Log
+                </button>
+                <p style="font-size: 0.8em; margin-top: 10px;">
+                 Últimos errores del sistema (máx. 10KB)
+                </p>
+            </div>
         </div>
         
         <!-- Sección de Actualización OTA -->
@@ -503,9 +514,14 @@
             <div class="progress-bar-fill" id="progressFill"></div>
             </div>
         </div>
-    </div>
 
-    
+             <div class="card" style="margin-top: 20px; text-align: center;">
+            <button onclick="confirmRestart()" class="btn-secondary" style="padding: 12px 24px;">
+                <i class="fas fa-sync-alt"></i> Reiniciar Sistema
+            </button>
+        </div>
+    </div>
+  
 
     <!-- Modales y Overlays -->
     <div class="loading-overlay" id="loading">
@@ -554,6 +570,42 @@
     let fileSelected = false;
     let loginInProgress = false;
     let savedNetworks = []; // Almacenará las redes guardadas
+
+    function downloadLog() {
+    // Versión robusta con manejo de errores
+    fetch('/downloadLog')
+        .then(response => {
+            if(!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'esp32_log.txt';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Error al descargar. Prueba /logview para diagnóstico");
+        });
+}
+
+    function confirmRestart() {
+    if (confirm("¿Está seguro de reiniciar el sistema? Se perderán conexiones temporales.")) {
+        toggleLoading(true, "Reiniciando...");
+        fetch("/restart", { 
+            method: "POST",
+            headers: { 'Authorization': `Basic ${authToken}` }
+        }).catch(err => console.log("Reinicio iniciado"));
+    }
+}
+
 
 function showAuthModal() {
         const modal = document.getElementById('authModal');
@@ -944,6 +996,7 @@ async function loadConfig() {
         };
         
         // Mostrar valores en el formulario
+        document.getElementById('location-display').textContent = config.location || "No configurada";
         document.getElementById('googleSheetURL').value = config.googleSheetURL;
         document.getElementById('thingSpeakAPIKey').value = "*****"; // Enmascarar
         document.getElementById('channelID').value = config.channelID;
@@ -1285,7 +1338,8 @@ const updateSensorData = async () => {
             try {
                 const response = await fetch('/sensor_data');
                 const data = await response.json();
-                
+
+                document.getElementById('location-display').textContent = config.location || "No configurada";
                 document.getElementById('temp').textContent = data.temp.toFixed(1);
                 document.getElementById('humidity').textContent = data.humidity.toFixed(1);
                 document.getElementById('pressure').textContent = data.pressure.toFixed(1);

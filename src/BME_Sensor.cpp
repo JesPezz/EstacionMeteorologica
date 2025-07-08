@@ -19,6 +19,8 @@ void checkIaqSensorStatus(void)
       Serial.println();
       Serial.println(output);
       Serial.println();
+      writeLog("BSEC error code : " + String(iaqSensor.bsecStatus));
+
       for (;;)
         errLeds(); /* Halt in case of failure */
     } else {
@@ -35,6 +37,7 @@ void checkIaqSensorStatus(void)
       Serial.println();
       Serial.println(output);
       Serial.println();
+      writeLog("BME68X error code : " + String(iaqSensor.bme68xStatus));
       for (;;)
         errLeds(); /* Halt in case of failure */
     } else {
@@ -88,9 +91,11 @@ void loadState() {
           checkIaqSensorStatus();
       } else {
           Serial.printf("⚠ Tamaño incorrecto: %d (esperado %d)\n", stateSize, BSEC_MAX_STATE_BLOB_SIZE);
+          writeLog("⚠ Tamaño incorrecto al cargar estado de NVS: " + String(stateSize));
       }
   } else {
       Serial.println("⚠ No hay estado guardado en NVS. Iniciando calibración desde cero.");
+      writeLog("⚠ No hay estado guardado en NVS. Iniciando calibración desde cero.");
   }
   
   bsecPrefs.end();
@@ -135,6 +140,7 @@ void updateState() {
           //uploadCalibrationToServer(); // Descomenta para subir al servidor
       } else {
           Serial.println("❌ Error al guardar en NVS");
+          writeLog("❌ Error al guardar estado en NVS");
       }
   }
 }

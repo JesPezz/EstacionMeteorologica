@@ -63,6 +63,7 @@ void enableWatchdog() {
         
         if (error) {
             Serial.println("❌ Error al parsear JSON");
+            Serial.println("Error: " + String(error.c_str()));
             return "";
         }
 
@@ -76,6 +77,7 @@ void enableWatchdog() {
         }
     } else {
         Serial.printf("❌ Error HTTP al obtener URL del firmware. Código: %d\n", httpCode);
+        writeLog("❌ Error HTTP al obtener URL del firmware. Código: " + String(httpCode));
         
     }
     return"";
@@ -124,6 +126,7 @@ void checkForUpdates() {
         
         if (error) {
             Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
+            writeLog("❌ Error al parsear JSON: " + String(error.c_str()));
             return;
         }
 
@@ -151,6 +154,7 @@ void checkForUpdates() {
         
          } else {
            Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
+              writeLog("❌ Error HTTP: " + String(httpCode) + " al obtener información de Releases.");
     }
 
     http.end();
@@ -170,6 +174,7 @@ void checkForIndexUpdate() {
 
     if (!client.connect(host, 443)) {
         Serial.println("❌ Error al conectar con GitHub.");
+        writeLog("❌ Error al conectar con GitHub.");
         return;
     }
 
@@ -199,6 +204,7 @@ void checkForIndexUpdate() {
 
     if (remoteETag.isEmpty()) {
         Serial.println("❌ No se encontró 'ETag'. No se puede verificar la actualización.");
+        writeLog("❌ No se encontró 'ETag'. No se puede verificar la actualización.");
         return;
     }
 
@@ -235,6 +241,7 @@ void checkForIndexUpdate() {
             enableWatchdog();
         } else {
             Serial.println("❌ Error al actualizar index.html.");
+            writeLog("❌ Error al actualizar index.html.");
             sendTelegramMessage("❌ Error al actualizar index.html.", config);
         }
     } else {
@@ -260,6 +267,7 @@ bool updateFileFromURL(const char* url, const char* path) {
         File file = SPIFFS.open(path, "w");
         if (!file) {
             Serial.println("❌ Error al abrir archivo en SPIFFS.");
+            writeLog("❌ Error al abrir archivo en SPIFFS: " + String(path));
             sendTelegramMessage("❌ Error al abrir archivo en SPIFFS.", config);
             http.end();  // 🔹 Asegurar que se liberen recursos
             enableWatchdog();
@@ -283,6 +291,7 @@ bool updateFileFromURL(const char* url, const char* path) {
         return true;
     } else {
         Serial.printf("❌ Error HTTP %d al descargar archivo.\n", httpCode);
+        writeLog("❌ Error HTTP " + String(httpCode) + " al descargar archivo.");
         sendTelegramMessage("❌ Error HTTP " + String(httpCode) + " al descargar archivo.", config);
         
         http.end();  // 🔹 Liberar recursos aunque falle la descarga
@@ -298,6 +307,7 @@ void downloadAndUpdate() {
     String firmwareURL = getFirmwareURL();
     if (firmwareURL == "") {
         Serial.println("❌ No se pudo obtener la URL del firmware.");
+        sendTelegramMessage("❌ No se pudo obtener la URL del firmware.", config);
         enableWatchdog();
         return;
     }
@@ -322,6 +332,7 @@ void downloadAndUpdate() {
 
         if (contentLength < 1000000) { // Si el tamaño es sospechosamente bajo, reintentar
             Serial.println("❌ Tamaño del firmware demasiado pequeño. Reintentando...");
+            writeLog("❌ Tamaño del firmware demasiado pequeño. Reintentando...");
             http.end();
             enableWatchdog();
             return;
@@ -330,6 +341,7 @@ void downloadAndUpdate() {
         const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
         if (update_partition == NULL) {
             Serial.println("❌ No se encontró una partición OTA válida.");
+            writeLog("❌ No se encontró una partición OTA válida.");
             sendTelegramMessage("❌ No se encontró una partición OTA válida.", config);
             http.end();
             enableWatchdog();
@@ -338,6 +350,7 @@ void downloadAndUpdate() {
 
         if (contentLength > ESP.getFreeSketchSpace()) {
             Serial.println("❌ No hay suficiente espacio para actualizar.");
+            writeLog("❌ No hay suficiente espacio para actualizar.");
             sendTelegramMessage("❌ No hay suficiente espacio para actualizar.", config);
             http.end();
             enableWatchdog();
@@ -346,6 +359,7 @@ void downloadAndUpdate() {
 
         if (!Update.begin(contentLength, U_FLASH)) {
             Serial.println("❌ Error al iniciar la actualización.");
+            writeLog("❌ Error al iniciar la actualización.");
             sendTelegramMessage("❌ Error al iniciar la actualización.", config);
             http.end();
             enableWatchdog();
@@ -364,6 +378,7 @@ void downloadAndUpdate() {
                 if (bytesRead > 0) {
                     if (Update.write(buffer, bytesRead) != bytesRead) {
                         Serial.println("❌ Error al escribir en flash.");
+                        writeLog("❌ Error al escribir en flash.");
                         sendTelegramMessage("❌ Error al escribir en la memoria flash.", config);
                         Update.abort();
                         http.end();
@@ -387,17 +402,20 @@ void downloadAndUpdate() {
                 ESP.restart();
             } else {
                 Serial.println("❌ Error al finalizar la actualización.");
+                writeLog("❌ Error al finalizar la actualización.");
                 sendTelegramMessage("❌ Error al finalizar la actualización.", config);
                 Update.printError(Serial);
                 enableWatchdog();
             }
         } else {
             Serial.println("❌ Error: No se recibió el firmware completo.");
+            writeLog("❌ Error: No se recibió el firmware completo.");
             sendTelegramMessage("❌ Error: No se recibió el firmware completo.", config);
             enableWatchdog();
         }
     } else {
         Serial.printf("❌ Error HTTP: %d al descargar firmware.\n", httpCode);
+        writeLog("❌ Error HTTP: " + String(httpCode) + " al descargar firmware.");
         sendTelegramMessage("❌ Error HTTP: " + String(httpCode) + " al descargar firmware.", config);
         enableWatchdog();
     }

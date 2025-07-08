@@ -5,6 +5,52 @@
 
 std::vector<WiFiNetwork> networks;
 
+String getDateTimeString() {
+    struct tm timeinfo;
+    if(!getLocalTime(&timeinfo)){
+        return "00-00-00 00:00:00";
+    }
+    
+    char buffer[20];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    return String(buffer);
+}
+
+// Función para escribir logs en SPIFFS
+void writeLog(const String &message) {
+    if (!SPIFFS.begin(true)) {
+        Serial.println("❌ Error al montar SPIFFS para logs");
+        writeLog("❌ Error al montar SPIFFS para logs");
+        return;
+    }
+
+    File logFile = SPIFFS.open(LOG_FILE, "a");
+    if (!logFile) {
+        Serial.println("❌ No se pudo abrir el archivo de log");
+        writeLog("❌ No se pudo abrir el archivo de log");
+        return;
+    }
+
+    if (logFile.size() > MAX_LOG_SIZE) {
+        logFile.close();
+        SPIFFS.remove(LOG_FILE);
+        logFile = SPIFFS.open(LOG_FILE, "a");
+    }
+
+    String timestamp = getDateTimeString(); // Ahora usa la función definida
+    String logEntry = "[" + timestamp + "] " + message + "\n";
+    
+    logFile.print(logEntry);
+    logFile.close();
+}
+
+// Función para borrar logs antiguos
+void clearLogs() {
+    if (SPIFFS.exists(LOG_FILE)) {
+        SPIFFS.remove(LOG_FILE);
+    }
+}
+
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000; // Escaneo cada 15 segundos
 TimerHandle_t sseTimer = nullptr;
@@ -23,7 +69,7 @@ String webUsername = "admin";
 String webPassword = "admin123";
 
 
-const char* version = "v3.5.4";
+const char* version = "v3.6";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
@@ -53,6 +99,7 @@ bool scanRequested = false;
 void initSPIFFS() {
     if (!SPIFFS.begin(true)) {
         Serial.println("❌ Error al montar SPIFFS");
+        writeLog("❌ Error al montar SPIFFS");
     } else {
         Serial.println("✅ SPIFFS montado correctamente.");
     }
@@ -65,6 +112,7 @@ bool loadConfig() {
     File file = SPIFFS.open(configFilePath, "r");
     if (!file) {
         Serial.println("Error al abrir el archivo de configuración.");
+        writeLog("❌ Error al abrir el archivo de configuración: " + String(configFilePath));
         return false;
     }
 
@@ -72,6 +120,7 @@ bool loadConfig() {
     DeserializationError error = deserializeJson(doc, file);
     if (error) {
         Serial.println("Error al parsear el archivo de configuración.");
+        writeLog("❌ Error al parsear el archivo de configuración: " + String(error.c_str()));
         file.close();
         return false;
     }
@@ -91,6 +140,7 @@ bool loadConfig() {
         config.updateOta = doc["updateOta"].as<unsigned long>() * 3600000;  // 🔹 Convertir horas → ms
     } else {
         Serial.println("⚠️ updateOta no encontrado, usando valor por defecto.");
+        writeLog("⚠️ updateOta no encontrado en config.json, usando valor por defecto.");
         config.updateOta = 3600000;  // 🔹 1 hora por defecto
     }
 
@@ -117,6 +167,7 @@ bool saveConfig(const Config& config) {
     File file = SPIFFS.open(configFilePath, "w");
     if (!file) {
         Serial.println("Error al abrir el archivo de configuración para escritura.");
+        writeLog("❌ Error al abrir el archivo de configuración para escritura: " + String(configFilePath));
         return false;
     }
 
@@ -130,6 +181,7 @@ void printConfig() {
     File file = SPIFFS.open(configFilePath, "r");
     if (!file) {
         Serial.println("❌ No se pudo abrir settings.json para lectura.");
+        writeLog("❌ No se pudo abrir config.json para lectura: " + String(configFilePath));
         return;
     }
 
@@ -145,6 +197,7 @@ void testFlash() {
     Serial.println("🔍 Probando memoria flash...");
     if (!SPIFFS.begin()) {
         Serial.println("❌ Error: SPIFFS no inicializado.");
+        writeLog("❌ Error: SPIFFS no inicializado.");
     } else {
         Serial.println("✅ SPIFFS funcionando correctamente.");
     }

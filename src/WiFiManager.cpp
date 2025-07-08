@@ -10,9 +10,10 @@
 
 bool APmode = false;
 unsigned long lastConnectionAttempt = 0;
-const int maxConnectionAttempts = 5;  // 5 intentos (antes: 1)
+const int maxConnectionAttempts = 3;  // 5 intentos (antes: 1)
 const int connectionAttemptDelay = 10000; // 10 segundos entre intentos
-const int apModeTimeout = 120000; // 2 minutos (para salir del modo AP)
+const int apModeTimeout = 180000; // 3 minutos (para salir del modo AP)
+
 
 // 🔹 Función mejorada para conectar a WiFi con múltiples intentos
 bool connectWithRetries(const char* ssid, const char* password) {
@@ -241,28 +242,26 @@ void startAPMode() {
     std::vector<WiFiNetwork> savedNetworks;
     WiFiManager::loadSavedNetworks(savedNetworks);
 
-    // 2. Si NO hay redes guardadas, activar AP indefinidamente
+    // 2. Si NO hay redes guardadas, activar AP indefinidamente SIN reintentos
     if (savedNetworks.empty()) {
         WiFi.mode(WIFI_AP);
         WiFi.softAP(webUsername, webPassword);
         APmode = true;
         Serial.println("⚠️ No hay redes WiFi guardadas. Modo AP activado indefinidamente.");
-        return; // 🔹 ¡Salir aquí para evitar reintentos!
+        return; // 🔹 ¡Salir inmediatamente!
     }
 
-    // 3. Si hay redes guardadas, intentar conexión
+    // 3. Si hay redes guardadas, usar lógica normal con timeout
     if (connectToBestWiFi()) {
         APmode = false;
-        Serial.println("✅ WiFi conectado. Modo AP desactivado.");
         return;
     }
 
-    // 4. Si las redes guardadas fallan, activar AP temporalmente (con timeout)
+    // 4. Activar AP temporalmente solo si hay redes guardadas
     WiFi.mode(WIFI_AP);
     WiFi.softAP(webUsername, webPassword);
     APmode = true;
     lastConnectionAttempt = millis();
-    Serial.printf("⚠️ Modo AP activado (timeout: %d minutos). IP: %s\n", apModeTimeout / 60000, WiFi.softAPIP().toString().c_str());
 }
 
 
@@ -274,23 +273,20 @@ bool reconnectWiFi() {
 
 // 🔹 Función mejorada para verificar WiFi y manejar reconexiones
 void checkWiFiConnection() {
-    if (WiFi.status() == WL_CONNECTED) return;
+    // 1. Si no hay redes guardadas, NO hacer nada
+    std::vector<WiFiNetwork> savedNetworks;
+    WiFiManager::loadSavedNetworks(savedNetworks);
+    if (savedNetworks.empty()) return;
 
-    if (APmode) {
-        // Si está en modo AP y ha pasado el timeout, intentar reconectar
-        if (millis() - lastConnectionAttempt > apModeTimeout) {
-            Serial.println("🔄 Timeout de modo AP. Intentando reconectar a WiFi...");
-            APmode = false;
-            WiFi.softAPdisconnect(true);
-            startAPMode(); // Reinicia el proceso
-        }
-    } else {
-        // Si no está en modo AP, reintentar conexión periódicamente
-        if (millis() - lastConnectionAttempt > 30000) { // Cada 30 segundos
-            Serial.println("🔄 Intentando reconexión WiFi...");
-            lastConnectionAttempt = millis();
-            startAPMode(); // Llama a la función que maneja los reintentos
-        }
+    // 2. Lógica normal para reconexión
+    if (WiFi.status() != WL_CONNECTED && !APmode) {
+        startAPMode();
+    }
+    else if (APmode && (millis() - lastConnectionAttempt > apModeTimeout)) {
+        Serial.println("🔄 Intentando reconexión WiFi...");
+        APmode = false;
+        WiFi.softAPdisconnect(true);
+        startAPMode();
     }
 }
 

@@ -24,6 +24,19 @@ extern SemaphoreHandle_t sensorMutex;
 class AsyncEventSource;
 extern AsyncEventSource events;
 String getSensorJson();
+String getDateTimeString();
+
+void writeLog(const String &message);
+
+// Definir tamaño máximo del archivo de log (ej: 10KB)
+#define MAX_LOG_SIZE 10240  // 10KB 
+#define LOG_FILE "/error.log"
+
+// Estructura para manejar logs
+struct SystemLog {
+    String timestamp;
+    String message;
+};
 
 // Definir la estructura WiFiNetwork
 struct WiFiNetwork {

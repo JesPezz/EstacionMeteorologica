@@ -35,6 +35,7 @@ void taskSendToThingSpeak(void *pvParameters) {
           Serial.println();
         } else {
           Serial.print("Error al enviar datos a ThingSpeak. Código de respuesta HTTP: ");
+          writeLog("❌ Error al enviar datos a ThingSpeak. Código de respuesta HTTP: " + String(httpResponseCode));
           Serial.println(httpResponseCode);
           Serial.println();
         }

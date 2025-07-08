@@ -28,6 +28,7 @@ String urlEncode(const String &value) {
 void sendTelegramMessage(const String &mensaje, const Config &config) {
     if (config.telegramToken.isEmpty() || config.chatId.isEmpty()) {
         Serial.println("❌ Telegram: Configuración no válida.");
+        writeLog("❌ Telegram: Configuración no válida.");
         return;
     }
 
@@ -59,6 +60,7 @@ void sendTelegramMessage(const String &mensaje, const Config &config) {
         Serial.println("✅ Mensaje enviado por Telegram.");
     } else {
         Serial.println("❌ Error enviando Telegram. Código: " + String(httpCode));
+        writeLog("❌ Error enviando Telegram. Código: " + String(httpCode));
     }
 }
 
@@ -68,6 +70,7 @@ void saveNotificationConfig() {
     File file = SPIFFS.open("/config.json", "w");
     if (!file) {
         Serial.println("❌ Error al abrir el archivo de configuración para escritura.");
+        writeLog("❌ Error al abrir el archivo de configuración para escritura: /config.json");
         return;
     }
 

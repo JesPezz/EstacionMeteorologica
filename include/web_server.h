@@ -27,5 +27,6 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 void wifiScanTask(void *parameter);
 void initWiFiScanner();
 void logConfig(const char* title, const Config &config);
+void handleDownloadLog(AsyncWebServerRequest *request);
 
 #endif
