@@ -28,6 +28,7 @@ void checkIaqSensorStatus(void)
       Serial.println();
       Serial.println(output);
       Serial.println();
+      writeLog("BSEC warning code : " + String(iaqSensor.bsecStatus));
     }
   }
 
@@ -45,6 +46,7 @@ void checkIaqSensorStatus(void)
       Serial.println();
       Serial.println(output);
       Serial.println();
+      writeLog("BME68X warning code : " + String(iaqSensor.bme68xStatus));
     }
   }
 }
@@ -86,8 +88,10 @@ void loadState() {
           Serial.printf("📦 Tamaño: %d bytes\n", stateSize);
           Serial.println("📝 Primeros 32 bytes (hexdump):");
           printHexDump(bsecState, 32); // Muestra solo los primeros 32 bytes
+          writeLog("✅ Estado de calibración cargado desde NVS, tamaño: " + String(stateSize) + " bytes");
           iaqSensor.setState(bsecState);  // Aplica el estado directamente
           Serial.println("✅ Estado aplicado al sensor BSEC");
+          writeLog("✅ Estado aplicado al sensor BSEC");
           checkIaqSensorStatus();
       } else {
           Serial.printf("⚠ Tamaño incorrecto: %d (esperado %d)\n", stateSize, BSEC_MAX_STATE_BLOB_SIZE);
@@ -110,6 +114,7 @@ void updateState() {
       (currentAccuracy == 1 || currentAccuracy == 2 || currentAccuracy == 3)) {
       shouldUpdate = true;
       Serial.printf("\n🔄 Cambio de precisión %d→%d\n", lastStoredAccuracy, currentAccuracy);
+      writeLog("🔄 Cambio de precisión " + String(lastStoredAccuracy) + "→" + String(currentAccuracy));
       lastStoredAccuracy = currentAccuracy;
   }
 
@@ -119,6 +124,7 @@ void updateState() {
           shouldUpdate = true;
           stateUpdateCounter++;
           Serial.println("\n⏰ Guardado periódico programado");
+          writeLog("⏰ Guardado periódico programado");
       }
   }
 
@@ -130,6 +136,7 @@ void updateState() {
       Serial.printf("🔢 Precisión: %d\n", currentAccuracy);
       Serial.println("📝 Primeros 32 bytes a guardar:");
       printHexDump(bsecState, 32);
+      writeLog("💾 Guardando estado actual, precisión: " + String(currentAccuracy));
 
       bsecPrefs.begin("bsec_data", false);
       bool saveResult = bsecPrefs.putBytes("state", bsecState, BSEC_MAX_STATE_BLOB_SIZE);
@@ -137,6 +144,7 @@ void updateState() {
 
       if (saveResult) {
           Serial.println("✅ Guardado en NVS exitoso");
+          writeLog("✅ Guardado en NVS exitoso, tamaño: " + String(BSEC_MAX_STATE_BLOB_SIZE) + " bytes");
           //uploadCalibrationToServer(); // Descomenta para subir al servidor
       } else {
           Serial.println("❌ Error al guardar en NVS");

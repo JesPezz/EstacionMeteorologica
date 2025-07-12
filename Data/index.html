@@ -1339,7 +1339,7 @@ const updateSensorData = async () => {
                 const response = await fetch('/sensor_data');
                 const data = await response.json();
 
-                document.getElementById('location-display').textContent = config.location || "No configurada";
+                //document.getElementById('location-display').textContent = config.location || "No configurada";
                 document.getElementById('temp').textContent = data.temp.toFixed(1);
                 document.getElementById('humidity').textContent = data.humidity.toFixed(1);
                 document.getElementById('pressure').textContent = data.pressure.toFixed(1);

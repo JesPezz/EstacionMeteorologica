@@ -69,7 +69,7 @@ String webUsername = "admin";
 String webPassword = "admin123";
 
 
-const char* version = "v3.6";
+const char* version = "v3.6.2";
 const char nombreCodigo[] = "EstacionThingSpeak";
 
 unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
@@ -102,6 +102,7 @@ void initSPIFFS() {
         writeLog("❌ Error al montar SPIFFS");
     } else {
         Serial.println("✅ SPIFFS montado correctamente.");
+        writeLog("✅ SPIFFS montado correctamente.");
     }
 }
 
@@ -187,6 +188,7 @@ void printConfig() {
 
     Serial.println("📜 Configuración actual en config.json:");
     while (file.available()) {
+        // writeLog("📜 Configuración actual en config.json: " + String(file.readStringUntil('\n')));
         Serial.write(file.read());
     }
     Serial.println();
@@ -200,6 +202,7 @@ void testFlash() {
         writeLog("❌ Error: SPIFFS no inicializado.");
     } else {
         Serial.println("✅ SPIFFS funcionando correctamente.");
+        writeLog("✅ SPIFFS funcionando correctamente.");
     }
 }
 

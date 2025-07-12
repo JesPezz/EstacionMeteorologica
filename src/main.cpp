@@ -84,9 +84,11 @@ if (!testFile) {
    size_t total = SPIFFS.totalBytes();
    size_t used = SPIFFS.usedBytes();
    Serial.printf("SPIFFS: %d/%d bytes usados\n", used, total);
+  writeLog("SPIFFS: " + String(used) + "/" + String(total) + " bytes usados");
    
    if (total - used < 250000) { // 250KB mínimo recomendado
     Serial.println("Espacio insuficiente en SPIFFS");
+    writeLog("❌ Espacio insuficiente en SPIFFS");
     return;
   }
   
@@ -98,7 +100,7 @@ if (!testFile) {
   Serial.print(" ");
   Serial.println(version);
   Serial.println("Ubicacion: " + config.location);
-
+  
   output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
   Serial.println(output);
   Serial.println();
