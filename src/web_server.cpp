@@ -17,7 +17,6 @@
 #include <vector>
 #include <AsyncEventSource.h>
 #include <freertos/timers.h>
-#include "WiFiManager.h"
 
 SemaphoreHandle_t wifiMutex = NULL;
 std::vector<WiFiNetwork> wifiNetworks; // Declare wifiNetworks globally
@@ -28,7 +27,6 @@ AsyncWebServer server(80);
 AsyncEventSource events("/events");
 const char* sensorDataFile = "/sensor_data.json";
 void restartESP32Task(void *parameter);
-bool otaInProgress = false;  // 🔹 Indica si una OTA está en proceso
 
 // Handler para descargar el log
 void handleDownloadLog(AsyncWebServerRequest *request) {
@@ -420,19 +418,12 @@ void startWebServer() {
         response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
         request->send(response);
     });
-    
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        Serial.println("📂 Petición recibida para /");
         if (!SPIFFS.exists("/index.html")) {
-            Serial.println("❌ index.html no encontrado en SPIFFS");
-            writeLog("❌ index.html no encontrado en SPIFFS");
             request->send(404, "text/plain", "File Not Found");
             return;
         }
-        Serial.println();
-        Serial.println("📤 Enviando index.html...");
-        Serial.println();
         request->send(SPIFFS, "/index.html", "text/html");
     });
     
@@ -468,127 +459,80 @@ server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
 });
     server.on("/getConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
-    
-        // 🔄 Usar add() para cadenas C-style (si config usa char* o const char*)
-        doc["googleSheetURL"] = config.googleSheetURL;
-        doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
+        
+        // Campos Generales
         doc["location"] = config.location;
         doc["telegramToken"] = config.telegramToken;
         doc["chatId"] = config.chatId;
         doc["webUsername"] = webUsername;
         doc["webPassword"] = webPassword;
-    
-        // ✅ Campos que no son cadenas C-style:
-        doc["channelID"] = config.channelID;
         doc["updateOta"] = config.updateOta;
-    
+        
+        // Campos MQTT (Nuevos)
+        doc["mqttServer"] = config.mqttServer;
+        doc["mqttPort"] = config.mqttPort;
+        doc["mqttUser"] = config.mqttUser;
+        doc["mqttPassword"] = config.mqttPassword;
+        doc["mqttTopic"] = config.mqttTopic;
+
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
     });
 
     
-    // 1. Manejador OPTIONS para CORS
-server.on("/config", HTTP_OPTIONS, [](AsyncWebServerRequest *request){
-    AsyncWebServerResponse *response = request->beginResponse(204);
-    response->addHeader("Access-Control-Allow-Origin", "*");
-    response->addHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    request->send(response);
-});
-
-// 2. Manejador POST mejorado
-server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
-    Serial.println();
-    Serial.println("\n--- PETICIÓN CONFIG RECIBIDA ---");
-    Serial.println();
-    // Verificar autenticación
-    if(!isAuthenticated(request)) {
-        request->send(401, "text/plain", "Acceso no autorizado");
-        return;
-    }
-
-    // Verificar si tiene body
-    if(!request->hasParam("plain", true)) {
-        Serial.println();
-        Serial.println("ERROR: No se recibió parámetro 'plain'");
-        Serial.println();
-        writeLog("❌ No se recibió parámetro 'plain' en la petición de configuración");
-        request->send(400, "text/plain", "No se recibieron datos");
-        return;
-    }
-
-    // Procesar el body
-    String body = request->getParam("plain", true)->value();
-    Serial.println();
-    Serial.println("Body recibido: " + body);
-    Serial.println();
-    // Parsear JSON
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, body);
-    if(error) {
-        Serial.println();
-        Serial.print("ERROR parseando JSON: ");
-        Serial.println(error.c_str());
-        Serial.println();
-        writeLog("❌ Error parseando JSON: " + String(error.c_str()));
-        request->send(400, "text/plain", "Error en formato JSON");
-        return;
-    }
-
-    // Procesar configuración
-    Config newConfig = config;
-    
-    if(!doc["updateOta"].isNull()) {
-        long otaValue = doc["updateOta"];
-        newConfig.updateOta = (otaValue < 100) ? otaValue * 3600000 : otaValue;
-        Serial.println();
-        Serial.printf("Nuevo updateOta: %ld ms (%d horas)\n", newConfig.updateOta, otaValue);
-        Serial.println();
-    }
-        if (!doc["googleSheetURL"].isNull()) {
-            newConfig.googleSheetURL = doc["googleSheetURL"].as<String>();
+    // --- NUEVO POST CONFIG ---
+    server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
+        if(!isAuthenticated(request)) {
+            request->send(401, "text/plain", "Unauthorized");
+            return;
         }
-        if (!doc["thingSpeakAPIKey"].isNull()) {
-            newConfig.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
+        if(!request->hasParam("plain", true)) {
+            request->send(400, "text/plain", "No data");
+            return;
         }
-        if (!doc["channelID"].isNull()) {
-            newConfig.channelID = doc["channelID"];
-        }
-        if (!doc["location"].isNull()) {
-            newConfig.location = doc["location"].as<String>();
-        }
-        if (!doc["telegramToken"].isNull()) {
-            newConfig.telegramToken = doc["telegramToken"].as<String>();
-        }
-        if (!doc["chatId"].isNull()) {
-            newConfig.chatId = doc["chatId"].as<String>();
-        }
-    
-         // Guardar configuración
-    if(saveConfig(newConfig)) {
-        request->send(200, "text/plain", "Configuración guardada. Reiniciando...");
-        delay(500);
-        ESP.restart();
-    } else {
-        request->send(500, "text/plain", "Error al guardar configuración");
-    }
-}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-    // Manejador para recibir el cuerpo RAW
-    Serial.println();
-    Serial.printf("Recibiendo datos: %d/%d bytes\n", index + len, total);
-    Serial.println();
-});
 
-    // 🔹 Ruta para subir firmware OTA
-    server.on("/update", HTTP_POST, 
-        [](AsyncWebServerRequest *request) {
-            request->send(200, "text/plain", "📥 Subida OTA en progreso...");
-        }, 
-        handleOTA
-    );
+        String body = request->getParam("plain", true)->value();
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, body);
+        if(error) {
+            request->send(400, "text/plain", "JSON Error");
+            return;
+        }
 
-    server.begin(); // ✅ Se mueve fuera de cualquier server.on()
+        Config newConfig = config;
+
+        // General
+        if (!doc["location"].isNull()) newConfig.location = doc["location"].as<String>();
+        if (!doc["telegramToken"].isNull()) newConfig.telegramToken = doc["telegramToken"].as<String>();
+        if (!doc["chatId"].isNull()) newConfig.chatId = doc["chatId"].as<String>();
+        
+        if(!doc["updateOta"].isNull()) {
+            long otaValue = doc["updateOta"];
+            newConfig.updateOta = (otaValue < 100) ? otaValue * 3600000 : otaValue;
+        }
+
+        // MQTT (Nuevos)
+        if (!doc["mqttServer"].isNull()) newConfig.mqttServer = doc["mqttServer"].as<String>();
+        if (!doc["mqttPort"].isNull()) newConfig.mqttPort = doc["mqttPort"].as<int>();
+        if (!doc["mqttUser"].isNull()) newConfig.mqttUser = doc["mqttUser"].as<String>();
+        if (!doc["mqttPassword"].isNull()) newConfig.mqttPassword = doc["mqttPassword"].as<String>();
+        if (!doc["mqttTopic"].isNull()) newConfig.mqttTopic = doc["mqttTopic"].as<String>();
+
+        // Guardar
+        if(saveConfig(newConfig)) {
+            request->send(200, "text/plain", "Saved. Restarting...");
+            delay(500);
+            ESP.restart();
+        } else {
+            request->send(500, "text/plain", "Save Error");
+        }
+    }, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){});
+
+    // OTA Handler
+    server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) { request->send(200, "text/plain", "OTA..."); }, handleOTA);
+
+    server.begin();
 }
 
 // 🔹 Verificar autenticación básica
@@ -705,14 +649,10 @@ void listSPIFFS() {
     Serial.println();
     Serial.println(title);
     Serial.println("----------------------------");
-    Serial.printf("GoogleSheetURL: %s\n", config.googleSheetURL.c_str());
-    Serial.printf("ThingSpeakAPIKey: %s\n", config.thingSpeakAPIKey.c_str());
-    Serial.printf("ChannelID: %d\n", config.channelID);
     Serial.printf("Location: %s\n", config.location.c_str());
-    Serial.printf("updateOta: %ld ms (%d horas)\n", 
-                 config.updateOta, config.updateOta/3600000);
-    Serial.printf("TelegramToken: %s\n", config.telegramToken.c_str());
-    Serial.printf("ChatID: %s\n", config.chatId.c_str());
+    Serial.printf("MQTT Server: %s\n", config.mqttServer.c_str());
+    Serial.printf("MQTT Port: %d\n", config.mqttPort);
+    Serial.printf("MQTT Topic: %s\n", config.mqttTopic.c_str());
+    Serial.printf("UpdateOTA: %ld ms\n", config.updateOta);
     Serial.println("----------------------------");
-    Serial.println();
 }

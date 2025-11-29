@@ -10,8 +10,6 @@
 #include "config.h"
 #include "BME_Sensor.h"
 #include "WiFiManager.h"
-#include "GoogleSheetManager.h"
-#include "ThingSpeakManager.h"
 #include "TimeManager.h"
 #include <bme68xLibrary.h>
 #include "web_server.h"
@@ -179,18 +177,6 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     NULL,           // Handle
     0               // Núcleo (evitar core donde corre AsyncTCP)
 );
-
-  // Iniciar tarea FreeRTOS para enviar datos a ThingSpeak
-  xTaskCreatePinnedToCore(
-    taskSendToThingSpeak,   // Función que ejecutará la tarea
-    "SendToThingSpeak",     // Nombre de la tarea
-    4096,                   // Tamaño de la pila de la tarea
-    NULL,                   // Parámetros de la tarea
-    1,                      // Prioridad de la tarea
-    &thingSpeakTaskHandle,  // Manejador de la tarea
-    0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
-  );
-
   
   sseTimer = xTimerCreate(
     "SSETimer",
@@ -224,20 +210,6 @@ void loop() {
    
   readSensorData();      // Leer datos del sensor
   
-  // Enviar datos a Google Sheets en el intervalo normal (usando isHourOnTheDot)
-  bool currentMinuteZero = isHourOnTheDot();
-  if (!prevMinuteZero && currentMinuteZero) {
-    googlesheet(); // Envía los datos a Google Sheets
-  }
-  prevMinuteZero = currentMinuteZero;
-
-  // //Enviar datos a Google Sheets en el intervalo de prueba (usando millis)
-  // static unsigned long lastUploadTime = 0;
-  // if (millis() - lastUploadTime >= 30000) { // 30000 ms = .5 minutes
-  //   googlesheet();
-  //   lastUploadTime = millis();
-  // }
-
   checkClockSync();
 }
 

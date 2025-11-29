@@ -2,212 +2,119 @@
 #include "FS.h"
 #include "SPIFFS.h"
 #include <ArduinoJson.h>
+#include <bsec.h> 
 
+// --- Definición de Variables ---
 std::vector<WiFiNetwork> networks;
+Config config;
 
+const char* configFilePath = "/config.json";
+const char* LOG_FILE = "/error.log";
+const char* host = "raw.githubusercontent.com";
+const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
+const char* etagFilePath = "/index_etag.txt";
+const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/main/Data/index.html";
+const char nombreCodigo[] = "EstacionMQTT"; 
+String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest"; 
+
+String webUsername = "admin";
+String webPassword = "admin123";
+const char* version = "v4.0.0-MQTT"; 
+
+unsigned long lastScanTime = 0;
+const int scanInterval = 15000;
+unsigned long lastUpdateCheck = 0;
+
+// Variables RTOS
+TimerHandle_t sseTimer = nullptr; 
+SemaphoreHandle_t sensorMutex = NULL; 
+bool otaInProgress = false; 
+
+// Variables BSEC
+Bsec iaqSensor; 
+uint8_t bsecState[BSEC_MAX_STATE_BLOB_SIZE] = {0}; 
+uint16_t stateUpdateCounter = 0; 
+
+String output;
+bool scanRequested = false;
+
+// --- Funciones ---
 String getDateTimeString() {
     struct tm timeinfo;
     if(!getLocalTime(&timeinfo)){
         return "00-00-00 00:00:00";
     }
-    
     char buffer[20];
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
     return String(buffer);
 }
 
-// Función para escribir logs en SPIFFS
 void writeLog(const String &message) {
-    if (!SPIFFS.begin(true)) {
-        Serial.println("❌ Error al montar SPIFFS para logs");
-        writeLog("❌ Error al montar SPIFFS para logs");
-        return;
-    }
-
+    if (!SPIFFS.begin(true)) return;
     File logFile = SPIFFS.open(LOG_FILE, "a");
-    if (!logFile) {
-        Serial.println("❌ No se pudo abrir el archivo de log");
-        writeLog("❌ No se pudo abrir el archivo de log");
-        return;
-    }
-
+    if (!logFile) return;
     if (logFile.size() > MAX_LOG_SIZE) {
         logFile.close();
         SPIFFS.remove(LOG_FILE);
         logFile = SPIFFS.open(LOG_FILE, "a");
     }
-
-    String timestamp = getDateTimeString(); // Ahora usa la función definida
-    String logEntry = "[" + timestamp + "] " + message + "\n";
-    
-    logFile.print(logEntry);
+    logFile.print("[" + getDateTimeString() + "] " + message + "\n");
     logFile.close();
 }
 
-// Función para borrar logs antiguos
-void clearLogs() {
-    if (SPIFFS.exists(LOG_FILE)) {
-        SPIFFS.remove(LOG_FILE);
-    }
-}
-
-unsigned long lastScanTime = 0;
-const int scanInterval = 15000; // Escaneo cada 15 segundos
-TimerHandle_t sseTimer = nullptr;
-SemaphoreHandle_t sensorMutex = xSemaphoreCreateMutex(); // Crear el semáforo
-String scannedNetworks = "[]";
-const char* configFilePath = "/config.json";
-
-const char* host = "raw.githubusercontent.com";
-const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
-const char* etagFilePath = "/index_etag.txt";
-
-TaskHandle_t thingSpeakTaskHandle = NULL;
-
-const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/main/Data/index.html";
-String webUsername = "admin";
-String webPassword = "admin123";
-
-
-const char* version = "v3.6.2";
-const char nombreCodigo[] = "EstacionThingSpeak";
-
-unsigned long lastUpdateCheck = 0;  // Inicializa lastUpdateCheck a 0
-
-
-String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest";
-
-
-Config config;
-
-unsigned long CHANNEL_UPDATE_INTERVAL = 60 * 1000;
-unsigned long MONTH_IN_SECONDS = 30 * 24 * 60 * 60;
-unsigned long STATE_SAVE_PERIOD = 360 * 60 * 1000;
-int LED_ON_DURATION_MS = 1000;
-
-// ✅ Definir variables globales aquí
-Bsec iaqSensor;
-uint8_t bsecState[BSEC_MAX_STATE_BLOB_SIZE] = {0};
-uint16_t stateUpdateCounter = 0;
-unsigned long lastChannelUpdate = 0;
-unsigned long lastSyncTime = 0;
-String output;
-bool prevFiveMinutes = false;  // Para envío cada 5 minutos
-bool prevTenMinutes = false;   // Para envío cada 10 minutos
-bool prevMinuteZero = false;   // Para envío cada minuto
-bool scanRequested = false;
 void initSPIFFS() {
-    if (!SPIFFS.begin(true)) {
-        Serial.println("❌ Error al montar SPIFFS");
-        writeLog("❌ Error al montar SPIFFS");
-    } else {
-        Serial.println("✅ SPIFFS montado correctamente.");
-        writeLog("✅ SPIFFS montado correctamente.");
-    }
+    if (!SPIFFS.begin(true)) Serial.println("❌ Error SPIFFS");
+    else Serial.println("✅ SPIFFS OK");
 }
 
 bool loadConfig() {
-    JsonDocument doc;  // Usar JsonDocument en lugar de StaticJsonDocument
-
-    // Cargar el archivo JSON desde el sistema de archivos
+    JsonDocument doc;
     File file = SPIFFS.open(configFilePath, "r");
-    if (!file) {
-        Serial.println("Error al abrir el archivo de configuración.");
-        writeLog("❌ Error al abrir el archivo de configuración: " + String(configFilePath));
-        return false;
-    }
-
-    // Parsear el JSON
+    if (!file) return false;
     DeserializationError error = deserializeJson(doc, file);
-    if (error) {
-        Serial.println("Error al parsear el archivo de configuración.");
-        writeLog("❌ Error al parsear el archivo de configuración: " + String(error.c_str()));
-        file.close();
-        return false;
-    }
-
     file.close();
+    if (error) return false;
 
-    // Leer valores del JSON
-    if (doc["googleSheetURL"].is<String>()) config.googleSheetURL = doc["googleSheetURL"].as<String>();
-    if (doc["thingSpeakAPIKey"].is<String>()) config.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
-    if (doc["channelID"].is<unsigned long>()) config.channelID = doc["channelID"].as<unsigned long>();
     if (doc["location"].is<String>()) config.location = doc["location"].as<String>();
-    if (doc["webUsername"].is<String>()) webUsername = doc["webUsername"].as<String>();
-    if (doc["webPassword"].is<String>()) webPassword = doc["webPassword"].as<String>();
     if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
     if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
-    if (doc["updateOta"].is<unsigned long>()) {
-        config.updateOta = doc["updateOta"].as<unsigned long>() * 3600000;  // 🔹 Convertir horas → ms
-    } else {
-        Serial.println("⚠️ updateOta no encontrado, usando valor por defecto.");
-        writeLog("⚠️ updateOta no encontrado en config.json, usando valor por defecto.");
-        config.updateOta = 3600000;  // 🔹 1 hora por defecto
-    }
+    if (doc["webUsername"].is<String>()) webUsername = doc["webUsername"].as<String>();
+    if (doc["webPassword"].is<String>()) webPassword = doc["webPassword"].as<String>();
+    
+    if (doc["updateOta"].is<unsigned long>()) config.updateOta = doc["updateOta"].as<unsigned long>() * 3600000;
+    else config.updateOta = 3600000;
 
-    //Serial.printf("✅ updateOta cargado desde config.json: %lu ms\n", config.updateOta);
+    // MQTT
+    if (doc["mqttServer"].is<String>()) config.mqttServer = doc["mqttServer"].as<String>();
+    config.mqttPort = doc["mqttPort"] | 1883;
+    if (doc["mqttUser"].is<String>()) config.mqttUser = doc["mqttUser"].as<String>();
+    if (doc["mqttPassword"].is<String>()) config.mqttPassword = doc["mqttPassword"].as<String>();
+    if (doc["mqttTopic"].is<String>()) config.mqttTopic = doc["mqttTopic"].as<String>();
+
     return true;
 }
 
-bool saveConfig(const Config& config) {
-
+bool saveConfig(const Config& newConfig) {
     JsonDocument doc;
-
-    // Asignar valores al JSON
-    doc["googleSheetURL"] = config.googleSheetURL;
-    doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
-    doc["channelID"] = config.channelID;
-    doc["location"] = config.location;
+    doc["location"] = newConfig.location;
+    doc["telegramToken"] = newConfig.telegramToken;
+    doc["chatId"] = newConfig.chatId;
     doc["webUsername"] = webUsername;
     doc["webPassword"] = webPassword;
-    doc["telegramToken"] = config.telegramToken;
-    doc["chatId"] = config.chatId;
-    doc["updateOta"] = config.updateOta / 3600000;  // 🔹 Guarda en horas
+    doc["updateOta"] = newConfig.updateOta / 3600000;
+    
+    doc["mqttServer"] = newConfig.mqttServer;
+    doc["mqttPort"] = newConfig.mqttPort;
+    doc["mqttUser"] = newConfig.mqttUser;
+    doc["mqttPassword"] = newConfig.mqttPassword;
+    doc["mqttTopic"] = newConfig.mqttTopic;
 
-    // Guardar el JSON en el sistema de archivos
     File file = SPIFFS.open(configFilePath, "w");
-    if (!file) {
-        Serial.println("Error al abrir el archivo de configuración para escritura.");
-        writeLog("❌ Error al abrir el archivo de configuración para escritura: " + String(configFilePath));
-        return false;
-    }
-
+    if (!file) return false;
     serializeJson(doc, file);
     file.close();
-
     return true;
- }
-
-void printConfig() {
-    File file = SPIFFS.open(configFilePath, "r");
-    if (!file) {
-        Serial.println("❌ No se pudo abrir settings.json para lectura.");
-        writeLog("❌ No se pudo abrir config.json para lectura: " + String(configFilePath));
-        return;
-    }
-
-    Serial.println("📜 Configuración actual en config.json:");
-    while (file.available()) {
-        // writeLog("📜 Configuración actual en config.json: " + String(file.readStringUntil('\n')));
-        Serial.write(file.read());
-    }
-    Serial.println();
-    file.close();
 }
 
-void testFlash() {
-    Serial.println("🔍 Probando memoria flash...");
-    if (!SPIFFS.begin()) {
-        Serial.println("❌ Error: SPIFFS no inicializado.");
-        writeLog("❌ Error: SPIFFS no inicializado.");
-    } else {
-        Serial.println("✅ SPIFFS funcionando correctamente.");
-        writeLog("✅ SPIFFS funcionando correctamente.");
-    }
-}
-
-
-
-
-  
-  
+void printConfig() { Serial.println("Config Cargada"); }
+void testFlash() { SPIFFS.begin(); }
