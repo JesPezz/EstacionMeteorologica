@@ -22,6 +22,7 @@
 #include "notifications.h"
 #include "web_server.h"
 #include <freertos/timers.h>
+#include "MQTTManager.h"
 
 void setup() {
   
@@ -91,6 +92,7 @@ if (!testFile) {
   }
   
   loadConfig();
+  setupMQTT();
    // Definir el nombre del código y la ubicación
   Serial.println();
   Serial.print("Version: ");
@@ -219,9 +221,28 @@ if (shouldRestart) {
       WiFiManager::scanNetworks(networks);
       scanRequested = false; // Bajamos la bandera
   }
+
+  // 1. Gestión de conexión MQTT
+// Si hay WiFi pero no MQTT, intentamos conectar
+if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+     // Un pequeño timer simple para no saturar intentos en el loop
+     static unsigned long lastMqttAttempt = 0;
+     if (millis() - lastMqttAttempt > 5000) {
+         lastMqttAttempt = millis();
+         connectToMqtt();
+     }
+}
    
   readSensorData();      // Leer datos del sensor
   
+  // 2. Lógica de Envío MQTT (Reemplazando la vieja de Google Sheets)
+// Usaremos el booleano 'isHourOnTheDot' o mejor, un intervalo simple de 1 minuto para probar
+static unsigned long lastPublish = 0;
+if (millis() - lastPublish >= 60000) { // Enviar cada 60 segundos
+    publishSensorData();
+    lastPublish = millis();
+}
+
   checkClockSync();
 }
 
