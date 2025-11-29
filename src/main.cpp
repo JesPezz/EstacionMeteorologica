@@ -192,7 +192,7 @@ xTimerStart(sseTimer, 0);
 void loop() {
   checkWiFiConnection(); // Verificar la conexión WiFi y reconectar si es necesario
   yield();
-  if (millis() - lastUpdateCheck >= config.updateOta) {
+  /* if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
         checkForIndexUpdate();
@@ -201,7 +201,7 @@ void loop() {
         Serial.println();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
-    }
+    } */
 
     if (otaInProgress) {
       yield(); // Alimenta el WDT
