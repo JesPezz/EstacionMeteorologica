@@ -156,8 +156,8 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForIndexUpdate();
-  checkForUpdates();
+  //checkForIndexUpdate();
+  //checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
   Serial.println();
@@ -202,10 +202,22 @@ void loop() {
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
     } */
-
+    
+if (shouldRestart) {
+      Serial.println("🔄 Reiniciando sistema de forma segura...");
+      delay(1000); // Aquí SÍ podemos usar delay porque estamos en el loop principal
+      ESP.restart();
+  }
     if (otaInProgress) {
       yield(); // Alimenta el WDT
       return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
+  }
+
+  // --- NUEVA LÓGICA DE ESCANEO WIFI ---
+  // El servidor web solicitó un escaneo. Lo hacemos aquí porque es seguro.
+  if (scanRequested) {
+      WiFiManager::scanNetworks(networks);
+      scanRequested = false; // Bajamos la bandera
   }
    
   readSensorData();      // Leer datos del sensor

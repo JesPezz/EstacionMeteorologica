@@ -60,6 +60,7 @@ extern String output;
 extern bool scanRequested;
 extern bool otaInProgress;        
 extern unsigned long lastUpdateCheck; 
+extern bool shouldRestart;
 
 // RTOS Handles
 extern SemaphoreHandle_t sensorMutex; 

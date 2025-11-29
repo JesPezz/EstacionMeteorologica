@@ -206,19 +206,24 @@ bool parseRequestJSON(AsyncWebServerRequest* request, JsonDocument& doc) {
     return true;
 }
 
-void handleWiFiScan(AsyncWebServerRequest* request) { //envia la lista de redes WiFi disponibles de networks de WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks)
-    
+void handleWiFiScan(AsyncWebServerRequest* request) {
     if(otaInProgress) {
-        request->send(503, "text/plain", "Actualización OTA en progreso. Intente más tarde.");
+        request->send(503, "text/plain", "Actualización OTA en progreso.");
         return;
     }
 
-    Serial.println("📤 Enviando lista de redes WiFi almacenadas...");
+    // 🛑 CAMBIO IMPORTANTE:
+    // No escaneamos aquí porque bloquea el servidor y causa reinicios (WDT).
+    // En su lugar, pedimos al loop principal que lo haga.
+    scanRequested = true; 
 
+    Serial.println("📤 Solicitud de escaneo recibida. Enviando lista en caché...");
+
+    // Enviamos lo que tengamos en memoria en este momento (puede estar vacío la primera vez)
     JsonDocument doc;
     JsonArray jsonNetworks = doc.to<JsonArray>();
 
-    for (const auto& net : networks) {  // 🔹 Leer redes desde `networks`
+    for (const auto& net : networks) {
         JsonObject obj = jsonNetworks.add<JsonObject>();
         obj["ssid"] = net.ssid;
         obj["rssi"] = net.rssi;
@@ -227,8 +232,6 @@ void handleWiFiScan(AsyncWebServerRequest* request) { //envia la lista de redes 
 
     String jsonResponse;
     serializeJson(doc, jsonResponse);
-    Serial.println(jsonResponse);  // 🔹 Ver JSON en Serial Monitor
-
     request->send(200, "application/json", jsonResponse);
 }
 
@@ -286,8 +289,9 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 
     if (saved) {
         request->send(200, "application/json", "{\"status\":\"success\"}");
-        delay(1000);
-        ESP.restart();
+        //delay(1000);
+        //ESP.restart();
+        shouldRestart = true;
       } else {
         // Nuevo: Enviar motivo específico del error
         String errorMsg = "{\"error\":\"No se pudo guardar\",\"details\":\"";
@@ -339,8 +343,9 @@ void handleESPStatus(AsyncWebServerRequest *request) {
 
 void handleRestart(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "ESP32 reiniciándose...");
-    delay(1000);
-    ESP.restart();
+    //delay(1000);
+    //ESP.restart();
+    shouldRestart = true;
 }
 
 void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {

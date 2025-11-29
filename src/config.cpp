@@ -29,6 +29,7 @@ unsigned long lastUpdateCheck = 0;
 TimerHandle_t sseTimer = nullptr; 
 SemaphoreHandle_t sensorMutex = NULL; 
 bool otaInProgress = false; 
+bool shouldRestart = false;
 
 // Variables BSEC
 Bsec iaqSensor; 
