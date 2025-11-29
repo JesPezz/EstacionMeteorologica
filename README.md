@@ -39,7 +39,7 @@ Los datos se envían a **ThingSpeak** para su monitoreo en tiempo real y se gest
 ESP32 Pin | BME680 Pin
 --------- | ----------
 3.3V      | VIN
-GND       | GND
+GND       | GND y SDO
 GPIO 21   | SDA
 GPIO 22   | SCL
 ```
