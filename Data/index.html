@@ -310,11 +310,16 @@
             mqttTopic: document.getElementById('mqttTopic').value
         };
 
+        // 🛑 CORRECCIÓN: Envolver el JSON en un parámetro 'plain'
+        const jsonString = JSON.stringify(data);
+        const formBody = 'plain=' + encodeURIComponent(jsonString);
+
         try {
             await apiCall('/config', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
+                // Usamos el tipo de contenido estándar para formularios
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formBody
             });
             showToast('Configuración guardada. Reiniciando...', 'success');
             setTimeout(() => location.reload(), 5000);

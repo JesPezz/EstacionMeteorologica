@@ -243,8 +243,8 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     for (size_t i = 0; i < len; i++) {
         body += (char)data[i];
     }
-    Serial.println("📩 JSON Recibido:");
-    Serial.println(body);
+    /* Serial.println("📩 JSON Recibido:");
+    Serial.println(body); */
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, body);
@@ -486,21 +486,31 @@ server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
     });
 
     
-    // --- NUEVO POST CONFIG ---
+    // --- NUEVO POST CONFIG CON DEBUG ---
     server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){
+        Serial.println("\n📨 RECIBIDA PETICIÓN POST /config"); // <--- DEBUG 1
+        
         if(!isAuthenticated(request)) {
+            Serial.println("⛔ Acceso denegado (Auth)");
             request->send(401, "text/plain", "Unauthorized");
             return;
         }
+        
         if(!request->hasParam("plain", true)) {
+            Serial.println("⚠️ Error: No hay cuerpo (body) en la petición");
             request->send(400, "text/plain", "No data");
             return;
         }
 
         String body = request->getParam("plain", true)->value();
+        Serial.println("📦 JSON Recibido:"); // <--- DEBUG 2
+        Serial.println(body);                // <--- DEBUG 3 (Veremos qué envía el navegador)
+
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, body);
         if(error) {
+            Serial.print("❌ Error JSON: ");
+            Serial.println(error.c_str());
             request->send(400, "text/plain", "JSON Error");
             return;
         }
@@ -526,14 +536,16 @@ server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
 
         // Guardar
         if(saveConfig(newConfig)) {
+            Serial.println("💾 Configuración guardada en SPIFFS correctamente.");
+            Serial.println("🔄 Reiniciando en 1 segundo...");
             request->send(200, "text/plain", "Saved. Restarting...");
-            delay(500);
-            ESP.restart();
+            shouldRestart = true; // Usamos la bandera segura
         } else {
+            Serial.println("❌ Error al escribir en SPIFFS");
             request->send(500, "text/plain", "Save Error");
         }
     }, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){});
-
+    
     // OTA Handler
     server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) { request->send(200, "text/plain", "OTA..."); }, handleOTA);
 

@@ -28,6 +28,7 @@ void setup() {
   
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
+  
   if(!SPIFFS.begin(true)) {
     Serial.println("Error al montar SPIFFS");
     writeLog("❌ Error al montar SPIFFS");
