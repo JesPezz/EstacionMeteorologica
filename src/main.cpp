@@ -11,7 +11,7 @@
 #include "BME_Sensor.h"
 #include "WiFiManager.h"
 #include "TimeManager.h"
-#include <bme68xLibrary.h>
+//#include <bme68xLibrary.h>
 #include "web_server.h"
 #include "BME_sensor.h"
 #include <bsec.h>
@@ -102,11 +102,7 @@ if (!testFile) {
   Serial.println(version);
   Serial.println("Ubicacion: " + config.location);
   
-  output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
-  Serial.println(output);
-  Serial.println();
-
-  
+    
   printWiFiNetwork();
   Serial.println();
   
@@ -125,6 +121,10 @@ if (!testFile) {
   Serial.println();
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   setupBsecSensor();
+  Serial.println();
+
+  output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
+  Serial.println(output);
   Serial.println();
 
 initWiFiScanner();

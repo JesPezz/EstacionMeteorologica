@@ -20,8 +20,17 @@ void setupBsecSensor() {
   }
 
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
-  bsecPrefs.begin("bsec_data", false);
+
+  // ------------------------------------------------------------------------
+  // 🛑 FIX CRÍTICO: Cargar la configuración binaria generic_33v_3s_4d
+  // ------------------------------------------------------------------------
+  Serial.println("\n⏳ Cargando configuración BSEC (generic_33v_3s_4d)...");
+  iaqSensor.setConfig(bsec_config_iaq);
+  // ----
+  
   checkIaqSensorStatus();
+  bsecPrefs.begin("bsec_data", false);
+  
   delay(1000);
   Serial.println();
   loadState();

@@ -73,29 +73,41 @@ void publishSensorData() {
     doc["location"] = config.location;
     doc["device_id"] = WiFi.macAddress();
     
-    // 2. Datos del Sensor (Valores directos de iaqSensor)
-    doc["temperature"] = iaqSensor.temperature;
-    doc["humidity"] = iaqSensor.humidity;
-    doc["pressure"] = iaqSensor.pressure / 100.0; // Convertir a hPa
-    doc["iaq"] = iaqSensor.iaq;
-    doc["iaq_accuracy"] = iaqSensor.iaqAccuracy;
-    doc["co2_eq"] = iaqSensor.co2Equivalent;
-    doc["voc_eq"] = iaqSensor.breathVocEquivalent;
+    // 2. Datos del Sensor (TODOS los parámetros del BME680/BSEC)
     
+    // Principales
+    doc["temperature"] = iaqSensor.temperature;       // Temp compensada
+    doc["humidity"] = iaqSensor.humidity;             // Humedad compensada
+    doc["pressure"] = iaqSensor.pressure / 100.0;     // Presión en hPa
+    doc["iaq"] = iaqSensor.iaq;                       // Índice de Calidad de Aire (0-500)
+    
+    // Diagnóstico y Precisión (Claves para coincidir con tu CSV)
+    doc["iaqAccuracy"] = iaqSensor.iaqAccuracy;       // 0=Estabilizando, 1-3=Válido
+    doc["staticIaq"] = iaqSensor.staticIaq;           // IAQ sin autocalibración móvil
+    doc["co2Equivalent"] = iaqSensor.co2Equivalent;   // CO2 estimado (ppm)
+    doc["breathVocEquivalent"] = iaqSensor.breathVocEquivalent; // VOC estimado (ppm)
+    
+    // Valores "Raw" (Crudos)
+    doc["rawTemperature"] = iaqSensor.rawTemperature;
+    doc["rawHumidity"] = iaqSensor.rawHumidity;
+    doc["gasResistance"] = iaqSensor.gasResistance;   // Resistencia del gas en Ohms
+    doc["gasPercentage"] = iaqSensor.gasPercentage;
+    
+    // Estados del sistema
+    doc["stabilizationStatus"] = iaqSensor.stabStatus; // 1 = listo
+    doc["runInStatus"] = iaqSensor.runInStatus;        // 1 = listo
+
     // 3. Serializar a String
     String payload;
     serializeJson(doc, payload);
 
     // 4. Publicar
-    // Topic: casa/sala (por ejemplo)
     String topic = config.mqttTopic;
-    if (topic == "") topic = "estacion/datos"; // Topic por defecto
+    if (topic == "") topic = "estacion/datos"; 
 
-    // qos: 1 (asegura entrega), retain: false
     uint16_t packetId = mqttClient.publish(topic.c_str(), 1, false, payload.c_str());
     
-    Serial.printf("📤 Publicando MQTT [%s]: %s\n", topic.c_str(), payload.c_str());
+    Serial.printf("📤 Publicando MQTT Completo [%s]: %s\n", topic.c_str(), payload.c_str());
     
-    // Feedback visual
     ledSuccess(); 
 }
