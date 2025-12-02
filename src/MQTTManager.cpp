@@ -55,7 +55,7 @@ void setupMQTT() {
   }
 
   // Timer para reconexión automática sin bloquear
-  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, [](TimerHandle_t xTimer) {
+  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, [](TimerHandle_t xTimer) {
     connectToMqtt();
   });
 }

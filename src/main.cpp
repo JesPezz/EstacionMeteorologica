@@ -195,16 +195,16 @@ xTimerStart(sseTimer, 0);
 void loop() {
   checkWiFiConnection(); // Verificar la conexión WiFi y reconectar si es necesario
   yield();
-  /* if (millis() - lastUpdateCheck >= config.updateOta) {
+  if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        checkForIndexUpdate();
-        checkForUpdates();
+        // checkForIndexUpdate();
+        // checkForUpdates();
         loadState();
         Serial.println();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
-    } */
+    }
     
 if (shouldRestart) {
       Serial.println("🔄 Reiniciando sistema de forma segura...");
@@ -223,28 +223,40 @@ if (shouldRestart) {
       scanRequested = false; // Bajamos la bandera
   }
 
-  // 1. Gestión de conexión MQTT
-// Si hay WiFi pero no MQTT, intentamos conectar
-if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
-     // Un pequeño timer simple para no saturar intentos en el loop
-     static unsigned long lastMqttAttempt = 0;
-     if (millis() - lastMqttAttempt > 5000) {
-         lastMqttAttempt = millis();
-         connectToMqtt();
-     }
-}
+  // 1. Gestión de Conexión MQTT "Suave"
+  // Solo intentamos conectar si NO estamos en un momento crítico de medición
+  // y usamos un timer no bloqueante.
+  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+      static unsigned long lastMqttAttempt = 0;
+      // Aumentamos el tiempo entre intentos a 10s para dejar respirar a BSEC
+      if (millis() - lastMqttAttempt > 10000) { 
+          lastMqttAttempt = millis();
+          Serial.println("📡 Mantenimiento MQTT: Intentando reconectar...");
+          connectToMqtt();
+      }
+  }
    
-  readSensorData();      // Leer datos del sensor
-  
-  // 2. Lógica de Envío MQTT (Reemplazando la vieja de Google Sheets)
-// Usaremos el booleano 'isHourOnTheDot' o mejor, un intervalo simple de 1 minuto para probar
-static unsigned long lastPublish = 0;
-if (millis() - lastPublish >= 60000) { // Enviar cada 60 segundos
-    publishSensorData();
-    lastPublish = millis();
-}
+  // 3. BSEC tiene la prioridad absoluta
+  // Ejecutamos el sensor y capturamos si hubo datos nuevos
+  bool nuevosDatos = readSensorData(); 
+
+  // 4. Lógica de Envío Sincronizada (Evita colisiones)
+  if (nuevosDatos) {
+      // SOLO entramos aquí si BSEC acaba de terminar de usar el bus I2C
+      // y tiene datos frescos. Es el momento perfecto para transmitir.
+      
+      static unsigned long lastPublish = 0;
+      // Mantenemos tu intervalo de 60s, pero ahora alineado con el ciclo del sensor
+      if (millis() - lastPublish >= 60000) {
+          publishSensorData(); 
+          lastPublish = millis();
+          Serial.println("✅ Sincronización: Datos enviados en ventana segura.");
+      }
+  }
 
   checkClockSync();
+  // Pequeño yield para que el Stack TCP/IP procese paquetes en background
+  yield();
 }
 
 
