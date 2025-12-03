@@ -10,10 +10,8 @@
 #include "config.h"
 #include "BME_Sensor.h"
 #include "WiFiManager.h"
-#include "GoogleSheetManager.h"
-#include "ThingSpeakManager.h"
 #include "TimeManager.h"
-#include <bme68xLibrary.h>
+//#include <bme68xLibrary.h>
 #include "web_server.h"
 #include "BME_sensor.h"
 #include <bsec.h>
@@ -24,11 +22,13 @@
 #include "notifications.h"
 #include "web_server.h"
 #include <freertos/timers.h>
+#include "MQTTManager.h"
 
 void setup() {
   
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
+  
   if(!SPIFFS.begin(true)) {
     Serial.println("Error al montar SPIFFS");
     writeLog("❌ Error al montar SPIFFS");
@@ -93,6 +93,7 @@ if (!testFile) {
   }
   
   loadConfig();
+  setupMQTT();
    // Definir el nombre del código y la ubicación
   Serial.println();
   Serial.print("Version: ");
@@ -101,11 +102,7 @@ if (!testFile) {
   Serial.println(version);
   Serial.println("Ubicacion: " + config.location);
   
-  output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
-  Serial.println(output);
-  Serial.println();
-
-  
+    
   printWiFiNetwork();
   Serial.println();
   
@@ -124,6 +121,10 @@ if (!testFile) {
   Serial.println();
   iaqSensor.begin(BME68X_I2C_ADDR_LOW, Wire);
   setupBsecSensor();
+  Serial.println();
+
+  output = "\nBSEC library version " + String(iaqSensor.version.major) + "." + String(iaqSensor.version.minor) + "." + String(iaqSensor.version.major_bugfix) + "." + String(iaqSensor.version.minor_bugfix);
+  Serial.println(output);
   Serial.println();
 
 initWiFiScanner();
@@ -158,8 +159,8 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForIndexUpdate();
-  checkForUpdates();
+  //checkForIndexUpdate();
+  //checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
   Serial.println();
@@ -179,18 +180,6 @@ printConfig();  // ✅ Ver los valores actuales de configuración
     NULL,           // Handle
     0               // Núcleo (evitar core donde corre AsyncTCP)
 );
-
-  // Iniciar tarea FreeRTOS para enviar datos a ThingSpeak
-  xTaskCreatePinnedToCore(
-    taskSendToThingSpeak,   // Función que ejecutará la tarea
-    "SendToThingSpeak",     // Nombre de la tarea
-    4096,                   // Tamaño de la pila de la tarea
-    NULL,                   // Parámetros de la tarea
-    1,                      // Prioridad de la tarea
-    &thingSpeakTaskHandle,  // Manejador de la tarea
-    0                       // Núcleo en el que se ejecutará la tarea (núcleo 1)
-  );
-
   
   sseTimer = xTimerCreate(
     "SSETimer",
@@ -209,36 +198,65 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
         stateUpdateCounter = 0;  // Restablecer el contador
         updateState();  // Llamar a la función
-        checkForIndexUpdate();
-        checkForUpdates();
+        // checkForIndexUpdate();
+        // checkForUpdates();
         loadState();
         Serial.println();
         Serial.println("loadState() se ha cargado.");
         lastUpdateCheck = millis();
     }
-
+    
+if (shouldRestart) {
+      Serial.println("🔄 Reiniciando sistema de forma segura...");
+      delay(1000); // Aquí SÍ podemos usar delay porque estamos en el loop principal
+      ESP.restart();
+  }
     if (otaInProgress) {
       yield(); // Alimenta el WDT
       return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
   }
-   
-  readSensorData();      // Leer datos del sensor
-  
-  // Enviar datos a Google Sheets en el intervalo normal (usando isHourOnTheDot)
-  bool currentMinuteZero = isHourOnTheDot();
-  if (!prevMinuteZero && currentMinuteZero) {
-    googlesheet(); // Envía los datos a Google Sheets
-  }
-  prevMinuteZero = currentMinuteZero;
 
-  // //Enviar datos a Google Sheets en el intervalo de prueba (usando millis)
-  // static unsigned long lastUploadTime = 0;
-  // if (millis() - lastUploadTime >= 30000) { // 30000 ms = .5 minutes
-  //   googlesheet();
-  //   lastUploadTime = millis();
-  // }
+  // --- NUEVA LÓGICA DE ESCANEO WIFI ---
+  // El servidor web solicitó un escaneo. Lo hacemos aquí porque es seguro.
+  if (scanRequested) {
+      WiFiManager::scanNetworks(networks);
+      scanRequested = false; // Bajamos la bandera
+  }
+
+  // 1. Gestión de Conexión MQTT "Suave"
+  // Solo intentamos conectar si NO estamos en un momento crítico de medición
+  // y usamos un timer no bloqueante.
+  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+      static unsigned long lastMqttAttempt = 0;
+      // Aumentamos el tiempo entre intentos a 10s para dejar respirar a BSEC
+      if (millis() - lastMqttAttempt > 10000) { 
+          lastMqttAttempt = millis();
+          Serial.println("📡 Mantenimiento MQTT: Intentando reconectar...");
+          connectToMqtt();
+      }
+  }
+   
+  // 3. BSEC tiene la prioridad absoluta
+  // Ejecutamos el sensor y capturamos si hubo datos nuevos
+  bool nuevosDatos = readSensorData(); 
+
+  // 4. Lógica de Envío Sincronizada (Evita colisiones)
+  if (nuevosDatos) {
+      // SOLO entramos aquí si BSEC acaba de terminar de usar el bus I2C
+      // y tiene datos frescos. Es el momento perfecto para transmitir.
+      
+      static unsigned long lastPublish = 0;
+      // Mantenemos tu intervalo de 3s, pero ahora alineado con el ciclo del sensor
+      if (millis() - lastPublish >= 3000) {
+          publishSensorData(); 
+          lastPublish = millis();
+          Serial.println("✅ Sincronización: Datos enviados en ventana segura.");
+      }
+  }
 
   checkClockSync();
+  // Pequeño yield para que el Stack TCP/IP procese paquetes en background
+  yield();
 }
 
 

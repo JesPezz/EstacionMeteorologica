@@ -3,122 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estación Meteorológica - Dashboard</title>
+    <title>Estación Meteorológica MQTT</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <script>
-        // Variable global para controlar el estado
-        window.chartJSLoaded = false;
-      </script>
     <style>
-        
-        .modal {
-    transition: opacity 0.3s ease, visibility 0.3s ease !important;
-    opacity: 1;
-    visibility: visible;
-}
-
-.modal.hidden {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
-
-/* Animaciones */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-        /* Estilos para los botoness */
-        .btn-primary {
-            background: #2196F3;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            flex: 1;
-        }
-        
-        .btn-secondary {
-    background: #f44336;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    flex: 1;
-}
-
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.8);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000; /* Mayor que todo */
-    overflow: auto;
-}
-
-.modal-content {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 400px;
-    margin: 20px auto;
-    animation: modalFadeIn 0.3s ease-out;
-}
-
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Inputs para móvil */
-.modal-content input {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px; /* Tamaño mínimo para evitar zoom */
-    box-sizing: border-box;
-}
-
-.modal-content button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-/* Evitar zoom en iOS */
-@media screen and (max-width: 480px) {
-    input, select, textarea {
-        font-size: 16px !important;
-    }
-}
-
-:root {
-    --primary: #2196F3;
-    --success: #4CAF50;
-    --error: #f44336;
-    --text: #2c3e50;
-    --background: #f5f6fa;
+        /* Estilos base */
+        :root {
+            --primary: #2196F3;
+            --success: #4CAF50;
+            --error: #f44336;
+            --text: #2c3e50;
+            --background: #f5f6fa;
             --card-bg: #ffffff;
         }
         
@@ -131,7 +26,7 @@
         }
         
         .dashboard {
-            max-width: 1200px;
+            max-width: 800px; /* Más estrecho al no tener gráfica */
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -143,1306 +38,427 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
-        }
-        
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-        }
-        
-        .sensor-data {
-            font-size: 1.2rem;
-            margin: 15px 0;
         }
 
-        .sensor-value {
-            font-weight: 600;
-            color: var(--primary);
-        }
+        h2 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-size: 1.2rem; }
         
-        .config-section {
-            grid-column: 1 / -1;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
+        /* Formularios */
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-top: 10px; font-weight: 500; font-size: 0.9em;}
         input, select, button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 8px;
-            border: 1px solid #ddd;
+            width: 100%; padding: 10px; margin-top: 5px;
+            border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;
+        }
+        
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+        button.btn-secondary { background: #607D8B; }
+        
+        /* Sensores */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .sensor-box {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
             border-radius: 8px;
-            font-size: 1rem;
         }
+        .sensor-value { font-size: 1.5rem; font-weight: bold; color: var(--primary); display: block;}
+        .sensor-label { font-size: 0.9rem; color: #666; }
         
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: opacity 0.3s;
+        /* Redes WiFi */
+        .network-item {
+            padding: 10px; border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
         }
-        
-        button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.9);
-            display: none;
-            place-items: center;
-            z-index: 1000;
-        }
+        .network-item:hover { background: #f9f9f9; }
 
-        /* Estilos adicionales para responsive design */
-        @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-            
-            .card {
-                padding: 15px;
-            }
-        }
-        .toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 15px 25px;
-            border-radius: 8px;
-            color: white;
-            display: none;
-            z-index: 1000;
-        }
-        .toast.success { background: #4CAF50; }
-        .toast.error { background: #f44336; }
-        
-        body {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transition: none !important;
-        }
-        
-        /* Prevenir flashes en móviles */
-        @media screen and (max-width: 768px) {
-            html, body {
-                -webkit-backface-visibility: hidden;
-                backface-visibility: hidden;
-            }
-        }
-
-        .loading-spinner {
-            border: 3px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top: 3px solid #2196F3;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
+        /* Modales */
         .modal {
-    transition: opacity 0.3s ease;
-    /* Asegurar que esté por encima de todo */
-    z-index: 9999; 
-    position: fixed;
-}
-
-/* Animación de cierre */
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-.modal {
-    transition: opacity 0.3s ease !important;
-    opacity: 1;
-}
-
-.modal[style*="none"] {
-    display: none !important;
-}
-
-/* Añade esto a tu sección de estilos */
-.modal {
-    transition: all 0.3s ease !important;
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.modal.hiding {
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
-/* Animaciones */
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes modalFadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-.chart-container {
-    position: relative;
-    height: 300px;
-    width: 100%;
-    margin: 20px 0;
-}
-
-.alert {
-    padding: 10px;
-    background: #ffeb3b;
-    color: #000;
-    border-radius: 4px;
-    text-align: center;
-    margin-top: 10px;
-}
-
-#otaStatus {
-    display: block;
-    margin-top: 10px;
-    font-weight: bold;
-    color: var(--primary);
-    transition: width 0.3s;
-}
-
-/* Barra de progreso opcional */
-.progress-bar {
-    height: 5px;
-    background: #e0e0e0;
-    margin-top: 5px;
-    border-radius: 3px;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 3px;
-    width: 0%;
-}
-
-.progress-status {
-    display: block;
-    margin: 10px 0;
-    font-weight: bold;
-    color: var(--primary);
-    text-align: center;
-}
-
-.progress-bar {
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 4px;
-    margin: 10px 0;
-    overflow: hidden;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    background: var(--primary);
-    width: 0%;
-    transition: width 0.3s ease;
-}
-.network-list {
-    max-height: 400px;
-    overflow-y: auto;
-    background: #f9f9f9;
-    border-radius: 8px;
-    padding: 10px;
-    margin-top: 10px;
-}
-
-.wifi-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.btn-refresh {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    color: #2196F3;
-}
-
-.network-item {
-    padding: 12px;
-    margin: 5px 0;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.network-info {
-    flex-grow: 1;
-}
-
-.network-ssid {
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.network-saved {
-    color: #4CAF50;
-}
-
-.network-rssi {
-    color: #666;
-    font-size: 0.9rem;
-    margin-top: 4px;
-}
-
-.network-status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-        </style>
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); display: none;
+            justify-content: center; align-items: center; z-index: 9999;
+        }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
+        
+        /* Loading */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9); display: none;
+            place-items: center; z-index: 1000; flex-direction: column; justify-content: center;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid var(--primary);
+            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 8px; color: white; display: none; z-index: 10000;
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--error); }
+    </style>
 </head>
 <body>
     <div class="dashboard">
-        <!-- Sección de Estado en Tiempo Real -->
-        <div class="card realtime-status">
-            <h2><i class="fas fa-heartbeat"></i> Estado del Sistema</h2>
-            <div class="sensor-data">
-                <p>📍 <b>Ubicación:</b> <span id="location-display">Cargando...</span></p>
-                <p>📡 <b>Estado del ESP32</b></p>
-                <p>IP: <span id="esp-ip">Cargando...</span></p>
-                <p>WiFi: <span id="wifi-status">Cargando...</span></p>
-                <p>Red WiFi: <span id="wifi-ssid">Cargando...</span></p>
-                <p>CPU: <span id="cpu-status">Cargando...</span></p>
-                <p>Memoria Libre: <span id="mem-status">Cargando...</span> KB</p>
-                <h2>ESP32 - Dashboard</h2>
-                <p>Temperatura: <span class="sensor-value" id="temp">--</span> °C</p>
-                <p>Humedad: <span class="sensor-value" id="humidity">--</span> %</p>
-                <p>Presión: <span class="sensor-value" id="pressure">--</span> hPa</p>
-                <p>Calidad Aire: <span class="sensor-value" id="air_quality">--</span></p>
-                <p>Precisión IAQ: <span id="precision">Cargando...</span></p>
-                <div class="version">Versión: <span id="version">Cargando...</span></div>
-                <div class="chart-container" style="position: relative; height:300px; width:100%">
-                <canvas id="sensorChart"></canvas>
+        <div class="card">
+            <h2><i class="fas fa-heartbeat"></i> Estado Actual</h2>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.9em; color:#555;">
+                <span>📍 <span id="location-display">--</span></span>
+                <span>📡 IP: <span id="esp-ip">--</span></span>
             </div>
-        </div>
-        
-        <!-- Sección de Configuración WiFi -->
-        <div class="card wifi-config">
-            <h2><i class="fas fa-wifi"></i> Configuración WiFi</h2>
-            <div id="wifi-list" class="network-list">
-                <div class="wifi-list-header">
-                    <span>Redes disponibles</span>
-                    <button id="refresh-wifi" class="btn-refresh"><i class="fas fa-sync-alt"></i></button>
+            
+            <div class="sensor-grid">
+                <div class="sensor-box">
+                    <span class="sensor-value"><span id="temp">--</span> °C</span>
+                    <span class="sensor-label">Temperatura</span>
                 </div>
-                <div id="wifi-list-container"></div>
+                <div class="sensor-box">
+                    <span class="sensor-value"><span id="humidity">--</span> %</span>
+                    <span class="sensor-label">Humedad</span>
+                </div>
+                <div class="sensor-box">
+                    <span class="sensor-value"><span id="air_quality">--</span></span>
+                    <span class="sensor-label">IAQ (<span id="precision">--</span>)</span>
+                </div>
+                <div class="sensor-box">
+                    <span class="sensor-value"><span id="pressure">--</span> hPa</span>
+                    <span class="sensor-label">Presión</span>
+                </div>
+            </div>
+            <div style="font-size:0.8em; color:#666; margin-top:15px; text-align:right">
+                Versión: <span id="version">--</span>
             </div>
         </div>
-        <!-- Sección de Configuración General -->
+
         <div class="card config-section">
-            <h2><i class="fas fa-cog"></i> Configuración del Sistema</h2>
-            <form id="configForm" onsubmit="saveConfig(event)">
-                <!-- Campos de configuración -->
+            <h2><i class="fas fa-cog"></i> Configuración MQTT</h2>
+            <form id="configForm">
                 <div class="form-group">
-                    <label for="googleSheetURL">Google Sheet URL:</label>
-                    <input type="text" id="googleSheetURL" name="googleSheetURL">
-                    
-                    <label for="thingSpeakAPIKey">ThingSpeak API Key:</label>
-                    <input type="text" id="thingSpeakAPIKey" name="thingSpeakAPIKey">
-                    
-                    <label for="channelID">Channel ID:</label>
-                    <input type="number" id="channelID" name="channelID">
-                    
-                    <label for="location">Ubicación:</label>
+                    <label>📍 Ubicación del Sensor</label>
                     <input type="text" id="location" name="location">
+
+                    <h3>☁️ ThingSpeak</h3>
+                    <div class="form-group">
+                        <label>API Key (Write)</label>
+                        <input type="text" id="thingSpeakAPIKey" placeholder="XXXXXXXXXXXX">
+    
+                        <label>Channel ID</label>
+                        <input type="number" id="channelID">
+                    </div>
                     
-                    <label for="updateOta">Intervalo OTA (horas):</label>
-                    <input type="number" id="updateOta" name="updateOta" min="1" step="1">
-        
-                    <h3>Notificaciones</h3>
-                    <label for="telegramToken">Token de Telegram:</label>
-                    <input type="text" id="telegramToken" name="telegramToken">
+                    <h3>📡 Servidor MQTT</h3>
+                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px">
+                        <div>
+                            <label>Host / IP</label>
+                            <input type="text" id="mqttServer">
+                        </div>
+                        <div>
+                            <label>Puerto</label>
+                            <input type="number" id="mqttPort">
+                        </div>
+                    </div>
+
+                    <label>Usuario MQTT</label>
+                    <input type="text" id="mqttUser">
+
+                    <label>Contraseña MQTT</label>
+                    <input type="password" id="mqttPassword">
+
+                    <label>Tópico Base</label>
+                    <input type="text" id="mqttTopic">
                     
-                    <label for="chatId">Chat ID de Telegram:</label>
-                    <input type="text" id="chatId" name="chatId">        
+                    <h3>🔔 Notificaciones & OTA</h3>
+                    <label>Token Telegram</label>
+                    <input type="password" id="telegramToken">
+                    
+                    <label>Chat ID Telegram</label>
+                    <input type="text" id="chatId">
+
+                    <label>Intervalo OTA (horas)</label>
+                    <input type="number" id="updateOta" min="1">
                 </div>
-                <!-- Más campos de configuración -->
+                
                 <button type="submit">Guardar Configuración</button>
             </form>
 
-                        <div class="card">
-                <h2><i class="fas fa-bug"></i> Registro de Errores</h2>
-                <button onclick="downloadLog()" class="btn-secondary">
-                 <i class="fas fa-download"></i> Descargar Log
-                </button>
-                <p style="font-size: 0.8em; margin-top: 10px;">
-                 Últimos errores del sistema (máx. 10KB)
-                </p>
+            <div style="margin-top: 20px; display:flex; gap:10px">
+                <button onclick="downloadLog()" class="btn-secondary"><i class="fas fa-file-alt"></i> Log</button>
+                <button onclick="confirmRestart()" class="btn-secondary" style="background:#f44336"><i class="fas fa-power-off"></i> Reiniciar</button>
             </div>
         </div>
-        
-        <!-- Sección de Actualización OTA -->
-        <div class="card ota-section">
-            <h2><i class="fas fa-cloud-upload-alt"></i> Actualización OTA</h2>
+
+        <div class="card">
+            <h2><i class="fas fa-wifi"></i> WiFi</h2>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px">
+                <span>Redes Disponibles</span>
+                <button id="refresh-wifi" style="width:auto; padding:5px 10px"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="wifi-list-container"></div>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-cloud-upload-alt"></i> Actualizar Firmware</h2>
             <input type="file" id="firmwareFile" accept=".bin">
-            <button onclick="uploadFirmware()">Subir Firmware</button>
-            <div id="otaStatus">0%</div>
-            <div class="progress-bar">
-            <div class="progress-bar-fill" id="progressFill"></div>
+            <button onclick="uploadFirmware()">Subir .bin</button>
+            <div id="otaStatus" style="margin-top:10px; font-weight:bold; text-align:center">0%</div>
+            <div style="height:5px; background:#eee; border-radius:3px; margin-top:5px; overflow:hidden">
+                <div id="progressFill" style="height:100%; background:var(--primary); width:0%"></div>
             </div>
         </div>
-
-             <div class="card" style="margin-top: 20px; text-align: center;">
-            <button onclick="confirmRestart()" class="btn-secondary" style="padding: 12px 24px;">
-                <i class="fas fa-sync-alt"></i> Reiniciar Sistema
-            </button>
-        </div>
     </div>
-  
 
-    <!-- Modales y Overlays -->
-    <div class="loading-overlay" id="loading">
-        <div class="spinner"></div>
-        <div id="loadingText"></div>
-    </div>
-    
-    <div id="toast" class="toast"></div>
-    
-    <div id="authModal" class="modal" style="display: none;">
+    <div id="authModal" class="modal" style="display:flex">
         <div class="modal-content">
-            <h2>🔐 Iniciar Sesión</h2>
+            <h2>🔐 Acceso</h2>
             <form id="loginForm">
-                <div class="form-group">
-                    <input type="text" id="username" placeholder="Usuario" required autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <input type="password" id="password" placeholder="Contraseña" required autocomplete="current-password">
-                </div>
-                <button type="submit">Ingresar</button>
+                <input type="text" id="username" placeholder="Usuario" autocomplete="username">
+                <input type="password" id="password" placeholder="Contraseña" autocomplete="current-password">
+                <button type="submit">Entrar</button>
             </form>
         </div>
     </div>
-    
-    <div id="wifiModal" class="modal" style="display: none;">
+
+    <div id="wifiModal" class="modal">
         <div class="modal-content">
-            <h2 id="wifiModalTitle">🔑 Ingrese Contraseña WiFi</h2>
-            <p>Conectando a: <span id="currentSSID"></span></p>
-            <input type="password" id="wifiPassword" placeholder="Escriba la contraseña">
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button id="connectWifiBtn" class="btn-primary">Conectar</button>
-                <button id="cancelWifiBtn" class="btn-secondary">Cancelar</button>
+            <h3>Conectar a <span id="currentSSID"></span></h3>
+            <input type="password" id="wifiPassword" placeholder="Contraseña WiFi">
+            <div style="display:flex; gap:10px; margin-top:10px">
+                <button id="connectWifiBtn">Conectar</button>
+                <button onclick="document.getElementById('wifiModal').style.display='none'" class="btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>
+
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText" style="margin-top:15px">Cargando...</div>
+    </div>
     
+    <div id="toast" class="toast"></div>
+
 <script>
-    let isSavingConfig = false;
-    let currentSSID = '';
-    let selectedNetwork = null;
     let authToken = null;
-    let chart = null;
-    let sensorChart = null;
-    let uploadInProgress = false; // Bandera para controlar procesos durante OTA
-    let sensorUpdateInterval;
-    let fileSelected = false;
-    let loginInProgress = false;
-    let savedNetworks = []; // Almacenará las redes guardadas
+    let selectedNetwork = null;
 
-    function downloadLog() {
-    // Versión robusta con manejo de errores
-    fetch('/downloadLog')
-        .then(response => {
-            if(!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.blob();
-        })
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'esp32_log.txt';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }, 100);
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            alert("Error al descargar. Prueba /logview para diagnóstico");
-        });
-}
-
-    function confirmRestart() {
-    if (confirm("¿Está seguro de reiniciar el sistema? Se perderán conexiones temporales.")) {
-        toggleLoading(true, "Reiniciando...");
-        fetch("/restart", { 
-            method: "POST",
-            headers: { 'Authorization': `Basic ${authToken}` }
-        }).catch(err => console.log("Reinicio iniciado"));
-    }
-}
-
-
-function showAuthModal() {
-        const modal = document.getElementById('authModal');
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Bloquear scroll del body
-        
-        // Enfocar automáticamente el primer input
-        setTimeout(() => {
-        document.getElementById('username').focus();
-    }, 100);
-}
-
-// Función para login (llamada desde el modal)
-async function login() {
-    if (loginInProgress) return;
-    loginInProgress = true;
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    
-    // Validación básica del frontend
-    if (!username || !password) {
-        showToast('Ingrese usuario y contraseña', 'error');
-        return;
-    }
-
-    toggleLoading(true, 'Verificando credenciales...');
-    
-    try {
-        // Crear token de autenticación (Base64)
-        authToken = btoa(`${username}:${password}`);
-        
-        // Intentar obtener la configuración (que sirve como verificación de credenciales)
-        console.log('Enviando autenticación:', {
-    headers: {
-        'Authorization': `Basic ${btoa(username + ':' + password)}`,
-        'Content-Type': 'application/json'
-    }
-});
-        const response = await fetch('/getConfig', {
-            headers: { 
-                'Authorization': `Basic ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 5000 // Timeout de 5 segundos
-        });
-        
-        // Manejar respuesta del servidor
-        if (!response.ok) {
-            if (response.status === 401) {
-                throw new Error('Credenciales incorrectas');
-            }
-            throw new Error(`Error del servidor (${response.status})`);
+    // --- API & DATA ---
+    async function apiCall(endpoint, options = {}) {
+        if (authToken) {
+            options.headers = { ...options.headers, 'Authorization': `Basic ${authToken}` };
         }
-        console.log('Respuesta del servidor:', {
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries()),
-    body: await response.clone().text() // clone() para poder leer después
-});
-        // Autenticación exitosa
-        const configData = await response.json();
-        console.log('Configuración recibida:', configData);
-        
-        // Verificar coincidencia con credenciales del backend
-        if (configData.webUsername !== username || configData.webPassword !== password) {
-            throw new Error('Credenciales no coinciden con configuración');
+        const res = await fetch(endpoint, options);
+        if (res.status === 401) {
+            document.getElementById('authModal').style.display = 'flex';
+            throw new Error('Unauthorized');
         }
-        
-        // Cierre del modal y flujo post-login
-        hideAuthModal();
-        showToast(`Bienvenido a ${configData.location}`, 'success');
-        
-        // Cargar configuración y datos
-        await loadConfig();
-        startSystemUpdates();
-        
-    } catch (error) {
-        console.error('Error en login:', error);
-        
-        // Mensajes de error específicos
-        let errorMessage = 'Error de autenticación';
-        if (error.message.includes('Failed to fetch') || error.message.includes('timeout')) {
-            errorMessage = 'No se pudo conectar al servidor';
-        } else if (error.message.includes('incorrectas') || error.message.includes('coinciden')) {
-            errorMessage = 'Usuario o contraseña incorrectos';
-        }
-        
-        showToast(errorMessage, 'error');
-        document.getElementById('password').select();
-    } finally {
-        toggleLoading(false);
-        loginInProgress = false;
-    }
-}
-
-// Función de validación local (mientras no hay conexión)
-function isValidCredentials(user, pass) {
-    // Modo emergencia: credenciales hardcodeadas
-    const validUsers = {
-        'admin': 'admin123',  // Cambiar en producción
-        'user': 'pass123'
-    };
-    return validUsers[user] === pass;
-}
-
-function initBasicSystem() {
-    // 1. Funciones esenciales (siempre disponibles)
-    updateSensorData();
-    setInterval(updateSensorData, 5000);
-    scanNetworks();
-    
-    // 2. Gráfico: SOLO si está el archivo en el ESP32
-    loadChartDynamically(); // <- Carga bajo demanda
-}
-
-function loadChartDynamically() {
-    // Intento 1: Cargar desde CDN
-    const cdnScript = document.createElement('script');
-    cdnScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-    //cdnScript.integrity = 'sha384-...'; // Opcional: añadir SRI hash
-    cdnScript.crossOrigin = 'anonymous';
-    
-    cdnScript.onload = () => {
-        console.log("Chart.js cargado desde CDN");
-        window.chartJSLoaded = true;
-        initChart();
-    };
-    
-    cdnScript.onerror = () => {
-        console.warn("Falló CDN, intentando cargar local...");
-        loadLocalChart();
-    };
-    
-    document.head.appendChild(cdnScript);
-}
-
-function loadLocalChart() {
-    const localScript = document.createElement('script');
-    localScript.src = '/chart.umd.min.js';
-    
-    localScript.onload = () => {
-        console.log("Chart.js cargado desde local");
-        window.chartJSLoaded = true;
-        initChart();
-    };
-    
-    localScript.onerror = () => {
-        console.error("No se pudo cargar Chart.js");
-        handleChartError();
-    };
-    
-    document.head.appendChild(localScript);
-}
-
-function handleChartError() {
-    const chartContainer = document.getElementById('sensorChart');
-    if (chartContainer) {
-        chartContainer.style.display = 'none';
-        // Mensaje alternativo
-        chartContainer.insertAdjacentHTML('afterend', 
-            '<div class="alert">Gráfico no disponible. Intente conectarse a internet.</div>');
-    }
-}
-
-function initChart() {
-    if (!window.chartJSLoaded) {
-        console.warn("Chart.js no está cargado");
-        return;
-    }
-    
-    const ctx = document.getElementById('sensorChart')?.getContext('2d');
-    if (!ctx) {
-        console.error("Contexto del canvas no disponible");
-        return;
+        return res;
     }
 
-    // Destruir gráfico existente
-    if (sensorChart) {
-        sensorChart.destroy();
-    }
-    
-    sensorChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [
-                {
-                    label: 'Temperatura (°C)',
-                    data: [],
-                    borderColor: '#2196F3',
-                    tension: 0.1,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Humedad (%)',
-                    data: [],
-                    borderColor: '#4CAF50',
-                    tension: 0.1,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: { display: true, text: 'Temperatura (°C)' }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: { display: true, text: 'Humedad (%)' },
-                    grid: { drawOnChartArea: false }
-                }
-            }
-        }
-    });
-}
-
-// Función para iniciar actualizaciones post-login
-function startSystemUpdates() {
-
-    // 1. Cargar Chart.js inteligentemente
-    if (typeof Chart === 'undefined') {
-        loadChartDynamically();
-    } else {
-        window.chartJSLoaded = true;
-        initChart();
-    }
-    // Actualizar datos inmediatamente
-    updateSensorData();
-    updateESPStatus();
-    // 3. Configurar SSE
-    setupEventSource();
-    // Establecer intervalos regulares
-    setInterval(updateSensorData, 5000);
-    setInterval(updateESPStatus, 10000);
-    
-    // Escanear redes WiFi
-    scanNetworks();
-}
-
-function setupEventSource() {
-    if (window.eventSource) return;
-    if (!window.eventSource) {
-        window.eventSource = new EventSource('/events');
-        window.eventSource.addEventListener('update', (e) => {
-            const data = JSON.parse(e.data);
-            updateChart(data);
-        });
-    }
-}
-
-// Función robusta para ocultar el modal
-function hideAuthModal() {
-    try {
-        // Método 1: Buscar por ID exacto
-        const modal = document.getElementById('authModal');
-        
-        if (modal) {
-            // Animación de desvanecimiento
-            modal.style.opacity = '0';
-            modal.style.transition = 'opacity 0.3s ease';
-            
-            // Ocultar completamente después de la animación
-            setTimeout(() => {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }, 300);
-        } else {
-            // Método de emergencia
-            document.querySelectorAll('.modal').forEach(m => {
-                m.style.display = 'none';
-                m.style.opacity = '0';
-            });
-        }
-    } catch (error) {
-        console.error('Error al ocultar modal:', error);
-        // Último recurso
-        const modals = document.getElementsByClassName('modal');
-        for (let m of modals) m.remove();
-    }
-}
-            
-// Evitar cierre accidental del modal en móvil
-document.getElementById('authModal').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('authModal')) {
-        // Opcional: prevenir que el modal se cierre al tocar fuera
-        // e.stopPropagation();
-    }
-});
-
-// Manejar teclado virtual en móvil
-window.addEventListener('resize', () => {
-    if (window.visualViewport) {
-        const modal = document.getElementById('authModal');
-        if (modal.style.display === 'flex') {
-            modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }
-});
-
-function updateESPStatus() {
-
-    if (uploadInProgress || isSavingConfig) {
-        console.log("Escaneo pospuesto (OTA en progreso)");
-        return;
-    }
-
-    fetch("/esp_status")
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById("esp-ip").textContent = data.ip || "No disponible";
-            document.getElementById("wifi-status").textContent = data.wifi || "No disponible";
-            document.getElementById("wifi-ssid").textContent = data.ssid || "No disponible";
-            document.getElementById("cpu-status").textContent = data.cpu || "No disponible";
-            document.getElementById("mem-status").textContent = data.memory || "No disponible";
-        })
-        .catch(error => console.error("Error al obtener estado del ESP32:", error));
-    }
-    
-// Llamar a la función cada 5 segundos
-setInterval(updateESPStatus, 5000);
-    
-// Configuración inicial de Chart.js
-const ctx = document.getElementById('sensorChart').getContext('2d');
-
-// Función para actualizar el gráfico
-function updateChart(data) {
-
-    if (uploadInProgress || isSavingConfig) {
-        console.log("Escaneo pospuesto (OTA en progreso)");
-        return;
-    }
-
-    if (!sensorChart || !data) return;
-    
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    // Limitar datos a 20 puntos
-    if (sensorChart.data.labels.length >= 20) {
-        sensorChart.data.labels.shift();
-        sensorChart.data.datasets.forEach(dataset => dataset.data.shift());
-    }
-    
-    // Añadir nuevos datos
-    sensorChart.data.labels.push(now);
-    sensorChart.data.datasets[0].data.push(parseFloat(data.temp) || 0);
-    sensorChart.data.datasets[1].data.push(parseFloat(data.humidity) || 0);
-    
-    sensorChart.update();
-}
-
-// Conexión SSE para recibir datos
-const eventSource = new EventSource('/events');
-eventSource.addEventListener('update', (e) => {
-    const data = JSON.parse(e.data);
-    updateChart(data);  // Actualiza el gráfico
-    console.log('Datos recibidos:', JSON.stringify(data, null, 2));  // Para depuración
-});
-
-
-// Función para cargar configuración
-async function loadConfig() {
-    try {
-        const response = await fetch('/getConfig', {
-            headers: { 'Authorization': `Basic ${authToken}` }
-        });
-        
-        if (!response.ok) throw new Error('Error cargando configuración');
-        
-        const config = await response.json();
-        
-        // Inicializar originalConfig aquí
-        window.originalConfig = {
-            googleSheetURL: config.googleSheetURL,
-            thingSpeakAPIKey: config.thingSpeakAPIKey,
-            channelID: config.channelID,
-            location: config.location,
-            updateOta: config.updateOta, // Guardar en ms
-            telegramToken: config.telegramToken,
-            chatId: config.chatId
-        };
-        
-        // Mostrar valores en el formulario
-        document.getElementById('location-display').textContent = config.location || "No configurada";
-        document.getElementById('googleSheetURL').value = config.googleSheetURL;
-        document.getElementById('thingSpeakAPIKey').value = "*****"; // Enmascarar
-        document.getElementById('channelID').value = config.channelID;
-        document.getElementById('location').value = config.location;
-        document.getElementById('updateOta').value = config.updateOta / 3600000; // Convertir a horas
-        document.getElementById('telegramToken').value = "*****";
-        document.getElementById('chatId').value = config.chatId;
-        
-    } catch (error) {
-        console.error("Error en loadConfig:", error);
-        showToast(error.message, 'error');
-    }
-}
-
-// Guardar configuración (con validación)
-async function saveConfig(event) {
-    event.preventDefault();
-    
-    // 1. Detener procesos interferentes
-    clearAllIntervals();
-    
-    const submitBtn = event.target.querySelector("button[type='submit']");
-    submitBtn.disabled = true;
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = "Guardando...";
-
-    try {
-        // 2. Preparar datos como objeto JSON
-        const configData = {
-            googleSheetURL: document.getElementById('googleSheetURL').value.trim(),
-            thingSpeakAPIKey: document.getElementById('thingSpeakAPIKey').value.trim(),
-            channelID: parseInt(document.getElementById('channelID').value),
-            location: document.getElementById('location').value.trim(),
-            updateOta: parseInt(document.getElementById('updateOta').value),
-            telegramToken: document.getElementById('telegramToken').value.trim(),
-            chatId: document.getElementById('chatId').value.trim()
-        };
-        
-        // 3. Crear el cuerpo de la petición con el parámetro 'plain' que contiene el JSON
-        const formData = new URLSearchParams();
-        formData.append('plain', JSON.stringify(configData));
-        
-        // 4. Enviar petición
-        console.log("Enviando datos:", formData.toString());
-        const response = await fetch('/config', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': `Basic ${authToken}`
-            },
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || "Error en el servidor");
-        }
-        
-        const result = await response.text();
-        showToast("¡Configuración guardada!", "success");
-        setTimeout(() => location.reload(), 5000);
-        
-    } catch (error) {
-        console.error("Error:", error);
-        showToast(`Error: ${error.message}`, "error");
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-    }
-}
-
-// Función para detener todos los intervalos
-function clearAllIntervals() {
-    const highestIntervalId = setTimeout(() => {}, 0);
-    for (let i = 1; i < highestIntervalId; i++) {
-        clearInterval(i);
-    }
-}
-       
-// Prueba de conexión básica
-async function testConnection() {
-    try {
-        const response = await fetch('/getConfig', {
-            headers: { 'Authorization': `Basic ${authToken}` }
-        });
-        console.log("Prueba de conexión:", response.status, await response.text());
-    } catch (error) {
-        console.error("Error de conexión:", error);
-    }
-}
-
-// Llama a esta función después del login
-testConnection();
-
-function uploadFirmware() {
-    if (!fileSelected) {
-        showToast('Seleccione un archivo primero', 'error');
-        return;
-    }
-
-    uploadInProgress = true;
-    stopAllProcesses();
-    
-    const file = document.getElementById('firmwareFile').files[0];
-    const formData = new FormData();
-    formData.append('update', file);
-
-    // Deshabilitar UI y resetear estado
-    document.getElementById('firmwareFile').disabled = true;
-    document.querySelector('.ota-section button').disabled = true;
-    document.getElementById('otaStatus').textContent = '0%';
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/update', true);
-
-    // Evento de progreso (actualiza porcentaje)
-    xhr.upload.onprogress = (e) => {
-    if (e.lengthComputable) {
-        const percent = Math.round((e.loaded / e.total) * 100);
-        document.getElementById('otaStatus').textContent = `${percent}%`;
-        document.getElementById('progressFill').style.width = `${percent}%`;
-    }
-};
-
-    xhr.onload = () => {
-        if (xhr.status === 200) {
-            showToast('¡Firmware actualizado! Reiniciando...', 'success');
-            document.getElementById('otaStatus').textContent = '100%';
-        } else {
-            showToast(`Error: ${xhr.statusText}`, 'error');
-        }
-        cleanupAfterUpload();
-    };
-
-    xhr.onerror = () => {
-        showToast('Error de conexión', 'error');
-        cleanupAfterUpload();
-    };
-
-    xhr.send(formData);
-}
-
-// Función para limpieza post-subida
-function cleanupAfterUpload() {
-    uploadInProgress = false;
-    fileSelected = false;
-    
-    // Resetear UI
-    document.getElementById('firmwareFile').value = '';
-    document.getElementById('firmwareFile').disabled = false;
-    document.querySelector('.ota-section button').disabled = false;
-    
-    // Reiniciar procesos
-    sensorUpdateInterval = setInterval(updateSensorData, 5000);
-    setupEventSource();
-    
-    console.log("Procesos reiniciados después de OTA");
-}
-
-
-// Función mejorada para detener procesos
-function stopAllProcesses() {
-    console.log("Deteniendo todos los procesos...");
-    clearInterval(sensorUpdateInterval);
-    
-    if (window.eventSource) {
-        window.eventSource.close();
-        window.eventSource = null;
-    }
-}
-
-async function scanNetworks() {
-    try {
-
-        // 1. Iniciar el escaneo
-        await fetch('/api/wifi/scanInternal', {
-            headers: { 'Authorization': `Basic ${authToken}` }
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        const response = await fetch('/api/wifi/scan', {
-            headers: { 'Authorization': `Basic ${authToken}` }
-        });
-        const networks = await response.json();
-        renderNetworkList(networks);
-    } catch (error) {
-        console.error("Error scanning networks:", error);
-    }
-}
-
-// Función para mostrar el modal WiFi
-function showWifiModal(network) {
-    selectedNetwork = network;
-    document.getElementById('currentSSID').textContent = network.ssid;
-    document.getElementById('wifiModalTitle').textContent = `🔑 Conectar a ${network.ssid}`;
-    document.getElementById('wifiPassword').value = '';
-    document.getElementById('wifiModal').style.display = 'flex';
-    document.getElementById('wifiPassword').focus();
-}
-
-// Función para ocultar el modal WiFi
-function hideWifiModal() {
-    document.getElementById('wifiModal').style.display = 'none';
-    selectedNetwork = null;
-}
-
-// Función para ocultar modales
-function hideModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-let selectedSSID = '';
-
-// Cargar redes guardadas al inicio
-async function loadSavedNetworks() {
-    try {
-        const response = await fetch('/api/savedNetworks', {
-            headers: { 'Authorization': `Basic ${authToken}` }
-        });
-        savedNetworks = await response.json();
-    } catch (error) {
-        console.error("Error loading saved networks:", error);
-    }
-}
-
-function renderNetworkList(networks) {
-    const container = document.getElementById('wifi-list-container');
-    if (!container) return;
-
-    // Crear elementos de red
-    container.innerHTML = networks.map(network => {
-        const isSaved = savedNetworks.some(saved => saved.ssid === network.ssid);
-        
-        return `
-            <div class="network-item">
-                <div class="network-info">
-                    <div class="network-ssid">
-                        ${isSaved ? '<span class="network-saved">✓</span>' : ''}
-                        ${network.ssid || 'Red oculta'}
-                    </div>
-                    <div class="network-rssi">
-                        Señal: ${network.rssi || '?'} dBm | 
-                        ${network.secured ? '🔒 Protegida' : '🔓 Abierta'}
-                    </div>
-                </div>
-                <div class="network-status">
-                    ${network.secured ? '🔒' : '🔓'}
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    // Añadir event listeners a los elementos de red
-    document.querySelectorAll('.network-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const ssid = item.querySelector('.network-ssid').textContent.trim();
-            const network = networks.find(n => n.ssid === ssid);
-            if (network) showWifiModal(network);
-        });
-    });
-}
-
-// Función para conectar a la red WiFi
-async function connectToNetwork() {
-    if (!selectedNetwork) {
-        showToast('No se ha seleccionado ninguna red', 'error');
-        return;
-    }
-    
-    const password = document.getElementById('wifiPassword').value.trim();
-    
-    if (selectedNetwork.secured && !password) {
-        showToast('La contraseña no puede estar vacía', 'error');
-        return;
-    }
-    
-    toggleLoading(true, `Conectando a ${selectedNetwork.ssid}...`);
-    
-    try {
-        const response = await fetch('/saveWiFi', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${authToken}`
-            },
-            body: JSON.stringify({ 
-                ssid: selectedNetwork.ssid, 
-                password: password 
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || "Error al conectar");
-        }
-        
-        const result = await response.json();
-        
-        if (result.status === "connected") {
-            showToast(`¡Conectado a ${selectedNetwork.ssid}!`, 'success');
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            throw new Error(result.error || "Error en la conexión");
-        }
-    } catch (error) {
-        showToast(error.message, 'error');
-        console.error("Error al conectar:", error);
-    } finally {
-        toggleLoading(false);
-        hideWifiModal();
-    }
-}
-
-// Manejar envío del formulario de login
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await login();
-});
-
-// Controlador de estado global
-let appState = {
-    isConnected: false,
-    config: {},
-    networks: []
-};
-
-// Función para mostrar/ocultar loading
-const toggleLoading = (show, text = 'Cargando...') => {
-    const loader = document.getElementById('loading');
-    loader.style.display = show ? 'grid' : 'none';
-            document.getElementById('loadingText').textContent = text;
-        };
-        
-// Actualizar datos de sensores
-const updateSensorData = async () => {
-    if (uploadInProgress) return;
-
-            try {
-                const response = await fetch('/sensor_data');
-                const data = await response.json();
-
-                //document.getElementById('location-display').textContent = config.location || "No configurada";
-                document.getElementById('temp').textContent = data.temp.toFixed(1);
-                document.getElementById('humidity').textContent = data.humidity.toFixed(1);
-                document.getElementById('pressure').textContent = data.pressure.toFixed(1);
-                document.getElementById('precision').textContent = data.precision;
-                document.getElementById('air_quality').textContent = data.air_quality.toFixed(1);
-                document.getElementById('version').textContent = data.version || "No disponible";
-                
-            } catch (error) {
-                console.error('Error fetching sensor data:', error);
-                showToast('Error obteniendo datos del sensor', 'error');
-            }
-        };
-
-sensorUpdateInterval = setInterval(updateSensorData, 5000);
-        
-// Controlador de configuración
-const handleConfig = {
-            load: async () => {
-                toggleLoading(true);
-                try {
-                    const response = await fetch('/getConfig');
-                    appState.config = await response.json();
-                    // Actualizar campos del formulario
-                } catch (error) {
-                    showToast('Error cargando configuración', 'error');
-                } finally {
-                    toggleLoading(false);
-                }
-            },
-            
-            save: async (event) => {
-                event.preventDefault();
-                toggleLoading(true, 'Guardando configuración...');
-                
-                try {
-                    const response = await fetch('/config', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(appState.config)
-                    });
-                    
-                    if (!response.ok) throw new Error(response.statusText);
-                    showToast('Configuración guardada exitosamente', 'success');
-                } catch (error) {
-                    showToast('Error guardando configuración', 'error');
-                } finally {
-                    toggleLoading(false);
-                }
-            }
-        };
-        
-        
-// Función para mostrar notificaciones
-const showToast = (message, type = 'info') => {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-    // 1. Autenticación
-    showAuthModal();
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
+    async function login(e) {
         e.preventDefault();
-        login();
-    });
-
-    // 2. WiFi
-    document.getElementById('connectWifiBtn').addEventListener('click', connectToNetwork);
-    document.getElementById('cancelWifiBtn').addEventListener('click', () => hideModal('wifiModal'));
-    document.getElementById('refresh-wifi').addEventListener('click', scanNetworks);
-
-    // 3. Configuración
-    const configForm = document.getElementById('configForm');
-    if (configForm) {
-        configForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await saveConfig(e);
-        });
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        authToken = btoa(`${u}:${p}`);
+        
+        try {
+            toggleLoading(true);
+            const res = await apiCall('/getConfig');
+            if (res.ok) {
+                const config = await res.json();
+                loadConfigToForm(config);
+                document.getElementById('authModal').style.display = 'none';
+                startDashboard();
+                showToast('Bienvenido', 'success');
+            } else {
+                showToast('Credenciales incorrectas', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error de conexión', 'error');
+        } finally {
+            toggleLoading(false);
+        }
     }
 
-    // 4. OTA
-    document.getElementById('firmwareFile').addEventListener('change', (e) => {
-        if (!e.target.files[0]) return;
-        fileSelected = true;
-        stopAllProcesses();
-    });
+    function loadConfigToForm(config) {
+        document.getElementById('location').value = config.location || '';
+        document.getElementById('thingSpeakAPIKey').value = config.thingSpeakAPIKey || '';
+        document.getElementById('channelID').value = config.channelID || '';
+        document.getElementById('location-display').innerText = config.location || 'Desconocida';
+        document.getElementById('telegramToken').value = config.telegramToken || '';
+        document.getElementById('chatId').value = config.chatId || '';
+        document.getElementById('updateOta').value = (config.updateOta / 3600000) || 1;
 
-    // 5. Inicialización del sistema (si ya está autenticado)
-    if (authToken) {
-        loadConfig();
-        loadSavedNetworks();
+        // MQTT
+        document.getElementById('mqttServer').value = config.mqttServer || '';
+        document.getElementById('mqttPort').value = config.mqttPort || 1883;
+        document.getElementById('mqttUser').value = config.mqttUser || '';
+        document.getElementById('mqttPassword').value = config.mqttPassword || '';
+        document.getElementById('mqttTopic').value = config.mqttTopic || '';
+    }
+
+    async function saveConfig(e) {
+        e.preventDefault();
+        toggleLoading(true, 'Guardando...');
+        
+        const data = {
+            location: document.getElementById('location').value,
+            thingSpeakAPIKey: document.getElementById('thingSpeakAPIKey').value,
+            channelID: parseInt(document.getElementById('channelID').value),
+            telegramToken: document.getElementById('telegramToken').value,
+            chatId: document.getElementById('chatId').value,
+            updateOta: parseInt(document.getElementById('updateOta').value),
+            
+            // MQTT
+            mqttServer: document.getElementById('mqttServer').value,
+            mqttPort: parseInt(document.getElementById('mqttPort').value),
+            mqttUser: document.getElementById('mqttUser').value,
+            mqttPassword: document.getElementById('mqttPassword').value,
+            mqttTopic: document.getElementById('mqttTopic').value
+        };
+
+        // 🛑 CORRECCIÓN: Envolver el JSON en un parámetro 'plain'
+        const jsonString = JSON.stringify(data);
+        const formBody = 'plain=' + encodeURIComponent(jsonString);
+
+        try {
+            await apiCall('/config', {
+                method: 'POST',
+                // Usamos el tipo de contenido estándar para formularios
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formBody
+            });
+            showToast('Configuración guardada. Reiniciando...', 'success');
+            setTimeout(() => location.reload(), 5000);
+        } catch (err) {
+            showToast('Error al guardar', 'error');
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    async function updateSensorData() {
+        try {
+            const res = await apiCall('/sensor_data');
+            const data = await res.json();
+            
+            document.getElementById('temp').innerText = data.temp?.toFixed(1) || '--';
+            document.getElementById('humidity').innerText = data.humidity?.toFixed(1) || '--';
+            document.getElementById('pressure').innerText = data.pressure?.toFixed(1) || '--';
+            document.getElementById('air_quality').innerText = data.air_quality?.toFixed(1) || '--';
+            document.getElementById('precision').innerText = data.precision || '--';
+            document.getElementById('version').innerText = data.version || '--';
+        } catch(e) { console.log(e); }
+    }
+
+    async function updateESPStatus() {
+        try {
+            const res = await apiCall('/esp_status');
+            const data = await res.json();
+            document.getElementById('esp-ip').innerText = data.ip;
+        } catch(e) {}
+    }
+
+    // --- SYSTEM ---
+    function startDashboard() {
+        updateSensorData();
+        updateESPStatus();
         scanNetworks();
+        
         setInterval(updateSensorData, 5000);
-    } else {
-        initBasicSystem(); // Carga mínima sin autenticación
+        setInterval(updateESPStatus, 10000);
+        
+        // SSE Simplificado (Sin updateChart)
+        const evtSource = new EventSource('/events');
+        evtSource.addEventListener('update', () => updateSensorData());
     }
-});
-    </script>
- </body>
- </html>
+
+    // --- WIFI ---
+    async function scanNetworks() {
+        const res = await apiCall('/api/wifi/scan');
+        const nets = await res.json();
+        const container = document.getElementById('wifi-list-container');
+        container.innerHTML = nets.map(n => `
+            <div class="network-item" onclick="promptWifi('${n.ssid}')">
+                <span><b>${n.ssid}</b> (${n.rssi} dBm)</span>
+                <span>${n.secured ? '🔒' : '🔓'}</span>
+            </div>
+        `).join('');
+    }
+
+    function promptWifi(ssid) {
+        selectedNetwork = ssid;
+        document.getElementById('currentSSID').innerText = ssid;
+        document.getElementById('wifiModal').style.display = 'flex';
+    }
+
+    document.getElementById('connectWifiBtn').onclick = async () => {
+        const pass = document.getElementById('wifiPassword').value;
+        toggleLoading(true, 'Conectando...');
+        try {
+            await apiCall('/saveWiFi', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ssid: selectedNetwork, password: pass })
+            });
+            showToast('WiFi guardado. Reiniciando...', 'success');
+            setTimeout(() => location.reload(), 10000);
+        } catch { showToast('Error al guardar WiFi', 'error'); }
+    };
+
+    // --- UTILS ---
+    function toggleLoading(show, text = 'Cargando...') {
+        document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        document.getElementById('loadingText').innerText = text;
+    }
+    
+    function showToast(msg, type) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.className = `toast ${type}`;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
+    
+    function confirmRestart() {
+        if(confirm('¿Reiniciar ESP32?')) {
+            apiCall('/restart', { method: 'POST' });
+        }
+    }
+    
+    function uploadFirmware() {
+        const file = document.getElementById('firmwareFile').files[0];
+        if(!file) return showToast('Selecciona un archivo', 'error');
+        
+        const data = new FormData();
+        data.append('update', file);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/update', true);
+        xhr.upload.onprogress = e => {
+            const p = Math.round((e.loaded / e.total) * 100);
+            document.getElementById('otaStatus').innerText = p + '%';
+            document.getElementById('progressFill').style.width = p + '%';
+        };
+        xhr.onload = () => {
+            if(xhr.status === 200) showToast('Actualizado. Reiniciando...', 'success');
+            else showToast('Error en subida', 'error');
+        };
+        xhr.send(data);
+    }
+    
+    function downloadLog() {
+        if(authToken) window.location.href = '/downloadLog'; 
+    }
+
+    document.getElementById('loginForm').onsubmit = login;
+    document.getElementById('configForm').onsubmit = saveConfig;
+    document.getElementById('refresh-wifi').onclick = scanNetworks;
+</script>
+</body>
+</html>

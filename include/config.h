@@ -1,44 +1,28 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 #pragma once
+
 #include <Arduino.h>
-#include <FS.h>
-#include <SPIFFS.h>
-#include <ArduinoJson.h>
-#include <bsec.h>
-#include <Preferences.h>
-#include <freertos/semphr.h>
-#include <freertos/FreeRTOS.h>
 #include <vector>
-#include <AsyncTCP.h>          
-#include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
+#include <bsec.h>         
+#include <freertos/semphr.h> 
+#include <freertos/timers.h> 
 
-extern bool scanRequested;
-extern unsigned long lastScanTime;
-extern const int scanInterval;
-extern String scannedNetworks;
-extern TimerHandle_t sseTimer;  // Declaración externa
-extern std::vector<String> storedReadings;
-extern Preferences preferences;
-extern SemaphoreHandle_t sensorMutex;
-class AsyncEventSource;
-extern AsyncEventSource events;
-String getSensorJson();
-String getDateTimeString();
+// --- Constantes Globales ---
+extern const char* configFilePath;
+extern const char* LOG_FILE;
+extern const char* indexURL;
+extern const char* version;
+extern const char* host;
+extern const char* url;
+extern const char* etagFilePath;
+extern const char nombreCodigo[]; 
+extern String githubAPIURL;       
 
-void writeLog(const String &message);
+#define MAX_LOG_SIZE 10240 
 
-// Definir tamaño máximo del archivo de log (ej: 10KB)
-#define MAX_LOG_SIZE 10240  // 10KB 
-#define LOG_FILE "/error.log"
-
-// Estructura para manejar logs
-struct SystemLog {
-    String timestamp;
-    String message;
-};
-
-// Definir la estructura WiFiNetwork
+// --- Estructuras ---
 struct WiFiNetwork {
     char ssid[32];
     char password[64];
@@ -46,76 +30,51 @@ struct WiFiNetwork {
     uint8_t encryptionType;
 };
 
-// Declarar el vector de redes como variable global
-extern std::vector<WiFiNetwork> networks;
-
-// ✅ Estructura global para datos del sensor
-struct SensorData {
-    float temperature;
-    float humidity;
-    float pressure;
-    float iaq;
-    uint8_t iaqAccuracy;
-    bool dataValid = false;
-};
-
-extern SensorData currentSensorData; // Declaración global
-
-extern const char* configFilePath;
-
-extern const char* host;
-extern const char* url;
-extern const char* etagFilePath;
-
-extern TaskHandle_t thingSpeakTaskHandle;
-
-extern bool otaInProgress;
-extern const char* indexURL;
-
-extern String webUsername;
-extern String webPassword;
-
-extern const char* version;  
-extern const char nombreCodigo[];
-extern String githubAPIURL;
-
-
 struct Config {
-    String googleSheetURL;
-    String thingSpeakAPIKey;
     String location;
     String telegramToken;
     String chatId;
-    unsigned long updateInterval;
-    unsigned long channelID;
     unsigned long updateOta;
+    String thingSpeakAPIKey;
+    long channelID;
+    
+    // MQTT
+    String mqttServer;
+    int mqttPort;
+    String mqttUser;
+    String mqttPassword;
+    String mqttTopic;
 };
 
-    extern Config config;
+// --- Variables Globales ---
+extern Config config;
+extern std::vector<WiFiNetwork> networks;
+extern String webUsername;
+extern String webPassword;
 
-
-    // Timing
-extern unsigned long CHANNEL_UPDATE_INTERVAL;
-extern unsigned long MONTH_IN_SECONDS;
-extern unsigned long STATE_SAVE_PERIOD;
-extern int LED_ON_DURATION_MS;
-extern unsigned long lastUpdateCheck;
-
-// Sensores BME680 y BSEC
-extern Bsec iaqSensor;
-extern uint8_t bsecState[BSEC_MAX_STATE_BLOB_SIZE];
-extern uint16_t stateUpdateCounter;
-extern unsigned long lastChannelUpdate;
-extern unsigned long lastSyncTime;
+// Variables BSEC y Sistema
+extern Bsec iaqSensor;            
+extern uint8_t bsecState[BSEC_MAX_STATE_BLOB_SIZE]; 
+extern uint16_t stateUpdateCounter; 
+extern unsigned long lastScanTime;
+extern const int scanInterval;
 extern String output;
-extern bool prevMinuteZero;   // Para envío cada minuto
+extern bool scanRequested;
+extern bool otaInProgress;        
+extern unsigned long lastUpdateCheck; 
+extern bool shouldRestart;
 
-// ✅ Funciones de configuración
+// RTOS Handles
+extern SemaphoreHandle_t sensorMutex; 
+extern TimerHandle_t sseTimer;        
+
+// Funciones
+void writeLog(const String &message);
+void initSPIFFS();
 bool loadConfig();
 bool saveConfig(const Config &newConfig);
-void initSPIFFS();
 void printConfig();
 void testFlash();
-
+String getDateTimeString();
 
 #endif

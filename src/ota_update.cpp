@@ -11,22 +11,15 @@
 #include "esp_ota_ops.h"
 #include "esp_task_wdt.h"
 
- // 🔹 Deshabilitar el Watchdog antes de la OTA
- void disableWatchdog() {
+// 🔹 Deshabilitar el Watchdog antes de la OTA
+void disableWatchdog() {
     Serial.println("🛑 Desactivando Watchdog y activando modo OTA...");
     otaInProgress = true;  // Indicar que la OTA está en curso
     esp_task_wdt_delete(NULL);  // Desactiva el Watchdog
 
-    // 🛑 Suspender la tarea de ThingSpeak
-    if (thingSpeakTaskHandle != NULL) {
-        Serial.println("🛑 Suspendiendo tarea ThingSpeak...");
-        vTaskSuspend(thingSpeakTaskHandle);
-    }
-
     // 📤 Enviar notificación a Telegram
     sendTelegramMessage("🛑 OTA iniciada: Suspendiendo procesos y Watchdog.", config);
 }
-
 
 void enableWatchdog() {
     Serial.println("✅ Reactivando Watchdog y reanudando procesos...");
@@ -34,19 +27,12 @@ void enableWatchdog() {
     esp_task_wdt_init(30, true);
     esp_task_wdt_add(NULL);
 
-    // ✅ Reanudar la tarea de ThingSpeak
-    if (thingSpeakTaskHandle != NULL) {
-        Serial.println("✅ Reanudando tarea ThingSpeak...");
-        vTaskResume(thingSpeakTaskHandle);
-    }
-
     // 📤 Enviar notificación a Telegram
     sendTelegramMessage("✅ OTA finalizada: Reactivando procesos y Watchdog.", config);
 }
 
-
- // 🔹 Obtener la URL del firmware desde la API de GitHub
- String getFirmwareURL() {
+// 🔹 Obtener la URL del firmware desde la API de GitHub
+String getFirmwareURL() {
     WiFiClientSecure client;
     client.setInsecure();
 
@@ -102,7 +88,6 @@ String getFinalURL(String initialURL) {
     return initialURL; // Si no hay redirección, usa la original
 }
 
-
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
 
@@ -115,14 +100,10 @@ void checkForUpdates() {
     int httpCode = http.GET();
 
     if (httpCode == 200) {
-        String jsonResponse = http.getString();  // 📌 Guardar la respuesta en un String
-        //Serial.println("📜 Respuesta JSON: " + jsonResponse);
-       
-
-        JsonDocument doc;  // 📌 Crear el buffer JSON
-        DeserializationError error = deserializeJson(doc, jsonResponse);  // Usar 'doc' en lugar de 'json'
+        String jsonResponse = http.getString();
         
-        
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, jsonResponse);
         
         if (error) {
             Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
@@ -130,12 +111,13 @@ void checkForUpdates() {
             return;
         }
 
-        String newVersion = doc["tag_name"];  // 📌 Extraer versión
-        String githubAPIURL = doc["assets"][0]["browser_download_url"];  // 📌 Extraer URL del firmware
-        
+        String newVersion = doc["tag_name"];
+        // IMPORTANTE: Aquí extraemos la URL de descarga para usarla luego si es necesario
+        // aunque getFirmwareURL la vuelve a pedir, es bueno tenerla o loguearla.
+        String downloadURL = doc["assets"][0]["browser_download_url"];
 
         Serial.printf("📌 Última versión en GitHub: %s\n", newVersion.c_str());
-        Serial.printf("📥 URL del firmware: %s\n", githubAPIURL.c_str());
+        Serial.printf("📥 URL del firmware: %s\n", downloadURL.c_str());
         
         if (newVersion == version) {
             Serial.println("✅ El ESP32 ya está actualizado.");
@@ -145,25 +127,23 @@ void checkForUpdates() {
             Serial.printf("📦 Espacio libre para OTA: %u bytes\n", ESP.getFreeSketchSpace());
             sendTelegramMessage("🚀 Nueva versión detectada. Iniciando OTA...", config);
             
-            // esp_task_wdt_init(30, true);
-            // esp_task_wdt_add(NULL);
+            // Liberar algo de memoria si es posible antes de empezar
             heap_caps_free(heap_caps_malloc(1, MALLOC_CAP_8BIT));
 
             downloadAndUpdate();
          }
         
-         } else {
+    } else {
            Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
-              writeLog("❌ Error HTTP: " + String(httpCode) + " al obtener información de Releases.");
+           writeLog("❌ Error HTTP: " + String(httpCode) + " al obtener información de Releases.");
     }
 
     http.end();
 }
 
-
 void checkForIndexUpdate() {
     if (otaInProgress) {
-        return;  // 🔹 No hacer nada si la OTA está en curso
+        return;
     }
 
     Serial.println("🔍 Verificando actualización de index.html...");
@@ -193,11 +173,10 @@ void checkForIndexUpdate() {
         String line = client.readStringUntil('\n');
         response += line + "\n";
 
-        // Buscar y extraer el ETag
         if (line.startsWith("ETag:")) {
             remoteETag = line.substring(6);
             remoteETag.trim();
-            remoteETag.replace("\"", "");  // Eliminar comillas
+            remoteETag.replace("\"", "");
         }
     }
     client.stop();
@@ -211,7 +190,6 @@ void checkForIndexUpdate() {
     Serial.print("🔖 ETag de GitHub: ");
     Serial.println(remoteETag);
 
-    // Leer el ETag almacenado en SPIFFS
     String localETag = "";
     if (SPIFFS.exists(etagFilePath)) {
         File file = SPIFFS.open(etagFilePath, "r");
@@ -222,15 +200,14 @@ void checkForIndexUpdate() {
         }
     } else {
         Serial.println("⚠️ Archivo index_etag.txt no encontrado. Creando...");
-        localETag = "N/A";  // Forzar la primera descarga
+        localETag = "N/A";
     }
 
-    // Comparar ETag remoto con el local
     if (remoteETag != localETag) {
         Serial.println("📥 Nueva versión detectada. Descargando index.html...");
         sendTelegramMessage("📥 Nueva versión detectada. Descargando index.html...", config);
     
-        if (updateFileFromURL(indexURL, "/index.html")) {  // 🔹 Usando indexURL directamente
+        if (updateFileFromURL(indexURL, "/index.html")) {
             File file = SPIFFS.open(etagFilePath, "w");
             if (file) {
                 file.print(remoteETag);
@@ -247,7 +224,6 @@ void checkForIndexUpdate() {
     } else {
         Serial.println("✅ index.html ya está actualizado.");
     }
-    
 }
 
 bool updateFileFromURL(const char* url, const char* path) {
@@ -260,7 +236,7 @@ bool updateFileFromURL(const char* url, const char* path) {
     HTTPClient http;
     Serial.println("🌐 Descargando archivo desde: " + String(url));
     
-    http.begin(client, url);  // 🔹 Asegúrate de que la URL es completa
+    http.begin(client, url);
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
@@ -269,7 +245,7 @@ bool updateFileFromURL(const char* url, const char* path) {
             Serial.println("❌ Error al abrir archivo en SPIFFS.");
             writeLog("❌ Error al abrir archivo en SPIFFS: " + String(path));
             sendTelegramMessage("❌ Error al abrir archivo en SPIFFS.", config);
-            http.end();  // 🔹 Asegurar que se liberen recursos
+            http.end();
             enableWatchdog();
             return false;
         }
@@ -286,7 +262,7 @@ bool updateFileFromURL(const char* url, const char* path) {
         Serial.println("✅ Archivo actualizado desde GitHub.");
         sendTelegramMessage("✅ Archivo actualizado desde GitHub.", config);
         
-        http.end();  // 🔹 Liberar recursos correctamente
+        http.end();
         enableWatchdog();
         return true;
     } else {
@@ -294,15 +270,14 @@ bool updateFileFromURL(const char* url, const char* path) {
         writeLog("❌ Error HTTP " + String(httpCode) + " al descargar archivo.");
         sendTelegramMessage("❌ Error HTTP " + String(httpCode) + " al descargar archivo.", config);
         
-        http.end();  // 🔹 Liberar recursos aunque falle la descarga
+        http.end();
         enableWatchdog();
         return false;
     }
 }
 
-
 void downloadAndUpdate() {
-    disableWatchdog(); // Desactivar Watchdog para evitar reinicios
+    disableWatchdog();
 
     String firmwareURL = getFirmwareURL();
     if (firmwareURL == "") {
@@ -330,28 +305,9 @@ void downloadAndUpdate() {
         int contentLength = http.getSize();
         Serial.printf("📥 Tamaño del firmware: %d bytes\n", contentLength);
 
-        if (contentLength < 1000000) { // Si el tamaño es sospechosamente bajo, reintentar
+        if (contentLength < 100000) { // Ajustado umbral mínimo
             Serial.println("❌ Tamaño del firmware demasiado pequeño. Reintentando...");
-            writeLog("❌ Tamaño del firmware demasiado pequeño. Reintentando...");
-            http.end();
-            enableWatchdog();
-            return;
-        }
-
-        const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
-        if (update_partition == NULL) {
-            Serial.println("❌ No se encontró una partición OTA válida.");
-            writeLog("❌ No se encontró una partición OTA válida.");
-            sendTelegramMessage("❌ No se encontró una partición OTA válida.", config);
-            http.end();
-            enableWatchdog();
-            return;
-        }
-
-        if (contentLength > ESP.getFreeSketchSpace()) {
-            Serial.println("❌ No hay suficiente espacio para actualizar.");
-            writeLog("❌ No hay suficiente espacio para actualizar.");
-            sendTelegramMessage("❌ No hay suficiente espacio para actualizar.", config);
+            writeLog("❌ Tamaño del firmware demasiado pequeño.");
             http.end();
             enableWatchdog();
             return;
@@ -421,6 +377,4 @@ void downloadAndUpdate() {
     }
 
     http.end();
-
 }
-
