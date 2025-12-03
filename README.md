@@ -19,13 +19,13 @@ graph LR
     A[BME680 Sensor] -->|I2C| B(ESP32)
     B -->|MQTT / 3 seg| C[Raspberry Pi 5<br>Mosquitto Broker]
     C --> D[Node-RED]
-    
+
     subgraph "Edge Gateway (Raspberry Pi)"
     D -->|Tiempo Real| E[InfluxDB]
     E --> F[Grafana Dashboard]
     D -->|CSV| G[Respaldo Local]
     end
-    
+
     subgraph "Nube"
     D -->|Promedio 1h| H[Google Sheets]
     D -->|Cada 20s| I[ThingSpeak]
@@ -91,15 +91,15 @@ ThingSpeak: API Key y Channel ID (opcional).
 2. Configuración del Servidor (Raspberry Pi)
 Se requiere instalar el siguiente stack de software:
 
-bash
 # 1. Broker MQTT
 sudo apt install mosquitto mosquitto-clients
 
 # 2. Node-RED
-bash <(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered)
+bash <(curl -sL [https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered](https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered))
 
 # 3. InfluxDB y Grafana
 # (Seguir instrucciones oficiales de sus respectivos repositorios apt)
+
 Despliegue de Lógica:
 
 Importar el archivo nodered_flow.json (incluido en este repo) dentro de Node-RED.
@@ -111,13 +111,14 @@ Configurar el Data Source en Grafana apuntando a la base de datos sensores de In
 📊 Estructura de Datos (InfluxDB)
 Los datos se almacenan en la base de datos sensores, measurement clima.
 
-Campo	Tipo	Descripción
-temperature	Float	Temperatura compensada (°C)
-humidity	Float	Humedad relativa (%)
-pressure	Float	Presión atmosférica (hPa)
-iaq	Float	Índice de Calidad de Aire (0-500)
-iaq_accuracy	Int	"Precisión de calibración (0=Estabilizando, 3=Calibrado)"
-gas_resistance	Float	Resistencia del sensor de gas (Ohms)
+Campo,Tipo,Descripción
+temperature,Float,Temperatura compensada (°C)
+humidity,Float,Humedad relativa (%)
+pressure,Float,Presión atmosférica (hPa)
+iaq,Float,Índice de Calidad de Aire (0-500)
+iaq_accuracy,Int,"Precisión de calibración (0=Estabilizando, 3=Calibrado)"
+gas_resistance,Float,Resistencia del sensor de gas (Ohms)
+
 Etiquetas (Tags):
 
 location: Ubicación definida en el ESP32 (ej: "Sala", "Patio").
@@ -129,7 +130,7 @@ El sistema envía un resumen horario al script de Google Apps (Esp32.gs).
 
 Lógica: Node-RED acumula lecturas durante 60 minutos.
 
-Disparo: Al minuto :00 de cada hora.
+Disparo: Al minuto :00 de cada hora。
 
 Datos: Promedio aritmético de valores analógicos + último estado conocido de valores discretos.
 
