@@ -143,6 +143,15 @@
                 <div class="form-group">
                     <label>📍 Ubicación del Sensor</label>
                     <input type="text" id="location" name="location">
+
+                    <h3>☁️ ThingSpeak</h3>
+                    <div class="form-group">
+                        <label>API Key (Write)</label>
+                        <input type="text" id="thingSpeakAPIKey" placeholder="XXXXXXXXXXXX">
+    
+                        <label>Channel ID</label>
+                        <input type="number" id="channelID">
+                    </div>
                     
                     <h3>📡 Servidor MQTT</h3>
                     <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px">
@@ -279,6 +288,8 @@
 
     function loadConfigToForm(config) {
         document.getElementById('location').value = config.location || '';
+        document.getElementById('thingSpeakAPIKey').value = config.thingSpeakAPIKey || '';
+        document.getElementById('channelID').value = config.channelID || '';
         document.getElementById('location-display').innerText = config.location || 'Desconocida';
         document.getElementById('telegramToken').value = config.telegramToken || '';
         document.getElementById('chatId').value = config.chatId || '';
@@ -298,6 +309,8 @@
         
         const data = {
             location: document.getElementById('location').value,
+            thingSpeakAPIKey: document.getElementById('thingSpeakAPIKey').value,
+            channelID: parseInt(document.getElementById('channelID').value),
             telegramToken: document.getElementById('telegramToken').value,
             chatId: document.getElementById('chatId').value,
             updateOta: parseInt(document.getElementById('updateOta').value),

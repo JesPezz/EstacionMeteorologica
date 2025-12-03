@@ -467,6 +467,8 @@ server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
         
         // Campos Generales
         doc["location"] = config.location;
+        doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
+        doc["channelID"] = config.channelID;
         doc["telegramToken"] = config.telegramToken;
         doc["chatId"] = config.chatId;
         doc["webUsername"] = webUsername;
@@ -519,6 +521,8 @@ server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
 
         // General
         if (!doc["location"].isNull()) newConfig.location = doc["location"].as<String>();
+        if (!doc["thingSpeakAPIKey"].isNull()) newConfig.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
+        if (!doc["channelID"].isNull()) newConfig.channelID = doc["channelID"].as<long>();
         if (!doc["telegramToken"].isNull()) newConfig.telegramToken = doc["telegramToken"].as<String>();
         if (!doc["chatId"].isNull()) newConfig.chatId = doc["chatId"].as<String>();
         

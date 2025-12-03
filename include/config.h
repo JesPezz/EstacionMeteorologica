@@ -35,6 +35,8 @@ struct Config {
     String telegramToken;
     String chatId;
     unsigned long updateOta;
+    String thingSpeakAPIKey;
+    long channelID;
     
     // MQTT
     String mqttServer;

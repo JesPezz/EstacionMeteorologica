@@ -246,8 +246,8 @@ if (shouldRestart) {
       // y tiene datos frescos. Es el momento perfecto para transmitir.
       
       static unsigned long lastPublish = 0;
-      // Mantenemos tu intervalo de 60s, pero ahora alineado con el ciclo del sensor
-      if (millis() - lastPublish >= 60000) {
+      // Mantenemos tu intervalo de 3s, pero ahora alineado con el ciclo del sensor
+      if (millis() - lastPublish >= 3000) {
           publishSensorData(); 
           lastPublish = millis();
           Serial.println("✅ Sincronización: Datos enviados en ventana segura.");

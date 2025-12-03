@@ -72,6 +72,8 @@ void publishSensorData() {
     // 1. Datos de Identificación
     doc["location"] = config.location;
     doc["device_id"] = WiFi.macAddress();
+    doc["ts_api_key"] = config.thingSpeakAPIKey;
+    doc["ts_channel"] = config.channelID;
     
     // 2. Datos del Sensor (TODOS los parámetros del BME680/BSEC)
     

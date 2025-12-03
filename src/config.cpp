@@ -84,6 +84,8 @@ bool loadConfig() {
     
     if (doc["updateOta"].is<unsigned long>()) config.updateOta = doc["updateOta"].as<unsigned long>() * 3600000;
     else config.updateOta = 3600000;
+    if (doc["thingSpeakAPIKey"].is<String>()) config.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
+    if (doc["channelID"].is<long>()) config.channelID = doc["channelID"].as<long>();
 
     // MQTT
     if (doc["mqttServer"].is<String>()) config.mqttServer = doc["mqttServer"].as<String>();
@@ -103,6 +105,8 @@ bool saveConfig(const Config& newConfig) {
     doc["webUsername"] = webUsername;
     doc["webPassword"] = webPassword;
     doc["updateOta"] = newConfig.updateOta / 3600000;
+    doc["thingSpeakAPIKey"] = newConfig.thingSpeakAPIKey;
+    doc["channelID"] = newConfig.channelID;
     
     doc["mqttServer"] = newConfig.mqttServer;
     doc["mqttPort"] = newConfig.mqttPort;
