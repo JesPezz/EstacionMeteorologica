@@ -1,0 +1,357 @@
+[
+    {
+        "id": "tab_clima",
+        "type": "tab",
+        "label": "Estación Meteorológica",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "mqtt_in",
+        "type": "mqtt in",
+        "z": "tab_clima",
+        "name": "Entrada MQTT",
+        "topic": "#",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "mqtt_local",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "debug_msg",
+                "func_influx",
+                "func_csv",
+                "ab74ac2f7bdf975a",
+                "30ad64804c89d91c"
+            ]
+        ]
+    },
+    {
+        "id": "debug_msg",
+        "type": "debug",
+        "z": "tab_clima",
+        "name": "Ver Mensaje",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 510,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "func_influx",
+        "type": "function",
+        "z": "tab_clima",
+        "name": "Formato InfluxDB",
+        "func": "// Aseguramos que todo sean números (Floats)\nmsg.payload = [\n    {\n            temperature: parseFloat(msg.payload.temperature),\n                    humidity: parseFloat(msg.payload.humidity),\n                            pressure: parseFloat(msg.payload.pressure),\n                                    iaq: parseFloat(msg.payload.iaq),\n                                            iaq_accuracy: parseFloat(msg.payload.iaqAccuracy),\n                                                    gas_resistance: parseFloat(msg.payload.gasResistance)\n                                                        },\n                                                            {\n                                                                    location: msg.payload.location || \"unknown\",\n                                                                            device_id: msg.payload.device_id || \"unknown\"\n                                                                                }\n                                                                                ];\n                                                                                \n                                                                                // Nombre de la tabla (Measurement)\n                                                                                msg.measurement = \"clima\";\n                                                                                \n                                                                                return msg",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 180,
+        "wires": [
+            [
+                "influx_out"
+            ]
+        ]
+    },
+    {
+        "id": "influx_out",
+        "type": "influxdb out",
+        "z": "tab_clima",
+        "influxdb": "influx_local",
+        "name": "Guardar en BD",
+        "measurement": "clima",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "database",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "organisation",
+        "bucket": "sensores",
+        "x": 660,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "func_gsheets",
+        "type": "function",
+        "z": "tab_clima",
+        "name": "Prep Google Sheets",
+        "func": "// El payload ya viene listo desde el nodo anterior.\n// Solo lo pasamos tal cual.\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 240,
+        "wires": [
+            [
+                "http_gsheets"
+            ]
+        ]
+    },
+    {
+        "id": "http_gsheets",
+        "type": "http request",
+        "z": "tab_clima",
+        "name": "Enviar a Google",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "query",
+        "url": "PEGA AQUI TU URL DE GOOGLE APPS SCRIPT",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1160,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "func_csv",
+        "type": "csv",
+        "z": "tab_clima",
+        "name": "A CSV",
+        "sep": ",",
+        "hdrin": "",
+        "hdrout": "none",
+        "multi": "one",
+        "ret": "\\n",
+        "temp": "location, temperature, humidity, pressure, iaq",
+        "skip": "0",
+        "strings": true,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 370,
+        "y": 320,
+        "wires": [
+            [
+                "file_local"
+            ]
+        ]
+    },
+    {
+        "id": "file_local",
+        "type": "file",
+        "z": "tab_clima",
+        "name": "Respaldo Local",
+        "filename": "/home/pi/datos_sensores.csv",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 540,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ab74ac2f7bdf975a",
+        "type": "delay",
+        "z": "tab_clima",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "20",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 380,
+        "y": 400,
+        "wires": [
+            [
+                "dbbd19061e66cc62"
+            ]
+        ]
+    },
+    {
+        "id": "dbbd19061e66cc62",
+        "type": "function",
+        "z": "tab_clima",
+        "name": "Prep ThingSpeak",
+        "func": "// Recuperamos la API Key que viene DENTRO del mensaje del ESP32\nvar dynamicKey = msg.payload.ts_api_key;\n\n// Validación de seguridad: Si no trae llave, no enviamos\nif (!dynamicKey || dynamicKey === \"\") {\n    node.warn(\"⚠️ Mensaje sin API Key de ThingSpeak. Ignorando.\");\n    return null; \n}\n\n// Mapeo para ThingSpeak\nmsg.payload = {\n    api_key: dynamicKey, // <--- Usamos la variable dinámica\n    field1: msg.payload.temperature,\n    field2: msg.payload.humidity,\n    field3: msg.payload.iaq,\n    field4: msg.payload.iaqAccuracy\n    // Agrega más fields si quieres\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 400,
+        "wires": [
+            [
+                "3acb5f685655540d"
+            ]
+        ]
+    },
+    {
+        "id": "3acb5f685655540d",
+        "type": "http request",
+        "z": "tab_clima",
+        "name": "",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "query",
+        "url": "https://api.thingspeak.com/update",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 770,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "30ad64804c89d91c",
+        "type": "function",
+        "z": "tab_clima",
+        "name": "Acumulador Promedio",
+        "func": "// Inicializar contadores si no existen\n// Usamos 'flow' directamente (variable nativa de Node-RED)\nvar count = flow.get('count') || 0;\n\n// Variables para Promedios (Floats)\nvar s_temp = flow.get('s_temp') || 0;\nvar s_hum = flow.get('s_hum') || 0;\nvar s_press = flow.get('s_press') || 0;\nvar s_iaq = flow.get('s_iaq') || 0;\nvar s_static = flow.get('s_static') || 0;\nvar s_co2 = flow.get('s_co2') || 0;\nvar s_voc = flow.get('s_voc') || 0;\nvar s_gas = flow.get('s_gas') || 0;     // Resistencia\nvar s_gasP = flow.get('s_gasP') || 0;   // Porcentaje\nvar s_rawT = flow.get('s_rawT') || 0;\nvar s_rawH = flow.get('s_rawH') || 0;\n\n// Validación básica\nif (msg.payload && (msg.payload.temperature !== undefined)) {\n\n    // Acumular valores flotantes (Sumas)\n    // Convertimos a Float para asegurar que sea suma matemática y no concatenación de texto\n    s_temp += parseFloat(msg.payload.temperature);\n    s_hum += parseFloat(msg.payload.humidity);\n    s_press += parseFloat(msg.payload.pressure);\n    s_iaq += parseFloat(msg.payload.iaq);\n    s_static += parseFloat(msg.payload.staticIaq);\n    s_co2 += parseFloat(msg.payload.co2Equivalent);\n    s_voc += parseFloat(msg.payload.breathVocEquivalent);\n    s_gas += parseFloat(msg.payload.gasResistance);\n    s_gasP += parseFloat(msg.payload.gasPercentage);\n    s_rawT += parseFloat(msg.payload.rawTemperature);\n    s_rawH += parseFloat(msg.payload.rawHumidity);\n\n    count++;\n\n    // Guardar acumulados en el contexto de Flujo\n    flow.set('count', count);\n    flow.set('s_temp', s_temp);\n    flow.set('s_hum', s_hum);\n    flow.set('s_press', s_press);\n    flow.set('s_iaq', s_iaq);\n    flow.set('s_static', s_static);\n    flow.set('s_co2', s_co2);\n    flow.set('s_voc', s_voc);\n    flow.set('s_gas', s_gas);\n    flow.set('s_gasP', s_gasP);\n    flow.set('s_rawT', s_rawT);\n    flow.set('s_rawH', s_rawH);\n\n    // --- MANEJO DE ENTEROS (Status) ---\n    // Estrategia: \"Último Valor Conocido\"\n    flow.set('last_acc', msg.payload.iaqAccuracy);\n    flow.set('last_stab', msg.payload.stabStatus);\n    flow.set('last_run', msg.payload.runInStatus);\n\n    // Metadatos\n    flow.set('lastLocation', msg.payload.location);\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 240,
+        "wires": [
+            [
+                "func_gsheets"
+            ]
+        ]
+    },
+    {
+        "id": "d47f2e679fb160f2",
+        "type": "inject",
+        "z": "tab_clima",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 690,
+        "y": 280,
+        "wires": [
+            [
+                "89f8a121fb52f0d9"
+            ]
+        ]
+    },
+    {
+        "id": "89f8a121fb52f0d9",
+        "type": "function",
+        "z": "tab_clima",
+        "name": "Calcular y Resetear",
+        "func": "var date = new Date();\nvar minutes = date.getMinutes();\n\n// Cambia 'minutes === 0' por 'true' para probar YA si quieres\nif (minutes === 0) { \n    \n    var count = flow.get('count') || 0;\n    \n    // Evitar división por cero si no hay datos\n    if (count === 0) return null;\n    \n    // Función auxiliar para formatear (2 decimales)\n    function fmt(val) { return (val / count).toFixed(2); }\n\n    // Preparar el Payload Completo para Google Sheets\n    // Recuperamos los datos acumulados usando 'flow.get'\n    msg.payload = {\n        // --- Metadatos ---\n        fechaHora: new Date().toISOString().replace('T', ' ').substring(0, 19),\n        location: flow.get('lastLocation'),\n        \n        // --- Promedios (Floats) ---\n        temperature: fmt(flow.get('s_temp')),\n        humidity: fmt(flow.get('s_hum')),\n        pressure: fmt(flow.get('s_press')),\n        iaq: fmt(flow.get('s_iaq')),\n        \n        staticIaq: fmt(flow.get('s_static')),\n        co2Equivalent: fmt(flow.get('s_co2')),\n        breathVocEquivalent: fmt(flow.get('s_voc')),\n        \n        rawTemperature: fmt(flow.get('s_rawT')),\n        rawHumidity: fmt(flow.get('s_rawH')),\n        \n        gasResistance: fmt(flow.get('s_gas')),\n        gasPercentage: fmt(flow.get('s_gasP')),\n        \n        // --- Enteros (Último estado registrado en la hora) ---\n        iaqAccuracy: flow.get('last_acc'),\n        stabStatus: flow.get('last_stab'),\n        runInStatus: flow.get('last_run'),\n        \n        samples: count // Para debug\n    };\n    \n    // --- RESETEAR TODO ---\n    var keys = ['count', 's_temp', 's_hum', 's_press', 's_iaq', 's_static', \n                's_co2', 's_voc', 's_gas', 's_gasP', 's_rawT', 's_rawH'];\n    \n    // Ponemos todas las variables en 0 para la siguiente hora\n    keys.forEach(k => flow.set(k, 0));\n    \n    return msg;\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 870,
+        "y": 320,
+        "wires": [
+            [
+                "func_gsheets"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_local",
+        "type": "mqtt-broker",
+        "name": "Mosquitto Local",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "influx_local",
+        "type": "influxdb",
+        "hostname": "127.0.0.1",
+        "port": "8086",
+        "protocol": "http",
+        "database": "sensores",
+        "name": "Influx Local",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://localhost:8086",
+        "timeout": "",
+        "rejectUnauthorized": true
+    },
+    {
+        "id": "938855b459452aa6",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-influxdb": "0.7.0"
+        }
+    }
+]

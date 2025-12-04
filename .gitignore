@@ -3,4 +3,4 @@
 *.hex
 *.elf
 Data/config.json
-*.json
+.vscode/
