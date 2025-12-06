@@ -25,9 +25,8 @@
             [
                 "debug_msg",
                 "func_influx",
-                "func_csv",
-                "ab74ac2f7bdf975a",
-                "30ad64804c89d91c"
+                "30ad64804c89d91c",
+                "65ba964267c9d2a7"
             ]
         ]
     },
@@ -114,7 +113,7 @@
         "method": "GET",
         "ret": "txt",
         "paytoqs": "query",
-        "url": "PEGA AQUI TU URL DE GOOGLE APPS SCRIPT",
+        "url": "https://script.google.com/macros/s/AKfycbyskgoHGsr6O8hhnkh9ShoYntCLnaUQA6d1IKrPJEcz-tULY8HWsC3Sbl1Ln9qbkxEvrQ/exec",
         "tls": "",
         "persist": false,
         "proxy": "",
@@ -169,36 +168,11 @@
         ]
     },
     {
-        "id": "ab74ac2f7bdf975a",
-        "type": "delay",
-        "z": "tab_clima",
-        "name": "",
-        "pauseType": "rate",
-        "timeout": "5",
-        "timeoutUnits": "seconds",
-        "rate": "1",
-        "nbRateUnits": "20",
-        "rateUnits": "second",
-        "randomFirst": "1",
-        "randomLast": "5",
-        "randomUnits": "seconds",
-        "drop": true,
-        "allowrate": false,
-        "outputs": 1,
-        "x": 380,
-        "y": 400,
-        "wires": [
-            [
-                "dbbd19061e66cc62"
-            ]
-        ]
-    },
-    {
         "id": "dbbd19061e66cc62",
         "type": "function",
         "z": "tab_clima",
         "name": "Prep ThingSpeak",
-        "func": "// Recuperamos la API Key que viene DENTRO del mensaje del ESP32\nvar dynamicKey = msg.payload.ts_api_key;\n\n// Validación de seguridad: Si no trae llave, no enviamos\nif (!dynamicKey || dynamicKey === \"\") {\n    node.warn(\"⚠️ Mensaje sin API Key de ThingSpeak. Ignorando.\");\n    return null; \n}\n\n// Mapeo para ThingSpeak\nmsg.payload = {\n    api_key: dynamicKey, // <--- Usamos la variable dinámica\n    field1: msg.payload.temperature,\n    field2: msg.payload.humidity,\n    field3: msg.payload.iaq,\n    field4: msg.payload.iaqAccuracy\n    // Agrega más fields si quieres\n};\n\nreturn msg;",
+        "func": "// Recuperamos la API Key que viene DENTRO del mensaje del ESP32\nvar dynamicKey = msg.payload.ts_api_key;\n\n// Validación de seguridad: Si no trae llave, no enviamos\nif (!dynamicKey || dynamicKey === \"\") {\n    node.warn(\"⚠️ Mensaje sin API Key de ThingSpeak. Ignorando.\");\n    return null; \n}\n\n// Mapeo para ThingSpeak\nmsg.payload = {\n    api_key: dynamicKey, // <--- Usamos la variable dinámica\n    field1: msg.payload.temperature,\n    field2: msg.payload.humidity,\n    field3: msg.payload.pressure,\n    field4: msg.payload.iaq\n    // Agrega más fields si quieres\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -240,7 +214,7 @@
         "type": "function",
         "z": "tab_clima",
         "name": "Acumulador Promedio",
-        "func": "// Inicializar contadores si no existen\n// Usamos 'flow' directamente (variable nativa de Node-RED)\nvar count = flow.get('count') || 0;\n\n// Variables para Promedios (Floats)\nvar s_temp = flow.get('s_temp') || 0;\nvar s_hum = flow.get('s_hum') || 0;\nvar s_press = flow.get('s_press') || 0;\nvar s_iaq = flow.get('s_iaq') || 0;\nvar s_static = flow.get('s_static') || 0;\nvar s_co2 = flow.get('s_co2') || 0;\nvar s_voc = flow.get('s_voc') || 0;\nvar s_gas = flow.get('s_gas') || 0;     // Resistencia\nvar s_gasP = flow.get('s_gasP') || 0;   // Porcentaje\nvar s_rawT = flow.get('s_rawT') || 0;\nvar s_rawH = flow.get('s_rawH') || 0;\n\n// Validación básica\nif (msg.payload && (msg.payload.temperature !== undefined)) {\n\n    // Acumular valores flotantes (Sumas)\n    // Convertimos a Float para asegurar que sea suma matemática y no concatenación de texto\n    s_temp += parseFloat(msg.payload.temperature);\n    s_hum += parseFloat(msg.payload.humidity);\n    s_press += parseFloat(msg.payload.pressure);\n    s_iaq += parseFloat(msg.payload.iaq);\n    s_static += parseFloat(msg.payload.staticIaq);\n    s_co2 += parseFloat(msg.payload.co2Equivalent);\n    s_voc += parseFloat(msg.payload.breathVocEquivalent);\n    s_gas += parseFloat(msg.payload.gasResistance);\n    s_gasP += parseFloat(msg.payload.gasPercentage);\n    s_rawT += parseFloat(msg.payload.rawTemperature);\n    s_rawH += parseFloat(msg.payload.rawHumidity);\n\n    count++;\n\n    // Guardar acumulados en el contexto de Flujo\n    flow.set('count', count);\n    flow.set('s_temp', s_temp);\n    flow.set('s_hum', s_hum);\n    flow.set('s_press', s_press);\n    flow.set('s_iaq', s_iaq);\n    flow.set('s_static', s_static);\n    flow.set('s_co2', s_co2);\n    flow.set('s_voc', s_voc);\n    flow.set('s_gas', s_gas);\n    flow.set('s_gasP', s_gasP);\n    flow.set('s_rawT', s_rawT);\n    flow.set('s_rawH', s_rawH);\n\n    // --- MANEJO DE ENTEROS (Status) ---\n    // Estrategia: \"Último Valor Conocido\"\n    flow.set('last_acc', msg.payload.iaqAccuracy);\n    flow.set('last_stab', msg.payload.stabStatus);\n    flow.set('last_run', msg.payload.runInStatus);\n\n    // Metadatos\n    flow.set('lastLocation', msg.payload.location);\n}\n\nreturn null;",
+        "func": "// Usamos 'flow' directamente para guardar los datos globales\n// Recuperamos el diccionario de dispositivos (o creamos uno nuevo)\nvar devices = flow.get('devices') || {};\n\n// Validación de seguridad\nif (msg.payload && (msg.payload.temperature !== undefined) && msg.payload.location) {\n    var loc = msg.payload.location;\n\n    // Si es la primera vez que vemos este dispositivo, inicializamos sus variables\n    if (!devices[loc]) {\n        devices[loc] = {\n            count: 0,\n            s_temp: 0, s_hum: 0, s_press: 0, s_iaq: 0,\n            s_static: 0, s_co2: 0, s_voc: 0, s_gas: 0, s_gasP: 0, s_rawT: 0, s_rawH: 0,\n            last_acc: 0, last_stab: 0, last_run: 0\n        };\n    }\n\n    var d = devices[loc]; // Atajo para trabajar con ESTE dispositivo\n\n    // Acumular valores (Sumas)\n    d.s_temp += parseFloat(msg.payload.temperature);\n    d.s_hum += parseFloat(msg.payload.humidity);\n    d.s_press += parseFloat(msg.payload.pressure);\n    d.s_iaq += parseFloat(msg.payload.iaq);\n    d.s_static += parseFloat(msg.payload.staticIaq);\n    d.s_co2 += parseFloat(msg.payload.co2Equivalent);\n    d.s_voc += parseFloat(msg.payload.breathVocEquivalent);\n    d.s_gas += parseFloat(msg.payload.gasResistance);\n    d.s_gasP += parseFloat(msg.payload.gasPercentage);\n    d.s_rawT += parseFloat(msg.payload.rawTemperature);\n    d.s_rawH += parseFloat(msg.payload.rawHumidity);\n\n    // Contar muestra\n    d.count++;\n\n    // Guardar último estado conocido\n    d.last_acc = msg.payload.iaqAccuracy;\n    d.last_stab = msg.payload.stabStatus;\n    d.last_run = msg.payload.runInStatus;\n\n    // Guardar cambios en memoria de Flujo\n    flow.set('devices', devices);\n}\n\nreturn null;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -289,7 +263,7 @@
         "type": "function",
         "z": "tab_clima",
         "name": "Calcular y Resetear",
-        "func": "var date = new Date();\nvar minutes = date.getMinutes();\n\n// Cambia 'minutes === 0' por 'true' para probar YA si quieres\nif (minutes === 0) { \n    \n    var count = flow.get('count') || 0;\n    \n    // Evitar división por cero si no hay datos\n    if (count === 0) return null;\n    \n    // Función auxiliar para formatear (2 decimales)\n    function fmt(val) { return (val / count).toFixed(2); }\n\n    // Preparar el Payload Completo para Google Sheets\n    // Recuperamos los datos acumulados usando 'flow.get'\n    msg.payload = {\n        // --- Metadatos ---\n        fechaHora: new Date().toISOString().replace('T', ' ').substring(0, 19),\n        location: flow.get('lastLocation'),\n        \n        // --- Promedios (Floats) ---\n        temperature: fmt(flow.get('s_temp')),\n        humidity: fmt(flow.get('s_hum')),\n        pressure: fmt(flow.get('s_press')),\n        iaq: fmt(flow.get('s_iaq')),\n        \n        staticIaq: fmt(flow.get('s_static')),\n        co2Equivalent: fmt(flow.get('s_co2')),\n        breathVocEquivalent: fmt(flow.get('s_voc')),\n        \n        rawTemperature: fmt(flow.get('s_rawT')),\n        rawHumidity: fmt(flow.get('s_rawH')),\n        \n        gasResistance: fmt(flow.get('s_gas')),\n        gasPercentage: fmt(flow.get('s_gasP')),\n        \n        // --- Enteros (Último estado registrado en la hora) ---\n        iaqAccuracy: flow.get('last_acc'),\n        stabStatus: flow.get('last_stab'),\n        runInStatus: flow.get('last_run'),\n        \n        samples: count // Para debug\n    };\n    \n    // --- RESETEAR TODO ---\n    var keys = ['count', 's_temp', 's_hum', 's_press', 's_iaq', 's_static', \n                's_co2', 's_voc', 's_gas', 's_gasP', 's_rawT', 's_rawH'];\n    \n    // Ponemos todas las variables en 0 para la siguiente hora\n    keys.forEach(k => flow.set(k, 0));\n    \n    return msg;\n}\n\nreturn null;",
+        "func": "var date = new Date();\nvar minutes = date.getMinutes();\n\n// Ejecutar solo al minuto 0\n// (Cambia 'minutes === 0' a 'true' si quieres probar ahora mismo)\nif (minutes === 0) { \n    \n    // Usamos 'flow' directamente\n    var devices = flow.get('devices') || {};\n    var outputMessages = []; // Aquí guardaremos los mensajes para cada hoja\n\n    // Obtenemos la lista de ubicaciones registradas\n    var locations = Object.keys(devices);\n\n    if (locations.length === 0) return null;\n\n    // Función auxiliar para promediar y formatear\n    function fmt(val, n) { return (val / n).toFixed(2); }\n\n    // Recorremos cada dispositivo\n    for (var i = 0; i < locations.length; i++) {\n        var loc = locations[i];\n        var d = devices[loc];\n\n        // Solo enviamos si tuvo datos esta hora\n        if (d.count > 0) {\n            var msgPayload = {\n                // --- Metadatos ---\n                fechaHora: new Date().toISOString().replace('T', ' ').substring(0, 19),\n                location: loc, \n                \n                // --- Promedios ---\n                temperature: fmt(d.s_temp, d.count),\n                humidity: fmt(d.s_hum, d.count),\n                pressure: fmt(d.s_press, d.count),\n                iaq: fmt(d.s_iaq, d.count),\n                \n                staticIaq: fmt(d.s_static, d.count),\n                co2Equivalent: fmt(d.s_co2, d.count),\n                breathVocEquivalent: fmt(d.s_voc, d.count),\n                \n                rawTemperature: fmt(d.s_rawT, d.count),\n                rawHumidity: fmt(d.s_rawH, d.count),\n                \n                gasResistance: fmt(d.s_gas, d.count),\n                gasPercentage: fmt(d.s_gasP, d.count),\n                \n                // --- Estados ---\n                iaqAccuracy: d.last_acc,\n                stabStatus: d.last_stab,\n                runInStatus: d.last_run,\n                \n                samples: d.count\n            };\n            \n            // Agregamos el mensaje a la lista de salida\n            outputMessages.push({ payload: msgPayload });\n        }\n    }\n\n    // RESETEAR TODO: Borramos el diccionario en 'flow' para empezar limpios\n    flow.set('devices', {});\n    \n    // Node-RED enviará estos mensajes uno tras otro\n    return [ outputMessages ];\n}\n\nreturn null;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -301,6 +275,26 @@
         "wires": [
             [
                 "func_gsheets"
+            ]
+        ]
+    },
+    {
+        "id": "65ba964267c9d2a7",
+        "type": "function",
+        "z": "tab_clima",
+        "name": "Limitador por Dispositivo",
+        "func": "// Usamos el contexto del flujo para recordar cuándo pasó cada dispositivo\nvar lastSent = flow.get('ts_last_sent') || {};\n\n// Identificamos el dispositivo (por ubicación o ID)\nvar deviceKey = msg.payload.location || \"unknown\";\nvar now = Date.now();\n\n// Tiempo de espera en milisegundos (20 segundos)\nvar cooldown = 20000; \n\n// Verificamos si este dispositivo específico puede pasar\nif (!lastSent[deviceKey] || (now - lastSent[deviceKey] > cooldown)) {\n    \n    // ¡Luz Verde! Actualizamos su última hora de paso\n    lastSent[deviceKey] = now;\n    flow.set('ts_last_sent', lastSent);\n    \n    return msg; // Dejar pasar el mensaje\n}\n\n// ¡Luz Roja! Aún no han pasado 20s para ESTE dispositivo\nreturn null; // Bloquear mensaje",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 400,
+        "wires": [
+            [
+                "dbbd19061e66cc62"
             ]
         ]
     },
@@ -347,7 +341,7 @@
         "rejectUnauthorized": true
     },
     {
-        "id": "938855b459452aa6",
+        "id": "c27c6f98422ebb1f",
         "type": "global-config",
         "env": [],
         "modules": {
