@@ -17,7 +17,7 @@
 #include <vector>
 #include <AsyncEventSource.h>
 #include <freertos/timers.h>
-
+#include "led_task.h"
 SemaphoreHandle_t wifiMutex = NULL;
 std::vector<WiFiNetwork> wifiNetworks; // Declare wifiNetworks globally
 
@@ -401,7 +401,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         if (Update.end(true)) {
             Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
             request->send(200, "text/plain", "✅ OTA completada. Reiniciando...");
-            ledSuccess();
+            signalLed(LED_SUCCESS);
             delay(1000);
             ESP.restart();
         } else {

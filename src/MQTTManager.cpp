@@ -2,7 +2,7 @@
 #include "led.h"
 #include "SensorManager.h" // Para acceder a los datos del sensor
 #include "BME_Sensor.h"    // Para acceder a iaqSensor
-
+#include "led_task.h"
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 
@@ -61,55 +61,21 @@ void setupMQTT() {
 }
 
 void publishSensorData() {
-    // Solo publicamos si estamos conectados
-    if (!mqttClient.connected()) {
-        Serial.println("⚠️ No se puede publicar: MQTT desconectado");
-        return;
-    }
+    if (!mqttClient.connected()) return;
 
-    JsonDocument doc;
+    JsonDocument doc; // Creamos el documento vacío
     
-    // 1. Datos de Identificación
-    doc["location"] = config.location;
-    doc["device_id"] = WiFi.macAddress();
-    doc["ts_api_key"] = config.thingSpeakAPIKey;
-    doc["ts_channel"] = config.channelID;
-    
-    // 2. Datos del Sensor (TODOS los parámetros del BME680/BSEC)
-    
-    // Principales
-    doc["temperature"] = iaqSensor.temperature;       // Temp compensada
-    doc["humidity"] = iaqSensor.humidity;             // Humedad compensada
-    doc["pressure"] = iaqSensor.pressure / 100.0;     // Presión en hPa
-    doc["iaq"] = iaqSensor.iaq;                       // Índice de Calidad de Aire (0-500)
-    
-    // Diagnóstico y Precisión (Claves para coincidir con tu CSV)
-    doc["iaqAccuracy"] = iaqSensor.iaqAccuracy;       // 0=Estabilizando, 1-3=Válido
-    doc["staticIaq"] = iaqSensor.staticIaq;           // IAQ sin autocalibración móvil
-    doc["co2Equivalent"] = iaqSensor.co2Equivalent;   // CO2 estimado (ppm)
-    doc["breathVocEquivalent"] = iaqSensor.breathVocEquivalent; // VOC estimado (ppm)
-    
-    // Valores "Raw" (Crudos)
-    doc["rawTemperature"] = iaqSensor.rawTemperature;
-    doc["rawHumidity"] = iaqSensor.rawHumidity;
-    doc["gasResistance"] = iaqSensor.gasResistance;   // Resistencia del gas en Ohms
-    doc["gasPercentage"] = iaqSensor.gasPercentage;
-    
-    // Estados del sistema
-    doc["stabilizationStatus"] = iaqSensor.stabStatus; // 1 = listo
-    doc["runInStatus"] = iaqSensor.runInStatus;        // 1 = listo
+    // ¡MAGIA! ✨ Llenamos los datos con una sola línea
+    populateSensorJson(doc); 
 
-    // 3. Serializar a String
     String payload;
     serializeJson(doc, payload);
 
-    // 4. Publicar
-    String topic = config.mqttTopic;
-    if (topic == "") topic = "estacion/datos"; 
+    mqttClient.publish(config.mqttTopic.c_str(), 1, false, payload.c_str());
+    // ... logs y leds ...
 
-    uint16_t packetId = mqttClient.publish(topic.c_str(), 1, false, payload.c_str());
     
-    Serial.printf("📤 Publicando MQTT Completo [%s]: %s\n", topic.c_str(), payload.c_str());
+    Serial.printf("📤 Publicando MQTT Completo [%s]: %s\n", config.mqttTopic.c_str(), payload.c_str());
     
-    ledSuccess(); 
+    signalLed(LED_SUCCESS); 
 }

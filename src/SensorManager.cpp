@@ -54,76 +54,71 @@ void checkClockSync() {
 }
 
 // 🟢 CAMBIO PRINCIPAL: Ahora devuelve bool para sincronizar MQTT
-bool readSensorData() {
-  static unsigned long calibrationStartTime = 0;
-  static unsigned long lastUpdateTime = 0;
-  const unsigned long estimatedCalibrationTime = 300000; // 5 minutos de calentamiento
-  const unsigned long updateInterval = 1000; 
-  static int lastPercentage = -1;
+// En SensorManager.cpp
 
-  // 1. BSEC decide si es momento de medir (cada 3s en modo LP)
+bool readSensorData() {
+  // Solo verificamos si la librería BSEC completó un ciclo de medición
   if (iaqSensor.run()) {
       
-      // CASO A: El sensor aún se está estabilizando (Precisión 0)
-      if (iaqSensor.iaqAccuracy == 0) {
-          if (calibrationStartTime == 0) {
-              calibrationStartTime = millis();
-              Serial.println("Iniciando calibración... 0%");
-          }
-
-          if (millis() - lastUpdateTime >= updateInterval) {
-              int progress = (millis() - calibrationStartTime) * 100 / estimatedCalibrationTime;
-              progress = constrain(progress, 0, 99);
-              
-              if (progress != lastPercentage) {
-                  Serial.print("Progreso: ");
-                  Serial.print(progress);
-                  Serial.println("%   ");
-                  lastPercentage = progress;
-              }
-              lastUpdateTime = millis();
-          }
-          // 🛑 Retornamos false aquí para NO enviar MQTT durante la fase delicada de calentamiento
-          // Esto protege la calibración inicial de interferencias.
-          return false; 
-      } 
+      // Construimos el string de salida para Serial (Igual que antes)
+      output = String(iaqSensor.iaq);
+      output += ", " + String(iaqSensor.iaqAccuracy);
+      output += ", " + String(iaqSensor.staticIaq);
+      output += ", " + String(iaqSensor.co2Equivalent);
+      output += ", " + String(iaqSensor.breathVocEquivalent);
+      output += ", " + String(iaqSensor.rawTemperature);
+      output += ", " + String(iaqSensor.pressure);
+      output += ", " + String(iaqSensor.rawHumidity);
+      output += ", " + String(iaqSensor.gasResistance);
+      output += ", " + String(iaqSensor.stabStatus);
+      output += ", " + String(iaqSensor.runInStatus);
+      output += ", " + String(iaqSensor.temperature);
+      output += ", " + String(iaqSensor.humidity);
+      output += ", " + String(iaqSensor.gasPercentage);
       
-      // CASO B: El sensor tiene datos válidos (Precisión >= 0 y fase de calentamiento terminada)
-      else {
-          if (calibrationStartTime != 0) {
-              Serial.println("\n✅ Calibración completada");
-              calibrationStartTime = 0;
-              lastPercentage = -1;
-          }
-          
-          // Construimos el string de salida para Serial
-          output = String(iaqSensor.iaq);
-          output += ", " + String(iaqSensor.iaqAccuracy);
-          output += ", " + String(iaqSensor.staticIaq);
-          output += ", " + String(iaqSensor.co2Equivalent);
-          output += ", " + String(iaqSensor.breathVocEquivalent);
-          output += ", " + String(iaqSensor.rawTemperature);
-          output += ", " + String(iaqSensor.pressure);
-          output += ", " + String(iaqSensor.rawHumidity);
-          output += ", " + String(iaqSensor.gasResistance);
-          output += ", " + String(iaqSensor.stabStatus);
-          output += ", " + String(iaqSensor.runInStatus);
-          output += ", " + String(iaqSensor.temperature);
-          output += ", " + String(iaqSensor.humidity);
-          output += ", " + String(iaqSensor.gasPercentage);
-          
-          Serial.println(output); // Ver datos en monitor serie
-          updateState();          // Guardar aprendizaje en NVS si es necesario
+      Serial.println(output); // Ver datos en monitor serie
+      
+      updateState(); // Guardar estado en NVS si corresponde
 
-          // ✅ RETORNO CLAVE: Avisamos a main.cpp que tenemos datos frescos
-          // y que el bus I2C está libre para usar MQTT.
-          return true;
-      }
+      // ✅ RETORNAMOS TRUE SIEMPRE QUE HAYA DATOS
+      // No importa si accuracy es 0, 1 o 3.
+      return true;
   } 
   
-  // Si BSEC no midió en este ciclo, verificamos estado pero no hacemos nada más
+  // Si no hubo medición nueva
   else {
       checkIaqSensorStatus();
       return false;
   }
+}
+
+void populateSensorJson(JsonDocument& doc) {
+    // 1. Datos de Identificación (Copiados de config global)
+    doc["location"] = config.location;
+    doc["device_id"] = WiFi.macAddress();
+    doc["ts_api_key"] = config.thingSpeakAPIKey; // Si aun lo usas
+    doc["ts_channel"] = config.channelID;
+    
+    // Agregar Timestamp actual (importante para datos offline)
+    doc["timestamp"] = getFormattedDateTime(); // Usando tu TimeManager
+
+    // 2. Datos del Sensor (Tomados de la variable global iaqSensor)
+    doc["temperature"] = iaqSensor.temperature;
+    doc["humidity"] = iaqSensor.humidity;
+    doc["pressure"] = iaqSensor.pressure / 100.0;
+    doc["iaq"] = iaqSensor.iaq;
+    
+    // Diagnósticos
+    doc["iaqAccuracy"] = iaqSensor.iaqAccuracy;
+    doc["staticIaq"] = iaqSensor.staticIaq;
+    doc["co2Equivalent"] = iaqSensor.co2Equivalent;
+    doc["breathVocEquivalent"] = iaqSensor.breathVocEquivalent;
+    
+    // Datos crudos
+    doc["rawTemperature"] = iaqSensor.rawTemperature;
+    doc["rawHumidity"] = iaqSensor.rawHumidity;
+    doc["gasResistance"] = iaqSensor.gasResistance;
+    doc["gasPercentage"] = iaqSensor.gasPercentage;
+    doc["stabilizationStatus"] = iaqSensor.stabStatus;
+    doc["runInStatus"] = iaqSensor.runInStatus;
 }

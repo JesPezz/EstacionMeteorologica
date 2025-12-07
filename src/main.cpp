@@ -23,6 +23,15 @@
 #include "web_server.h"
 #include <freertos/timers.h>
 #include "MQTTManager.h"
+#include "led_task.h"
+#include "OfflineManager.h"
+
+// En main.cpp (variables globales o estáticas)
+int lastProcessedHour = -1; 
+unsigned long backlogWaitTime = 0;
+bool backlogReady = false;
+int lastProcessedMinute = -1; // Variable auxiliar para pruebas
+
 
 void setup() {
   
@@ -115,7 +124,7 @@ if (!testFile) {
   // Obtener el tamaño de la partición OTA
   Serial.printf("📦 Tamaño de la partición actual: %u bytes (%.2f MB)\n", ESP.getSketchSize(), ESP.getSketchSize() / (1024.0 * 1024.0));
   Serial.printf("📦 Espacio libre para OTA: %u bytes (%.2f MB)\n", ESP.getFreeSketchSpace(), ESP.getFreeSketchSpace() / (1024.0 * 1024.0));
-  
+  setupLedTask();
   startAPMode();
   startWebServer();
   Serial.println();
@@ -193,70 +202,104 @@ xTimerStart(sseTimer, 0);
 }
 
 void loop() {
-  checkWiFiConnection(); // Verificar la conexión WiFi y reconectar si es necesario
-  yield();
+  // 1. MANTENIMIENTO DEL SISTEMA
+  checkWiFiConnection(); 
+  
+  if (otaInProgress) {
+      yield(); 
+      return; 
+  }
+  
+  // Actualizaciones OTA y reinicio
   if (millis() - lastUpdateCheck >= config.updateOta) {
-        stateUpdateCounter = 0;  // Restablecer el contador
-        updateState();  // Llamar a la función
-        checkForIndexUpdate();
-        checkForUpdates();
-        loadState();
-        Serial.println();
-        Serial.println("loadState() se ha cargado.");
-        lastUpdateCheck = millis();
-    }
-    
-if (shouldRestart) {
-      Serial.println("🔄 Reiniciando sistema de forma segura...");
-      delay(1000); // Aquí SÍ podemos usar delay porque estamos en el loop principal
+      stateUpdateCounter = 0;
+      updateState();
+      checkForIndexUpdate();
+      checkForUpdates();
+      loadState();
+      lastUpdateCheck = millis();
+  }
+
+  if (shouldRestart) {
+      Serial.println("🔄 Reiniciando sistema...");
+      delay(1000);
       ESP.restart();
   }
-    if (otaInProgress) {
-      yield(); // Alimenta el WDT
-      return;  // 🔹 Si la OTA está en proceso, no ejecutamos nada más
-  }
 
-  // --- NUEVA LÓGICA DE ESCANEO WIFI ---
-  // El servidor web solicitó un escaneo. Lo hacemos aquí porque es seguro.
+  // ✅ ESCANEO MANUAL (Solicitado desde la Web)
   if (scanRequested) {
-      WiFiManager::scanNetworks(networks);
-      scanRequested = false; // Bajamos la bandera
+      Serial.println("🔍 Escaneo solicitado por usuario web...");
+      WiFiManager::scanNetworks(networks); 
+      scanRequested = false; 
   }
 
-  // 1. Gestión de Conexión MQTT "Suave"
-  // Solo intentamos conectar si NO estamos en un momento crítico de medición
-  // y usamos un timer no bloqueante.
-  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
-      static unsigned long lastMqttAttempt = 0;
-      // Aumentamos el tiempo entre intentos a 10s para dejar respirar a BSEC
-      if (millis() - lastMqttAttempt > 10000) { 
-          lastMqttAttempt = millis();
-          Serial.println("📡 Mantenimiento MQTT: Intentando reconectar...");
-          connectToMqtt();
-      }
-  }
-   
-  // 3. BSEC tiene la prioridad absoluta
-  // Ejecutamos el sensor y capturamos si hubo datos nuevos
+  // 2. GESTIÓN DEL SENSOR (BSEC)
   bool nuevosDatos = readSensorData(); 
 
-  // 4. Lógica de Envío Sincronizada (Evita colisiones)
-  if (nuevosDatos) {
-      // SOLO entramos aquí si BSEC acaba de terminar de usar el bus I2C
-      // y tiene datos frescos. Es el momento perfecto para transmitir.
+  // 3. LÓGICA PRINCIPAL
+  
+  // CASO A: ONLINE (WiFi + MQTT) ✅
+  if (WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
       
-      static unsigned long lastPublish = 0;
-      // Mantenemos tu intervalo de 3s, pero ahora alineado con el ciclo del sensor
-      if (millis() - lastPublish >= 3000) {
-          publishSensorData(); 
-          lastPublish = millis();
-          Serial.println("✅ Sincronización: Datos enviados en ventana segura.");
+      // A1. Envío en Tiempo Real
+      if (nuevosDatos) {
+          static unsigned long lastPublish = 0;
+          if (millis() - lastPublish >= 3000) {
+              publishSensorData(); 
+              lastPublish = millis();
+              Serial.println("✅ Datos enviados en tiempo real.");
+          }
+      }
+
+      // A2. Recuperación de Backlog (con espera aleatoria)
+      if (SPIFFS.exists(BACKLOG_FILE)) {
+          if (!backlogReady && backlogWaitTime == 0) {
+              long wait = random(5000, 20000); 
+              backlogWaitTime = millis() + wait;
+              Serial.printf("⏳ Backlog detectado. Esperando %d ms...\n", wait);
+              backlogReady = true;
+          }
+
+          if (backlogReady && millis() > backlogWaitTime) {
+              processBacklog(); 
+              backlogWaitTime = 0; 
+              backlogReady = false; 
+          }
+      }
+  } 
+  
+  // CASO B: OFFLINE ❌
+  else {
+      // Intentar reconectar MQTT si hay WiFi
+      if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+          static unsigned long lastMqttAttempt = 0;
+          if (millis() - lastMqttAttempt > 10000) { 
+              lastMqttAttempt = millis();
+              Serial.println("📡 WiFi OK. Intentando recuperar MQTT...");
+              connectToMqtt();
+          }
+      }
+
+      // B1. Guardar Respaldo
+      if (nuevosDatos) {
+          struct tm timeinfo;
+          getCurrentTime(&timeinfo);
+
+          // 🏭 MODO PRODUCCIÓN (Cada hora en punto)
+          if (timeinfo.tm_min == 0 && timeinfo.tm_hour != lastProcessedHour) {
+              
+              Serial.println("⏱️ Minuto nuevo detectado. Guardando respaldo de prueba...");
+              lastProcessedHour = timeinfo.tm_hour; 
+
+              JsonDocument doc; 
+              populateSensorJson(doc); 
+              saveToBacklog(doc); 
+          }
       }
   }
 
   checkClockSync();
-  // Pequeño yield para que el Stack TCP/IP procese paquetes en background
-  yield();
+  yield(); 
 }
 
 
