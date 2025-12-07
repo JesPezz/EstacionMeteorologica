@@ -4,3 +4,4 @@
 *.elf
 Data/config.json
 .vscode/
+Data/wifi.json

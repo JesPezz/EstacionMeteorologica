@@ -285,10 +285,16 @@ void loop() {
           struct tm timeinfo;
           getCurrentTime(&timeinfo);
 
+          // 🧪 MODO PRUEBAS (Cada minuto)
+          // if (timeinfo.tm_sec == 0 && timeinfo.tm_min != lastProcessedMinute) {
+
           // 🏭 MODO PRODUCCIÓN (Cada hora en punto)
           if (timeinfo.tm_min == 0 && timeinfo.tm_hour != lastProcessedHour) {
+
+              // Serial.println("⏱️ Minuto nuevo detectado. Guardando respaldo de prueba...");
+              // lastProcessedMinute = timeinfo.tm_min;
               
-              Serial.println("⏱️ Minuto nuevo detectado. Guardando respaldo de prueba...");
+              Serial.println("⏱️ Guardando respaldo de prueba...");
               lastProcessedHour = timeinfo.tm_hour; 
 
               JsonDocument doc; 

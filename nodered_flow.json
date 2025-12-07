@@ -19,14 +19,12 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 150,
+        "x": 80,
         "y": 160,
         "wires": [
             [
                 "debug_msg",
-                "func_influx",
-                "30ad64804c89d91c",
-                "65ba964267c9d2a7"
+                "c0c93311982578db"
             ]
         ]
     },
@@ -43,8 +41,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 510,
-        "y": 80,
+        "x": 290,
+        "y": 60,
         "wires": []
     },
     {
@@ -59,8 +57,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 410,
-        "y": 180,
+        "x": 610,
+        "y": 320,
         "wires": [
             [
                 "influx_out"
@@ -81,8 +79,8 @@
         "retentionPolicyV18Flux": "",
         "org": "organisation",
         "bucket": "sensores",
-        "x": 660,
-        "y": 180,
+        "x": 820,
+        "y": 320,
         "wires": []
     },
     {
@@ -97,8 +95,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 960,
-        "y": 240,
+        "x": 900,
+        "y": 200,
         "wires": [
             [
                 "http_gsheets"
@@ -121,8 +119,8 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 1160,
-        "y": 240,
+        "x": 940,
+        "y": 140,
         "wires": [
             []
         ]
@@ -142,8 +140,8 @@
         "strings": true,
         "include_empty_strings": "",
         "include_null_values": "",
-        "x": 370,
-        "y": 320,
+        "x": 1430,
+        "y": 540,
         "wires": [
             [
                 "file_local"
@@ -161,8 +159,8 @@
         "createDir": false,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 540,
-        "y": 320,
+        "x": 1600,
+        "y": 540,
         "wires": [
             []
         ]
@@ -179,8 +177,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 590,
-        "y": 400,
+        "x": 850,
+        "y": 380,
         "wires": [
             [
                 "3acb5f685655540d"
@@ -203,8 +201,8 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 770,
-        "y": 400,
+        "x": 1050,
+        "y": 380,
         "wires": [
             []
         ]
@@ -221,8 +219,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 440,
-        "y": 240,
+        "x": 640,
+        "y": 200,
         "wires": [
             [
                 "func_gsheets"
@@ -250,8 +248,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 690,
-        "y": 280,
+        "x": 610,
+        "y": 260,
         "wires": [
             [
                 "89f8a121fb52f0d9"
@@ -270,8 +268,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 870,
-        "y": 320,
+        "x": 830,
+        "y": 260,
         "wires": [
             [
                 "func_gsheets"
@@ -290,11 +288,67 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 330,
-        "y": 400,
+        "x": 610,
+        "y": 380,
         "wires": [
             [
                 "dbbd19061e66cc62"
+            ]
+        ]
+    },
+    {
+        "id": "26c7068e4b2abdd2",
+        "type": "switch",
+        "z": "tab_clima",
+        "name": "Filtro Calibración",
+        "property": "payload.iaqAccuracy",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "neq",
+                "v": "0",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 330,
+        "y": 220,
+        "wires": [
+            [
+                "30ad64804c89d91c",
+                "func_influx",
+                "65ba964267c9d2a7"
+            ]
+        ]
+    },
+    {
+        "id": "c0c93311982578db",
+        "type": "switch",
+        "z": "tab_clima",
+        "name": "Router Offline",
+        "property": "payload.offline_flag",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "null"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 320,
+        "y": 140,
+        "wires": [
+            [
+                "http_gsheets"
+            ],
+            [
+                "26c7068e4b2abdd2"
             ]
         ]
     },
@@ -341,7 +395,7 @@
         "rejectUnauthorized": true
     },
     {
-        "id": "c27c6f98422ebb1f",
+        "id": "f86b29fa0a431178",
         "type": "global-config",
         "env": [],
         "modules": {
