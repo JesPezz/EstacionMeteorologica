@@ -41,16 +41,19 @@ function doGet(e) {
     ]);
   }
   
-  // Obtener la fecha y hora enviada desde el ESP32
-  var fechaHora = e.parameter.fechaHora || null;
+  // --- Lógica de Fecha Híbrida ---
+  var fechaHora;
   
-  // Si no se proporcionó fechaHora, usar la fecha y hora actual
-  if (!fechaHora) {
-    fechaHora = new Date();
+  // Verificamos si es un dato recuperado (Offline)
+  var isOffline = e.parameter.offline_flag === 'true';
+
+  if (isOffline && e.parameter.fechaHora) {
+    // CASO A: Es Offline -> Respetamos la hora del ESP32
+    // Asume formato "YYYY-MM-DD HH:MM:SS" y añade la Z para UTC o ajusta según tu zona
+    fechaHora = new Date(e.parameter.fechaHora.replace(" ", "T")); 
   } else {
-    // Convertir la fecha y hora enviada desde el ESP32 a un objeto Date
-    // Asume que el formato es "YYYY-MM-DD HH:MM:SS"
-    fechaHora = new Date(fechaHora.replace(" ", "T") + "Z");
+    // CASO B: Es En Vivo (o no trae fecha) -> Usamos la hora de recepción (Servidor Google)
+    fechaHora = new Date(); 
   }
   
   // Obtener los parámetros y convertirlos en números cuando sea necesario

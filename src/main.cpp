@@ -168,7 +168,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForIndexUpdate();
+  // checkForIndexUpdate();
   checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
@@ -214,7 +214,7 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
       stateUpdateCounter = 0;
       updateState();
-      checkForIndexUpdate();
+      // checkForIndexUpdate();
       checkForUpdates();
       loadState();
       lastUpdateCheck = millis();
@@ -261,6 +261,7 @@ void loop() {
           }
 
           if (backlogReady && millis() > backlogWaitTime) {
+              writeLog("🚀 Iniciando recuperación de Backlog. Conexión restablecida.");
               processBacklog(); 
               backlogWaitTime = 0; 
               backlogReady = false; 
@@ -294,7 +295,8 @@ void loop() {
               // Serial.println("⏱️ Minuto nuevo detectado. Guardando respaldo de prueba...");
               // lastProcessedMinute = timeinfo.tm_min;
               
-              Serial.println("⏱️ Guardando respaldo de prueba...");
+              Serial.println("⏱️ Guardando respaldo...");
+              writeLog("⚠️ Offline: Guardando respaldo en SPIFFS. Hora: " + getFormattedDateTime());
               lastProcessedHour = timeinfo.tm_hour; 
 
               JsonDocument doc; 

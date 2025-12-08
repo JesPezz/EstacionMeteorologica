@@ -451,9 +451,14 @@ void startWebServer() {
     server.on("/sensor_data", HTTP_GET, handleSensorData);
     server.on("/esp_status", HTTP_GET, handleESPStatus);
     server.on("/restart", HTTP_POST, handleRestart);
-    server.on("/downloadLog", HTTP_GET, [](AsyncWebServerRequest *request){
-    if(!isAuthenticated(request)) return;
-    handleDownloadLog(request);
+    server.on("/downloadLog", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (SPIFFS.exists("/error.log")) {
+        // El último argumento 'true' le dice a la librería:
+        // "Configura automáticamente los encabezados para que esto sea una descarga"
+        request->send(SPIFFS, "/error.log", "text/plain", true);
+    } else {
+        request->send(404, "text/plain", "Log no encontrado");
+    }
 });
 server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
     if(SPIFFS.exists(LOG_FILE)) {
