@@ -1,6 +1,6 @@
 # 🌦️ Estación Meteorológica IoT v4.0 (MQTT + Edge Computing)
 
-Este proyecto implementa un sistema de monitoreo ambiental profesional basado en el sensor **BME680** y el microcontrolador **ESP32**. A diferencia de las versiones anteriores, la **v4.0** migra de un modelo HTTP síncrono a una arquitectura **asíncrona basada en eventos con MQTT**, utilizando una **Raspberry Pi** como Gateway central para el procesamiento y distribución de datos.
+Este proyecto implementa un sistema de monitoreo ambiental profesional basado en el sensor **BME680** y el microcontrolador **ESP32**. A diferencia de las versiones anteriores, la **v4.0** migra de[...] 
 
 ![Status](https://img.shields.io/badge/Estado-Producción-green)
 
@@ -12,7 +12,7 @@ Este proyecto implementa un sistema de monitoreo ambiental profesional basado en
 
 ## 🏗️ Arquitectura del Sistema
 
-El sistema utiliza un patrón de **Edge Gateway**. El ESP32 se dedica exclusivamente a la lectura precisa del sensor y transmisión rápida, mientras que la Raspberry Pi gestiona la lógica de negocio, almacenamiento y reenvío a la nube.
+El sistema utiliza un patrón de **Edge Gateway**. El ESP32 se dedica exclusivamente a la lectura precisa del sensor y transmisión rápida, mientras que la Raspberry Pi gestiona la lógica de neg[...] 
 
 ```mermaid
 graph LR
@@ -30,7 +30,9 @@ graph LR
     D -->|Promedio 1h| H[Google Sheets]
     D -->|Cada 20s| I[ThingSpeak]
     end
- Características Principales
+```
+
+Características Principales
 📡 Firmware ESP32
 Algoritmo BSEC: Integración de la librería propietaria de Bosch (v1.4.8.0) para el cálculo preciso de IAQ (Índice de Calidad de Aire).
 
@@ -95,7 +97,7 @@ Se requiere instalar el siguiente stack de software:
 sudo apt install mosquitto mosquitto-clients
 
 # 2. Node-RED
-bash <(curl -sL [https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered](https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered))
+bash <(curl -sL [https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered](https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nod[...]
 
 # 3. InfluxDB y Grafana
 # (Seguir instrucciones oficiales de sus respectivos repositorios apt)
