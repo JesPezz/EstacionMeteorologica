@@ -126,5 +126,5 @@ Los datos se guardan en la base `sensores`, measurement `clima`.
 
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Este proyecto es open-source bajo la licencia MIT.  
+Este proyecto es open-source bajo la licencia AGPL-3.0.  
 Desarrollado por JesPezz.
