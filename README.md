@@ -32,28 +32,24 @@ graph LR
     end
 ```
 
-Características Principales
-📡 Firmware ESP32
-Algoritmo BSEC: Integración de la librería propietaria de Bosch (v1.4.8.0) para el cálculo preciso de IAQ (Índice de Calidad de Aire).
+## Características Principales
 
-Comunicación Asíncrona: Uso de AsyncMqttClient para envíos no bloqueantes.
+### Firmware ESP32
 
-Persistencia de Calibración: Guarda el estado del sensor en memoria NVS (bsec_clean) para recuperar la precisión tras reinicios.
+- Algoritmo BSEC: Integración de la librería propietaria de Bosch (v1.4.8.0) para el cálculo preciso de IAQ (Índice de Calidad de Aire).
+- Comunicación asíncrona: Uso de AsyncMqttClient para envíos no bloqueantes.
+- Persistencia de calibración: Guarda el estado del sensor en memoria NVS (bsec_clean) para recuperar la precisión tras reinicios.
+- Interfaz web integrada: Configuración de WiFi, MQTT y credenciales sin recompilar.
+- OTA (Over-The-Air): Actualización de firmware vía WiFi.
 
-Interfaz Web Integrada: Configuración de WiFi, MQTT y Credenciales sin recompilar.
+### 🧠 Backend (Raspberry Pi / Node-RED)
 
-OTA (Over-The-Air): Actualización de firmware vía WiFi.
+- Visualización en tiempo real: Gráficas en Grafana con resolución de 3 segundos.
+- Optimización de datos:
+  - Google Sheets: Recibe un promedio horario para ahorrar celdas.
+  - ThingSpeak: Recibe datos cada 20s (Rate Limit) para evitar bloqueos.
+- Multi-dispositivo: Soporte para múltiples ESP32 simultáneos separados por la etiqueta `location`.
 
-🧠 Backend (Raspberry Pi / Node-RED)
-Visualización en Tiempo Real: Gráficas en Grafana con resolución de 3 segundos.
-
-Optimización de Datos:
-
-Google Sheets: Recibe un promedio horario para ahorrar celdas.
-
-ThingSpeak: Recibe datos cada 20s (Rate Limit) para evitar bloqueos.
-
-Multi-Dispositivo: Soporte para múltiples ESP32 simultáneos separados por la etiqueta location.
 
 🛠️ Hardware Requerido
 Sensor: Bosch BME680 (Temperatura, Humedad, Presión, Gas/VOCs).
