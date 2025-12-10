@@ -168,7 +168,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  // checkForIndexUpdate();
+  checkForIndexUpdate();
   checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
@@ -214,7 +214,7 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
       stateUpdateCounter = 0;
       updateState();
-      // checkForIndexUpdate();
+      checkForIndexUpdate();
       checkForUpdates();
       loadState();
       lastUpdateCheck = millis();
@@ -286,17 +286,23 @@ void loop() {
           struct tm timeinfo;
           getCurrentTime(&timeinfo);
 
-          // 🧪 MODO PRUEBAS (Cada minuto)
-          // if (timeinfo.tm_sec == 0 && timeinfo.tm_min != lastProcessedMinute) {
+          // // 🧪 MODO PRUEBAS (Corregido)
 
-          // 🏭 MODO PRODUCCIÓN (Cada hora en punto)
+          // if (timeinfo.tm_min != lastProcessedMinute) {
+    
+          //     Serial.printf("⏱️ Nuevo minuto detectado (%d). Guardando respaldo...\n", timeinfo.tm_min);
+          //     writeLog("⚠️ Offline: Guardando respaldo en SPIFFS. Hora: " + getFormattedDateTime());
+          //     lastProcessedMinute = timeinfo.tm_min; // Marcamos como guardado inmediatamente
+            
+          // 🏭 MODO PRODUCCIÓN (Guardar cada hora en punto)
+          
           if (timeinfo.tm_min == 0 && timeinfo.tm_hour != lastProcessedHour) {
+              Serial.println("⏱️ Hora en punto detectada. Guardando respaldo...");
 
-              // Serial.println("⏱️ Minuto nuevo detectado. Guardando respaldo de prueba...");
-              // lastProcessedMinute = timeinfo.tm_min;
-              
-              Serial.println("⏱️ Guardando respaldo...");
+              // Registro en el log del sistema
               writeLog("⚠️ Offline: Guardando respaldo en SPIFFS. Hora: " + getFormattedDateTime());
+              
+              // Actualizamos el candado para que no guarde 20 veces en el mismo minuto
               lastProcessedHour = timeinfo.tm_hour; 
 
               JsonDocument doc; 

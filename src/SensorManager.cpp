@@ -100,7 +100,7 @@ void populateSensorJson(JsonDocument& doc) {
     doc["ts_channel"] = config.channelID;
     
     // Agregar Timestamp actual (importante para datos offline)
-    doc["timestamp"] = getFormattedDateTime(); // Usando tu TimeManager
+    doc["fechaHora"] = getFormattedDateTime(); // Usando tu TimeManager
 
     // 2. Datos del Sensor (Tomados de la variable global iaqSensor)
     doc["temperature"] = iaqSensor.temperature;

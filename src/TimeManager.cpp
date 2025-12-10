@@ -6,7 +6,7 @@
 
 // Function to synchronize the ESP32's internal clock with NTP server
 void syncClock() {
-    configTime(0, 0, "pool.ntp.org");
+    configTime(-21600, 0, "pool.ntp.org");
     while (!time(nullptr)) {
       delay(100);
     }

@@ -188,8 +188,51 @@ std::vector<WiFiNetwork> getAvailableNetworks() {
     return networks;
 }
 
-// 🔹 Función mejorada para seleccionar y conectar a la mejor red
 bool connectToBestWiFi() {
+    std::vector<WiFiNetwork> savedNetworks;
+    WiFiManager::loadSavedNetworks(savedNetworks);
+
+    if (savedNetworks.empty()) {
+        Serial.println("⚠️ No hay redes guardadas para conectar.");
+        return false;
+    }
+
+    Serial.println("🔄 Iniciando secuencia de conexión (Modo Directo - Sin Escaneo)...");
+
+    // Iteramos sobre las redes guardadas e intentamos conectar una por una
+    for (const auto& network : savedNetworks) {
+        Serial.printf("🔗 Intentando conectar a: %s\n", network.ssid);
+        
+        // ⚡ Desconexión preventiva para limpiar el estado del radio
+        WiFi.disconnect();
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(network.ssid, network.password);
+
+        // Esperamos hasta 10 segundos por red
+        unsigned long startAttempt = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 10000) {
+            delay(500);
+            Serial.print(".");
+            yield(); // Alimentar al perro guardián
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("\n✅ ¡Conexión Exitosa!");
+            Serial.print("📡 IP: ");
+            Serial.println(WiFi.localIP());
+            return true; // ¡Éxito! Salimos de la función
+        } else {
+            Serial.println("\n❌ No se pudo conectar. Probando siguiente (si hay)...");
+        }
+    }
+
+    Serial.println("⚠️ Fallaron todos los intentos de conexión.");
+    return false;
+}
+
+
+// 🔹 Función mejorada para seleccionar y conectar a la mejor red
+/* bool connectToBestWiFi() {
     std::vector<WiFiNetwork> savedNetworks;
     WiFiManager::loadSavedNetworks(savedNetworks);
 
@@ -229,7 +272,7 @@ bool connectToBestWiFi() {
 
     // 5. Si todas fallan, retornar false (activará modo AP)
     return false;
-}
+} */
 
 
 // 🔹 Función mejorada para iniciar el modo AP

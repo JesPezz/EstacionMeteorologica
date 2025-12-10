@@ -1,4 +1,4 @@
-var sheet_id = "12ttM1jJPRWgpgqWCg6ApXyouKTo7fzviuX42mmqxS1Q";  // ID del spreadsheet
+var sheet_id = "Id de hoja sheet";  // ID del spreadsheet
 
 function doGet(e) {
   var ss = SpreadsheetApp.openById(sheet_id);
@@ -9,54 +9,47 @@ function doGet(e) {
     return ContentService.createTextOutput("Error: 'location' no especificado.").setMimeType(ContentService.MimeType.TEXT);
   }
   
-  // Intentar obtener la hoja correspondiente
   var sheet = ss.getSheetByName(sheet_name);
-  
-  // Si la hoja no existe, crearla
   if (!sheet) {
     sheet = ss.insertSheet(sheet_name);
-    
-    // Si no se puede crear más hojas, lanzar un error
     if (!sheet) {
       return ContentService.createTextOutput("Error: No se pudo crear la hoja '" + sheet_name + "'.").setMimeType(ContentService.MimeType.TEXT);
     }
-    
-    // Agregar los encabezados a la nueva hoja (opcional)
-    sheet.appendRow([
-      "Fecha y Hora", 
-      "Temperatura", 
-      "Humedad", 
-      "Presión", 
-      "IAQ", 
-      "Precisión IAQ", 
-      "IAQ Estático", 
-      "CO2 Equivalente", 
-      "VOC Equivalente", 
-      "Temperatura Raw", 
-      "Humedad Raw", 
-      "Resistencia Gas", 
-      "Estab. Status", 
-      "Run-in Status", 
-      "Porcentaje Gas"
-    ]);
+    sheet.appendRow(["Fecha y Hora", "Temperatura", "Humedad", "Presión", "IAQ", "Precisión IAQ", "IAQ Estático", "CO2 Equivalente", "VOC Equivalente", "Temperatura Raw", "Humedad Raw", "Resistencia Gas", "Estab. Status", "Run-in Status", "Porcentaje Gas"]);
   }
   
-  // --- Lógica de Fecha Híbrida ---
+  // --- Lógica de Fecha Híbrida CORREGIDA ---
   var fechaHora;
   
-  // Verificamos si es un dato recuperado (Offline)
-  var isOffline = e.parameter.offline_flag === 'true';
+  // 1. Detección robusta de Offline
+  var isOffline = String(e.parameter.offline_flag).toLowerCase() === 'true';
 
-  if (isOffline && e.parameter.fechaHora) {
-    // CASO A: Es Offline -> Respetamos la hora del ESP32
-    // Asume formato "YYYY-MM-DD HH:MM:SS" y añade la Z para UTC o ajusta según tu zona
-    fechaHora = new Date(e.parameter.fechaHora.replace(" ", "T")); 
+  // 2. BUSCAMOS LA FECHA EN AMBOS NOMBRES (fechaHora O timestamp)
+  // Esto arregla el problema de comunicación
+  var fechaRecibida = e.parameter.fechaHora || e.parameter.timestamp;
+
+  if (isOffline && fechaRecibida) {
+    // Limpieza: Quitamos %20, %3A, T, Z
+    var horaLimpia = fechaRecibida.replace(/%20/g, " ").replace(/%3A/g, ":").replace("T", " ").replace("Z", "");
+    
+    // Formateo Latino: YYYY-MM-DD HH:MM:SS -> DD/MM/YYYY HH:MM:SS
+    var partes = horaLimpia.split(" ");
+    var fechaPartes = partes[0].split("-");
+    
+    // Validamos que la fecha tenga sentido antes de procesarla
+    if (fechaPartes.length === 3) {
+         var fechaFormateada = fechaPartes[2] + "/" + fechaPartes[1] + "/" + fechaPartes[0] + " " + partes[1];
+         fechaHora = "'" + fechaFormateada; // ' para forzar texto
+    } else {
+         fechaHora = "'" + horaLimpia; // Si falla el formato, poner lo que llegó
+    }
+
   } else {
-    // CASO B: Es En Vivo (o no trae fecha) -> Usamos la hora de recepción (Servidor Google)
+    // En Vivo -> Hora del servidor
     fechaHora = new Date(); 
   }
   
-  // Obtener los parámetros y convertirlos en números cuando sea necesario
+  // Parseo de números
   var temperature = parseNumber(e.parameter.temperature);
   var humidity = parseNumber(e.parameter.humidity);
   var pressure = parseNumber(e.parameter.pressure);
@@ -72,34 +65,17 @@ function doGet(e) {
   var runInStatus = parseNumber(e.parameter.runInStatus);
   var gasPercentage = e.parameter.gasPercentage || "";
 
-  // Escribir los datos en la hoja correspondiente
   sheet.appendRow([
-    fechaHora, // Fecha y hora
-    temperature, 
-    humidity, 
-    pressure, 
-    iaq, 
-    iaqAccuracy, 
-    staticIaq, 
-    co2Equivalent, 
-    breathVocEquivalent, 
-    rawTemperature, 
-    rawHumidity, 
-    gasResistance, 
-    stabStatus, 
-    runInStatus, 
-    gasPercentage
+    fechaHora, 
+    temperature, humidity, pressure, iaq, iaqAccuracy, staticIaq, co2Equivalent, breathVocEquivalent, 
+    rawTemperature, rawHumidity, gasResistance, stabStatus, runInStatus, gasPercentage
   ]);
   
-  // Devolver una respuesta de éxito
-  return ContentService.createTextOutput("Datos recibidos y registrados en la hoja '" + sheet_name + "'").setMimeType(ContentService.MimeType.TEXT);
+  return ContentService.createTextOutput("Datos recibidos. Offline: " + isOffline).setMimeType(ContentService.MimeType.TEXT);
 }
 
-// Función para convertir un valor a número (o devolver null si no es válido)
 function parseNumber(value) {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
+  if (value === null || value === undefined || value === "") return "";
   var num = Number(value);
   return isNaN(num) ? "" : num;
 }
