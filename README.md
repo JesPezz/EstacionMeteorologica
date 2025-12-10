@@ -1,8 +1,10 @@
 # 🌦️ Estación Meteorológica IoT v4.0 (MQTT + Edge Computing)
 
-Este proyecto implementa un sistema de monitoreo ambiental profesional basado en el sensor **BME680** y el microcontrolador **ESP32**. A diferencia de las versiones anteriores, la **v4.0** migra de[...] 
-
-![Status](https://img.shields.io/badge/Estado-Producción-green) ![Version](https://img.shields.io/badge/Versión-v4.0.0--MQTT-blue) ![Stack](https://img.shields.io/badge/Stack-ESP32%20%7C%20Node--RED%20%7C%20InfluxDB%20%7C%20Grafana-orange) ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Status](https://img.shields.io/badge/Estado-Producción-green)
+![Version](https://img.shields.io/badge/Versión-v4.0.0--MQTT-blue)
+![Stack](https://img.shields.io/badge/Stack-ESP32%20%7C%20Node--RED%20%7C%20InfluxDB%20%7C%20Grafana-orange)
+![PlatformIO](https://img.shields.io/badge/PlatformIO-Ready-brightgreen)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
@@ -11,94 +13,94 @@ Este proyecto implementa un sistema de monitoreo ambiental profesional basado en
 El sistema utiliza un patrón de **Edge Gateway**. El ESP32 se dedica exclusivamente a la lectura precisa del sensor y transmisión rápida, mientras que la Raspberry Pi gestiona la lógica de negocio, almacenamiento y visualización.
 
 ```mermaid
+%% Gráfico mejorado: sin etiquetas HTML, con saltos de línea y estilo
 graph LR
-    A[BME680 Sensor] -->|I2C| B(ESP32)
-    B -->|MQTT / 3 seg| C[Raspberry Pi 5<br>Mosquitto Broker]
-    C --> D[Node-RED]
+  A[BME680\nSensor] -->|I2C| B(ESP32)
+  B -->|MQTT / 3s| C[Raspberry Pi 5\nMosquitto Broker]
+  C --> D[Node-RED]
 
-    subgraph "Edge Gateway (Raspberry Pi)"
-    D -->|Tiempo Real| E[InfluxDB]
-    E --> F[Grafana Dashboard]
-    D -->|CSV| G[Respaldo Local]
-    end
+  subgraph EDGE["Edge Gateway (Raspberry Pi)"]
+    D -->|Tiempo real| E[InfluxDB]
+    E --> F[Grafana]
+    D -->|CSV backup| G[Respaldo Local]
+  end
 
-    subgraph "Nube"
+  subgraph CLOUD["Nube"]
     D -->|Promedio 1h| H[Google Sheets]
     D -->|Cada 20s| I[ThingSpeak]
-    end
+  end
+
+  classDef broker fill:#f9f,stroke:#333,stroke-width:1px;
+  class C broker;
+  classDef dbs fill:#cff,stroke:#333,stroke-width:1px;
+  class E,F,H,I dbs;
 ```
 
 ---
 
-## Características Principales
+<!-- Simple "cards" styled with inline CSS (renders on GitHub pages/README) -->
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0;">
+  <div style="flex:1;min-width:220px;border-radius:8px;padding:12px;background:#f7f9fc;border:1px solid #e1e4e8;">
+    <h3 style="margin:0 0 8px 0">Firmware ESP32</h3>
+    <ul style="margin:0 0 0 16px;padding:0">
+      <li>Algoritmo BSEC (Bosch) v1.4.8.0 — IAQ.</li>
+      <li>AsyncMqttClient — comunicaciones no bloqueantes.</li>
+      <li>Persistencia NVS (bsec_clean) para calibración.</li>
+      <li>Interfaz web de configuración + OTA.</li>
+    </ul>
+  </div>
 
-### Firmware ESP32
+  <div style="flex:1;min-width:220px;border-radius:8px;padding:12px;background:#f7f9fc;border:1px solid #e1e4e8;">
+    <h3 style="margin:0 0 8px 0">Backend (Raspberry Pi / Node-RED)</h3>
+    <ul style="margin:0 0 0 16px;padding:0">
+      <li>Node-RED: procesamiento y ruteo.</li>
+      <li>InfluxDB: serie temporal, retención configurable.</li>
+      <li>Grafana: dashboards en tiempo real (3s).</li>
+      <li>Integraciones: Google Sheets (promedios), ThingSpeak.</li>
+    </ul>
+  </div>
 
-- Algoritmo BSEC: integración de la librería propietaria de Bosch (v1.4.8.0) para el cálculo preciso de IAQ (Índice de Calidad de Aire).
-- Comunicación asíncrona: uso de AsyncMqttClient para envíos no bloqueantes.
-- Persistencia de calibración: guarda el estado del sensor en memoria NVS (bsec_clean) para recuperar la precisión tras reinicios.
-- Interfaz web integrada: configuración de WiFi, MQTT y credenciales sin recompilar.
-- OTA (Over-The-Air): actualización de firmware vía WiFi.
-
-### 🧠 Backend (Raspberry Pi / Node-RED)
-
-- Visualización en tiempo real: gráficas en Grafana con resolución de 3 segundos.
-- Optimización de datos:
-  - Google Sheets: recibe un promedio horario para ahorrar celdas.
-  - ThingSpeak: recibe datos cada 20s (Rate Limit) para evitar bloqueos.
-- Multi-dispositivo: soporte para múltiples ESP32 simultáneos, diferenciados por la etiqueta `location`.
+  <div style="flex:1;min-width:220px;border-radius:8px;padding:12px;background:#f7f9fc;border:1px solid #e1e4e8;">
+    <h3 style="margin:0 0 8px 0">Respaldo & Escalabilidad</h3>
+    <ul style="margin:0 0 0 16px;padding:0">
+      <li>CSV local por Node-RED para recuperación offline.</li>
+      <li>Multi-dispositivo: separación por etiqueta <code>location</code>.</li>
+      <li>Rate limits: ThingSpeak / Google Sheets — agregación en Node-RED.</li>
+    </ul>
+  </div>
+</div>
 
 ---
 
-## 🛠️ Hardware Requerido
+## 🛠️ Hardware Requerido (tabla)
 
-- Sensor: Bosch BME680 (Temperatura, Humedad, Presión, Gas/VOCs).
-- Microcontrolador: ESP32 (DevKit V1 recomendado).
-- Gateway: Raspberry Pi 4 o 5 (corriendo Raspberry Pi OS).
+| Componente | Modelo recomendado | Notas |
+|---|---|---|
+| Sensor | Bosch BME680 | Temperatura / Humedad / Presión / Gas (VOCs) |
+| MCU | ESP32 (DevKit V1) | Soporta BSEC, OTA y Web UI |
+| Gateway | Raspberry Pi 4/5 | Ejecuta Mosquitto, Node-RED, InfluxDB, Grafana |
+| Alimentación | Fuente 5V/2A | Depende del caso de uso y sensores adicionales |
+| Carcasa | IP65 opcional | Para instalación exterior |
 
 ---
 
-## 🚀 Instalación y Configuración
+## 🚀 Instalación y Configuración (resumen)
 
-1. Firmware ESP32 (PlatformIO)
-   - Este proyecto está diseñado para PlatformIO en VS Code.
-   - Clonar el repositorio.
-   - Abrir la carpeta en VS Code.
-   - Verificar platformio.ini (asegurar `lib_archive = false` para BSEC).
-   - Compilar y subir el código al ESP32.
-   - Subir la imagen del sistema de archivos (Upload Filesystem Image) para la interfaz web.
+1. Plataforma: PlatformIO en VS Code.  
+2. Verifica platformio.ini (ej. `lib_archive = false` para BSEC).  
+3. Subir firmware (include SPIFFS/LittleFS image para Web UI).  
+4. Configurar WiFi/MQTT/ThingSpeak desde la UI del dispositivo.
 
-**Configuración inicial:**
-
-- Conectarse al Punto de Acceso WiFi del ESP32 (si no hay redes guardadas).
-- Ingresar a 192.168.4.1 (o la IP asignada por el router).
-- Configurar:
-  - WiFi: SSID y Contraseña.
-  - MQTT: IP de la Raspberry Pi, Puerto (1883), Usuario/Pass.
-  - ThingSpeak: API Key y Channel ID (opcional).
-
-2. Configuración del Servidor (Raspberry Pi)
-   Se requiere instalar el siguiente stack de software:
-
-   # 1. Broker MQTT
-   sudo apt install mosquitto mosquitto-clients
-
-   # 2. Node-RED
-   bash <(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered)
-
-   # 3. InfluxDB y Grafana
-   (Seguir instrucciones oficiales de sus respectivos repositorios apt)
-
-**Despliegue de lógica:**
-- Importar el archivo `nodered_flow.json` (incluido en este repo) dentro de Node-RED.
-- Configurar las credenciales de MQTT y la URL del Google Script en los nodos correspondientes.
-- Configurar el Data Source en Grafana apuntando a la base de datos `sensores` de InfluxDB.
+**Servidor (Raspberry Pi)**  
+- Mosquitto (broker MQTT)  
+- Node-RED (flows incluidos en `nodered_flow.json`)  
+- InfluxDB + Grafana (datasource apuntando a DB `sensores`)
 
 ---
 
 ## 📊 Estructura de Datos (InfluxDB)
 
-Los datos se almacenan en la base de datos `sensores`, measurement `clima`.
+Los datos se guardan en la base `sensores`, measurement `clima`.
 
 | Campo | Tipo | Descripción |
 |---|---:|---|
@@ -106,22 +108,17 @@ Los datos se almacenan en la base de datos `sensores`, measurement `clima`.
 | humidity | Float | Humedad relativa (%) |
 | pressure | Float | Presión atmosférica (hPa) |
 | iaq | Float | Índice de Calidad de Aire (0-500) |
-| iaq_accuracy | Int | Precisión de calibración (0=Estabilizando, 3=Calibrado) |
-| gas_resistance | Float | Resistencia del sensor de gas (Ohms) |
+| iaq_accuracy | Int | Precisión (0=Estabilizando, 3=Calibrado) |
+| gas_resistance | Float | Resistencia del sensor (Ohms) |
 
-**Etiquetas (Tags):**
-- `location`: Ubicación definida en el ESP32 (ej: "Sala", "Patio").
-- `device_id`: Dirección MAC del dispositivo.
+**Tags:** `location`, `device_id`
 
 ---
 
 ## ☁️ Integración Google Sheets
 
-El sistema envía un resumen horario al script de Google Apps (Esp32.gs).
-
-- Lógica: Node-RED acumula lecturas durante 60 minutos.
-- Disparo: al minuto :00 de cada hora.
-- Datos: promedio aritmético de valores analógicos + último estado conocido de valores discretos.
+- Node-RED acumula lecturas durante 60 minutos y envía el promedio horario al script de Google Apps (Esp32.gs).  
+- ThingSpeak recibe lecturas cada 20s (respetando límites de la API).
 
 ---
 
@@ -129,6 +126,5 @@ El sistema envía un resumen horario al script de Google Apps (Esp32.gs).
 
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Este proyecto es de código abierto bajo la licencia MIT.
-
+Este proyecto es open-source bajo la licencia MIT.  
 Desarrollado por JesPezz.
