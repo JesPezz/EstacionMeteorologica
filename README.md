@@ -30,7 +30,7 @@ graph LR
     D -->|Promedio 1h| H[Google Sheets]
     D -->|Cada 20s| I[ThingSpeak]
     end
-⚡ Características Principales
+ Características Principales
 📡 Firmware ESP32
 Algoritmo BSEC: Integración de la librería propietaria de Bosch (v1.4.8.0) para el cálculo preciso de IAQ (Índice de Calidad de Aire).
 
