@@ -93,19 +93,38 @@ bool readSensorData() {
 }
 
 void populateSensorJson(JsonDocument& doc) {
-    // 1. Datos de Identificación (Copiados de config global)
+    // 1. Datos de Identificación
     doc["location"] = config.location;
     doc["device_id"] = WiFi.macAddress();
-    doc["ts_api_key"] = config.thingSpeakAPIKey; // Si aun lo usas
+    doc["ts_api_key"] = config.thingSpeakAPIKey;
     doc["ts_channel"] = config.channelID;
     
-    // Agregar Timestamp actual (importante para datos offline)
-    doc["fechaHora"] = getFormattedDateTime(); // Usando tu TimeManager
+    // Timestamp
+    doc["fechaHora"] = getFormattedDateTime();
 
-    // 2. Datos del Sensor (Tomados de la variable global iaqSensor)
+    // 2. CÁLCULO DE PRESIÓN (CORRECCIÓN POR ALTITUD)
+    // Obtenemos la presión absoluta (la real del sitio) en hPa
+    float presionAbsoluta = iaqSensor.pressure / 100.0;
+    
+    // Leemos la altitud configurada
+    float altitud = config.altitude;
+    
+    // Aplicamos la fórmula barométrica estándar
+    float presionNivelMar = presionAbsoluta;
+    if (altitud > 0) {
+        presionNivelMar = presionAbsoluta / pow(1.0 - (altitud / 44330.0), 5.255);
+    }
+
+    // 3. Llenado del JSON
     doc["temperature"] = iaqSensor.temperature;
     doc["humidity"] = iaqSensor.humidity;
-    doc["pressure"] = iaqSensor.pressure / 100.0;
+    
+    // Enviamos la presión calculada (Nivel del Mar) en lugar de la directa
+    doc["pressure"] = presionNivelMar;       
+    
+    // Opcional: Si quieres monitorear también la absoluta para comparar, descomenta esta línea:
+    // doc["pressure_abs"] = presionAbsoluta; 
+
     doc["iaq"] = iaqSensor.iaq;
     
     // Diagnósticos
@@ -119,6 +138,6 @@ void populateSensorJson(JsonDocument& doc) {
     doc["rawHumidity"] = iaqSensor.rawHumidity;
     doc["gasResistance"] = iaqSensor.gasResistance;
     doc["gasPercentage"] = iaqSensor.gasPercentage;
-    doc["stabilizationStatus"] = iaqSensor.stabStatus;
+    doc["stabilizationStatus"] = iaqSensor.stabStatus; // Ojo con el nombre que decidiste usar aquí vs Google Sheets
     doc["runInStatus"] = iaqSensor.runInStatus;
 }

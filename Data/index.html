@@ -111,7 +111,10 @@
             <h2><i class="fas fa-heartbeat"></i> Estado Actual</h2>
             <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.9em; color:#555;">
                 <span>📍 <span id="location-display">--</span></span>
-                <span>📡 IP: <span id="esp-ip">--</span></span>
+                <div style="text-align: right;">
+                    <div>📶 <span id="wifi-ssid">--</span></div>
+                    <div>📡 <span id="esp-ip">--</span></div>
+                </div>
             </div>
             
             <div class="sensor-grid">
@@ -143,6 +146,9 @@
                 <div class="form-group">
                     <label>📍 Ubicación del Sensor</label>
                     <input type="text" id="location" name="location">
+
+                    <label>⛰️ Altitud (metros s.n.m.)</label>
+                    <input type="number" id="altitude" step="0.1" placeholder="Ej: 2240.5">
 
                     <h3>☁️ ThingSpeak</h3>
                     <div class="form-group">
@@ -288,6 +294,7 @@
 
     function loadConfigToForm(config) {
         document.getElementById('location').value = config.location || '';
+        document.getElementById('altitude').value = config.altitude || 0;
         document.getElementById('thingSpeakAPIKey').value = config.thingSpeakAPIKey || '';
         document.getElementById('channelID').value = config.channelID || '';
         document.getElementById('location-display').innerText = config.location || 'Desconocida';
@@ -309,6 +316,7 @@
         
         const data = {
             location: document.getElementById('location').value,
+            altitude: parseFloat(document.getElementById('altitude').value),
             thingSpeakAPIKey: document.getElementById('thingSpeakAPIKey').value,
             channelID: parseInt(document.getElementById('channelID').value),
             telegramToken: document.getElementById('telegramToken').value,
@@ -362,6 +370,7 @@
             const res = await apiCall('/esp_status');
             const data = await res.json();
             document.getElementById('esp-ip').innerText = data.ip;
+            document.getElementById('wifi-ssid').innerText = data.ssid || 'Desconectado';
         } catch(e) {}
     }
 

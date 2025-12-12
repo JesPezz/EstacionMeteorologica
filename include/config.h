@@ -32,6 +32,7 @@ struct WiFiNetwork {
 
 struct Config {
     String location;
+    float altitude;
     String telegramToken;
     String chatId;
     unsigned long updateOta;

@@ -19,7 +19,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v4.0.0-MQTT"; 
+const char* version = "v4.1.0-MQTT"; 
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
@@ -77,6 +77,8 @@ bool loadConfig() {
     if (error) return false;
 
     if (doc["location"].is<String>()) config.location = doc["location"].as<String>();
+    if (doc["altitude"].is<float>()) config.altitude = doc["altitude"].as<float>();
+    else config.altitude = 0.0;
     if (doc["telegramToken"].is<String>()) config.telegramToken = doc["telegramToken"].as<String>();
     if (doc["chatId"].is<String>()) config.chatId = doc["chatId"].as<String>();
     if (doc["webUsername"].is<String>()) webUsername = doc["webUsername"].as<String>();
@@ -100,6 +102,7 @@ bool loadConfig() {
 bool saveConfig(const Config& newConfig) {
     JsonDocument doc;
     doc["location"] = newConfig.location;
+    doc["altitude"] = newConfig.altitude;
     doc["telegramToken"] = newConfig.telegramToken;
     doc["chatId"] = newConfig.chatId;
     doc["webUsername"] = webUsername;

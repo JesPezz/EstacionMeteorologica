@@ -357,7 +357,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
 
     if (!index) {
         Serial.println("🚨 🔄 Suspendiendo procesos...");
-        void disableWatchdog(); // Desactiva el Watchdog y suspende la tarea
+        disableWatchdog(); // Desactiva el Watchdog y suspende la tarea
         
         size_t firmwareSize = request->contentLength();
         Serial.printf("📥 Iniciando OTA: %s (%d bytes)\n", filename.c_str(), firmwareSize);
@@ -368,7 +368,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
             writeLog("❌ No se pudo iniciar la OTA");
             errLeds();
             request->send(500, "text/plain", "Error al iniciar actualización");
-            void enableWatchdog(); // Reactiva el Watchdog y reanuda la tarea 
+            enableWatchdog(); // Reactiva el Watchdog y reanuda la tarea 
             return;
         }
         totalSize = 0;
@@ -472,6 +472,7 @@ server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
         
         // Campos Generales
         doc["location"] = config.location;
+        doc["altitude"] = config.altitude;
         doc["thingSpeakAPIKey"] = config.thingSpeakAPIKey;
         doc["channelID"] = config.channelID;
         doc["telegramToken"] = config.telegramToken;
@@ -526,6 +527,7 @@ server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
 
         // General
         if (!doc["location"].isNull()) newConfig.location = doc["location"].as<String>();
+        if (!doc["altitude"].isNull()) newConfig.altitude = doc["altitude"].as<float>();
         if (!doc["thingSpeakAPIKey"].isNull()) newConfig.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
         if (!doc["channelID"].isNull()) newConfig.channelID = doc["channelID"].as<long>();
         if (!doc["telegramToken"].isNull()) newConfig.telegramToken = doc["telegramToken"].as<String>();
