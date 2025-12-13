@@ -1,24 +1,28 @@
 function copia() {
+  // --- CONFIGURACIÓN TELEGRAM ---
+  const telegramBotToken = ""; // Pega tu token
+  const telegramChatId = ""; // Pega tu chat ID
+  // ------------------------------
+
   try {
     var fechaActual = new Date();
 
-    // Verificamos si es 1 de Enero
+    // Verificamos si es 1 de Enero (Mes 0, Día 1)
     if (fechaActual.getDate() === 1 && fechaActual.getMonth() === 0) {
       
-      var idLibro = 'ID';
+      var idLibro = ''; // Tu ID real
       var libroActual = SpreadsheetApp.openById(idLibro);
-      var añoAnterior = fechaActual.getFullYear() - 1; // Calculamos el año que acabamos de cerrar
+      var añoAnterior = fechaActual.getFullYear() - 1;
       
-      // Hojas que NO se deben tocar (Dashboards, Configuración, etc.)
+      // Hojas que NO se deben tocar
       var hojasOmitir = ["G.U.P.A", "G.U.P.B", "Comparativas PA y PB", "GraficoPA", "Grafico 2", "Config"]; 
 
       // 1. Crear la copia de seguridad
       var nombreCopia = "Registro de Temperatura_" + añoAnterior;
       var copiaLibro = libroActual.copy(nombreCopia);
       
-      // Verificación de seguridad: ¿Existe la copia?
       if (!copiaLibro) {
-        throw new Error("No se pudo crear la copia de seguridad. Se aborta la limpieza.");
+        throw new Error("No se pudo crear la copia de seguridad.");
       }
       
       var hojasOriginales = libroActual.getSheets();
@@ -32,14 +36,10 @@ function copia() {
         var nombreHoja = hoja.getName();
 
         try {
-          // Si la hoja NO está en la lista de omitir
           if (hojasOmitir.indexOf(nombreHoja) === -1) {
-            
             var ultimaFila = hoja.getLastRow();
-            
-            // Si tiene datos más allá de la fila 1 (encabezados)
             if (ultimaFila > 1) {
-              // Borrar desde la fila 2 hasta el final
+              // Borrar desde fila 2 hasta el final
               hoja.getRange(2, 1, ultimaFila - 1, hoja.getLastColumn()).clearContent();
               hojasLimpiadas.push(nombreHoja);
             }
@@ -51,24 +51,56 @@ function copia() {
         }
       }
 
-      // 3. Enviar Informe
-      var destinatario = "jespezz@hotmail.com";
-      var asunto = "✅ Mantenimiento Anual Completado: " + añoAnterior;
-      var cuerpo = "El proceso de archivo anual ha finalizado.\n\n" +
-                   "📂 Backup creado: " + nombreCopia + "\n" +
-                   "🔗 URL Backup: " + copiaLibro.getUrl() + "\n\n" +
-                   "🧹 Hojas limpiadas: " + hojasLimpiadas.join(", ") + "\n" +
-                   "🛡️ Hojas omitidas: " + hojasOmitidasLog.join(", ") + "\n" +
-                   "⚠️ Errores: " + (errores.length > 0 ? errores.join("\n") : "Ninguno");
+      // 3. Preparar Mensajes (VERSIÓN HTML)
+      var resumenTelegram = `✅ <b>Mantenimiento Anual ${añoAnterior} Completado</b>\n\n` +
+                            `📂 <b>Backup:</b> ${nombreCopia}\n` +
+                            `🧹 <b>Hojas limpiadas:</b> ${hojasLimpiadas.length}\n` +
+                            `🛡️ <b>Hojas omitidas:</b> ${hojasOmitidasLog.length}\n` +
+                            `⚠️ <b>Errores:</b> ${errores.length > 0 ? errores.length : "Ninguno"}`;;
 
-      MailApp.sendEmail(destinatario, asunto, cuerpo);
+      var cuerpoCorreo = "El proceso de archivo anual ha finalizado.\n\n" +
+                         "📂 Backup creado: " + nombreCopia + "\n" +
+                         "🔗 URL Backup: " + copiaLibro.getUrl() + "\n\n" +
+                         "🧹 Hojas limpiadas: " + hojasLimpiadas.join(", ") + "\n" +
+                         "🛡️ Hojas omitidas: " + hojasOmitidasLog.join(", ") + "\n" +
+                         "⚠️ Errores: " + (errores.length > 0 ? errores.join("\n") : "Ninguno");
+
+      // Enviar Notificaciones
+      MailApp.sendEmail("jespezz@hotmail.com", "✅ Mantenimiento Anual Completado: " + añoAnterior, cuerpoCorreo);
+      enviarTelegram(telegramBotToken, telegramChatId, resumenTelegram);
+
       Logger.log("Proceso terminado exitosamente.");
 
     } else {
       Logger.log('Hoy no es 1 de enero. No se requiere mantenimiento.');
     }
   } catch (e) {
+    // Notificación de Error Crítico
+    var msgError = `❌ *ERROR CRÍTICO EN MANTENIMIENTO ANUAL*\n\nEl script ha fallado: ${e.message}`;
     MailApp.sendEmail("jespezz@hotmail.com", "❌ ERROR CRÍTICO en Script Anual", e.message);
+    enviarTelegram(telegramBotToken, telegramChatId, msgError);
     Logger.log('Error fatal: ' + e.message);
+  }
+}
+
+// --- Función Auxiliar para Telegram ---
+function enviarTelegram(token, chatId, mensaje) {
+  if (token === "TU_TOKEN_AQUI") return; 
+  
+  try {
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const payload = {
+      'chat_id': chatId,
+      'text': mensaje,
+      'parse_mode': 'HTML' // <--- CAMBIO IMPORTANTE AQUÍ
+    };
+    const options = {
+      'method': 'post',
+      'contentType': 'application/json',
+      'payload': JSON.stringify(payload)
+    };
+    UrlFetchApp.fetch(url, options);
+  } catch (e) {
+    Logger.log("Error enviando Telegram: " + e.message);
   }
 }
