@@ -1,7 +1,12 @@
 function copia() {
-  // --- CONFIGURACIÓN TELEGRAM ---
-  const telegramBotToken = ""; // Pega tu token
-  const telegramChatId = ""; // Pega tu chat ID
+  // --- CONFIGURACIÓN SEGURA ---
+  const scriptProperties = PropertiesService.getScriptProperties();
+  
+  const telegramBotToken = scriptProperties.getProperty('TELEGRAM_TOKEN');
+  const telegramChatId = scriptProperties.getProperty('TELEGRAM_CHAT_ID');
+  const idLibro = scriptProperties.getProperty('SHEET_ID');
+  // Si no configuraste el email en propiedades, usa este por defecto:
+  const emailDestino = scriptProperties.getProperty('EMAIL_DESTINO') || "jespezz@hotmail.com";
   // ------------------------------
 
   try {
@@ -10,7 +15,6 @@ function copia() {
     // Verificamos si es 1 de Enero (Mes 0, Día 1)
     if (fechaActual.getDate() === 1 && fechaActual.getMonth() === 0) {
       
-      var idLibro = ''; // Tu ID real
       var libroActual = SpreadsheetApp.openById(idLibro);
       var añoAnterior = fechaActual.getFullYear() - 1;
       
@@ -65,8 +69,8 @@ function copia() {
                          "🛡️ Hojas omitidas: " + hojasOmitidasLog.join(", ") + "\n" +
                          "⚠️ Errores: " + (errores.length > 0 ? errores.join("\n") : "Ninguno");
 
-      // Enviar Notificaciones
-      MailApp.sendEmail("jespezz@hotmail.com", "✅ Mantenimiento Anual Completado: " + añoAnterior, cuerpoCorreo);
+      // Enviar Notificaciones (Usando variables)
+      MailApp.sendEmail(emailDestino, "✅ Mantenimiento Anual Completado: " + añoAnterior, cuerpoCorreo);
       enviarTelegram(telegramBotToken, telegramChatId, resumenTelegram);
 
       Logger.log("Proceso terminado exitosamente.");
@@ -77,7 +81,7 @@ function copia() {
   } catch (e) {
     // Notificación de Error Crítico
     var msgError = `❌ *ERROR CRÍTICO EN MANTENIMIENTO ANUAL*\n\nEl script ha fallado: ${e.message}`;
-    MailApp.sendEmail("jespezz@hotmail.com", "❌ ERROR CRÍTICO en Script Anual", e.message);
+    MailApp.sendEmail(emailDestino, "❌ ERROR CRÍTICO en Script Anual", e.message);
     enviarTelegram(telegramBotToken, telegramChatId, msgError);
     Logger.log('Error fatal: ' + e.message);
   }
@@ -85,14 +89,14 @@ function copia() {
 
 // --- Función Auxiliar para Telegram ---
 function enviarTelegram(token, chatId, mensaje) {
-  if (token === "TU_TOKEN_AQUI") return; 
+  if (!token || !chatId) return; // Validación simple
   
   try {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     const payload = {
       'chat_id': chatId,
       'text': mensaje,
-      'parse_mode': 'HTML' // <--- CAMBIO IMPORTANTE AQUÍ
+      'parse_mode': 'HTML'
     };
     const options = {
       'method': 'post',

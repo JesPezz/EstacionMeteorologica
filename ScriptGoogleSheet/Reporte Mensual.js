@@ -1,11 +1,12 @@
  function enviarResumenConHTML() {
   // --- CONFIGURACIÓN ---
   const nombresHojas = ["nombrhoja"];
-  const emailDestino = "tu email";
-  
-  // 🤖 CONFIGURACIÓN TELEGRAM
-  const telegramBotToken = ""; // Ej: "123456789:AAFw..."
-  const telegramChatId = ""; // Ej: "12345678"
+    
+  // --- CONFIGURACIÓN SEGURA ---
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const emailDestino = scriptProperties.getProperty('EMAIL_DESTINO')
+  const telegramBotToken = scriptProperties.getProperty('TELEGRAM_TOKEN');
+  const telegramChatId = scriptProperties.getProperty('TELEGRAM_CHAT_ID');
   
   // 🚫 COLUMNAS A IGNORAR
   const columnasIgnorar = ["iaqAccuracy", "stabilizationStatus", "runInStatus", "gasPercentage", "gasResistance", "staticIaq", "co2Equivalent", "raw temperature [°C]", "raw humidity [%]", "breathVocEquivalent"];
@@ -147,14 +148,15 @@
     Logger.log("❌ Error enviando correo: " + e.message);
   }
 
-  // ENVIAR TELEGRAM
-  if (telegramBotToken !== "TU_TOKEN_AQUI") {
+  // ENVIAR TELEGRAM (CORREGIDO)
+  // Verificamos que ambos existan (sean verdaderos) antes de intentar enviar
+  if (telegramBotToken && telegramChatId) {
     try {
       const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
       const payload = {
         'chat_id': telegramChatId,
         'text': cuerpoTelegram,
-        'parse_mode': 'Markdown' // Importante para que las negritas funcionen
+        'parse_mode': 'Markdown'
       };
       
       const options = {
@@ -168,5 +170,7 @@
     } catch (e) {
       Logger.log("❌ Error enviando Telegram: " + e.message);
     }
+  } else {
+    Logger.log("⚠️ No se envió Telegram: Faltan credenciales en Propiedades del Script.");
   }
 }

@@ -1,6 +1,13 @@
-var sheet_id = "Id de hoja sheet";  // ID del spreadsheet
+// --- CONFIGURACIÓN SEGURA ---
+var sheet_id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+// ----------------------------
 
 function doGet(e) {
+  // Verificación de seguridad por si falla la lectura de propiedades
+  if (!sheet_id) {
+    return ContentService.createTextOutput("Error Crítico: ID de hoja no configurado en Propiedades del Script.").setMimeType(ContentService.MimeType.TEXT);
+  }
+
   var ss = SpreadsheetApp.openById(sheet_id);
   
   // Verificar si el parámetro 'location' fue proporcionado

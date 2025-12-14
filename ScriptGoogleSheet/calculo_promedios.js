@@ -9,10 +9,19 @@
  */
 
 function calcularPromediosMensuales() {
-  // --- CONFIGURACIÓN ---
-  var archivoId = ""; 
-  const telegramBotToken = ""; 
-  const telegramChatId = ""; 
+  // --- CONFIGURACIÓN SEGURA (PropertiesService) ---
+  // Obtenemos las credenciales del entorno de Apps Script
+  const scriptProperties = PropertiesService.getScriptProperties();
+  
+  const archivoId = scriptProperties.getProperty('SHEET_ID');
+  const telegramBotToken = scriptProperties.getProperty('TELEGRAM_TOKEN');
+  const telegramChatId = scriptProperties.getProperty('TELEGRAM_CHAT_ID');
+  
+  // Verificación de seguridad (Opcional: para que no falle silenciosamente si olvidas ponerlas)
+  if (!archivoId || !telegramBotToken || !telegramChatId) {
+    Logger.log("❌ ERROR: Faltan configurar las Propiedades del Script (SHEET_ID, TELEGRAM_TOKEN, etc).");
+    return;
+  } 
   
   // Hojas a procesar
   var hojas = ["PlantaBaja", "PlantaAlta", "Exterior", "Recamara"];
