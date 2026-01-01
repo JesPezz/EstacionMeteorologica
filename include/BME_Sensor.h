@@ -13,8 +13,6 @@ extern Preferences bsecPrefs;
 void checkIaqSensorStatus();
 void loadState();
 void updateState();
-void uploadCalibrationToServer();
-bool downloadCalibrationFromServer();
 void printHexDump(const uint8_t* data, size_t size, uint8_t bytesPerLine);
 
 #endif

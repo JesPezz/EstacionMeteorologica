@@ -168,7 +168,7 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  //checkForIndexUpdate();
+  checkForIndexUpdate();
   checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
@@ -214,7 +214,7 @@ void loop() {
   if (millis() - lastUpdateCheck >= config.updateOta) {
       stateUpdateCounter = 0;
       updateState();
-      //checkForIndexUpdate();
+      checkForIndexUpdate();
       checkForUpdates();
       loadState();
       lastUpdateCheck = millis();

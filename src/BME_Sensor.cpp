@@ -105,30 +105,44 @@ void loadState() {
   bsecPrefs.end();
 }
 
-void updateState() {
-  bool shouldUpdate = false;
-  byte currentAccuracy = iaqSensor.iaqAccuracy;
+void updateState() { // <--- SIN "BME_Sensor::"
+    bool shouldUpdate = false;
+    byte currentAccuracy = iaqSensor.iaqAccuracy;
+    unsigned long now = millis();
 
-  // 1. Guardar en cambios de precisión
-  if ((lastStoredAccuracy != currentAccuracy) && 
-      (currentAccuracy == 1 || currentAccuracy == 2 || currentAccuracy == 3)) {
-      shouldUpdate = true;
-      Serial.printf("\n🔄 Cambio de precisión %d→%d\n", lastStoredAccuracy, currentAccuracy);
-      writeLog("🔄 Cambio de precisión " + String(lastStoredAccuracy) + "→" + String(currentAccuracy));
-      lastStoredAccuracy = currentAccuracy;
-  }
+    // Variable "estática": Se guarda en memoria y no se borra al salir de la función
+    // Es perfecta para recordar cuándo fue la última vez que guardamos sin crear variables globales.
+    static unsigned long lastPeriodicSave = 0; 
 
-  // 2. Guardado periódico
-  if (currentAccuracy >= 3) {
-      if ((stateUpdateCounter * STATE_SAVE_PERIOD * 60000UL) < millis()) {
-          shouldUpdate = true;
-          stateUpdateCounter++;
-          Serial.println("\n⏰ Guardado periódico programado");
-          writeLog("⏰ Guardado periódico programado");
-      }
-  }
+    // 1. Guardar en cambios de precisión
+    if ((lastStoredAccuracy != currentAccuracy) && 
+        (currentAccuracy >= 1 && currentAccuracy <= 3)) {
+         
+         shouldUpdate = true;
+         Serial.printf("\n🔄 Cambio de precisión %d -> %d\n", lastStoredAccuracy, currentAccuracy);
+         // writeLog("🔄 Cambio de precisión " + String(lastStoredAccuracy) + " -> " + String(currentAccuracy)); // Descomenta si tienes writeLog accesible
+         lastStoredAccuracy = currentAccuracy;
+         
+         // Truco: Si guardamos por cambio de precisión, reseteamos el reloj del guardado periódico
+         lastPeriodicSave = now;
+    }
 
-  if (shouldUpdate) {
+    // 2. Guardado periódico (Cada 6 horas o lo que definas)
+    // Usamos STATE_SAVE_PERIOD que definiste arriba en tu archivo (ej. #define STATE_SAVE_PERIOD 360)
+    unsigned long intervalMs = STATE_SAVE_PERIOD * 60000UL;
+
+    if (!shouldUpdate && currentAccuracy >= 3) {
+        if (intervalMs > 0 && (now - lastPeriodicSave >= intervalMs)) {
+            shouldUpdate = true;
+            lastPeriodicSave = now; // Actualizamos el reloj
+            
+            Serial.println("\n⏰ Guardado periódico programado (Intervalo cumplido)");
+            // writeLog("⏰ Guardado periódico programado");
+        }
+    }
+
+    // Ejecutar el guardado
+    if (shouldUpdate) {
       iaqSensor.getState(bsecState);
       checkIaqSensorStatus();
 
@@ -145,7 +159,6 @@ void updateState() {
       if (saveResult) {
           Serial.println("✅ Guardado en NVS exitoso");
           writeLog("✅ Guardado en NVS exitoso, tamaño: " + String(BSEC_MAX_STATE_BLOB_SIZE) + " bytes");
-          //uploadCalibrationToServer(); // Descomenta para subir al servidor
       } else {
           Serial.println("❌ Error al guardar en NVS");
           writeLog("❌ Error al guardar estado en NVS");
