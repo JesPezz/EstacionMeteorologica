@@ -37,6 +37,10 @@
                     <span class="sensor-value"><span id="pressure">--</span> hPa</span>
                     <span class="sensor-label">Presión</span>
                 </div>
+                <div class="sensor-box">
+                    <span class="sensor-value"><span id="battery_display">--</span></span>
+                    <span class="sensor-label">Batería</span>
+                </div>
             </div>
             <div class="status-version">
                 Versión: <span id="version">--</span>
@@ -269,6 +273,26 @@
             document.getElementById('air_quality').innerText = data.air_quality?.toFixed(1) || '--';
             document.getElementById('precision').innerText = data.precision || '--';
             document.getElementById('version').innerText = data.version || '--';
+
+            // Mostrar estado/voltaje de batería
+            try {
+                const battStatus = data.battery_status || 'unknown';
+                const battVolt = parseFloat(data.battery_voltage) || 0.0;
+                const display = document.getElementById('battery_display');
+                if (battStatus === 'absent') {
+                    display.innerText = 'Ausente';
+                    display.style.color = 'var(--error)';
+                } else if (battStatus === 'undervoltage') {
+                    display.innerText = battVolt.toFixed(2) + ' V (Baja)';
+                    display.style.color = 'var(--error)';
+                } else if (battStatus === 'ok') {
+                    display.innerText = battVolt.toFixed(2) + ' V';
+                    display.style.color = 'var(--primary)';
+                } else {
+                    display.innerText = '--';
+                    display.style.color = '';
+                }
+            } catch(e) { console.warn('Error mostrando batería', e); }
         } catch(e) { console.log(e); }
     }
 

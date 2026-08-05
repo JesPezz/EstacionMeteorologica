@@ -33,10 +33,19 @@ void enableWatchdog() {
 
 // 🔹 Obtener la URL del firmware desde la API de GitHub
 String getFirmwareURL() {
+    // Verificar conectividad WiFi antes de intentar HTTP
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("❌ No hay conexión WiFi. Abortando petición a GitHub.");
+        writeLog("❌ No hay conexión WiFi. Abortando petición a GitHub.");
+        return "";
+    }
+
     WiFiClientSecure client;
-    client.setInsecure();
+    client.setInsecure(); // Nota: preferible usar setCACert() en producción si se dispone del CA
+    client.setTimeout(10); // timeout en segundos para operaciones de cliente TLS
 
     HTTPClient http;
+    http.setTimeout(10000); // Timeout explícito en ms (10s)
     http.begin(client, githubAPIURL);
     int httpCode = http.GET();
 
@@ -50,6 +59,7 @@ String getFirmwareURL() {
         if (error) {
             Serial.println("❌ Error al parsear JSON");
             Serial.println("Error: " + String(error.c_str()));
+            http.end();
             return "";
         }
 
@@ -59,11 +69,13 @@ String getFirmwareURL() {
             String firmwareURL = json["assets"][0]["browser_download_url"].as<String>();
             
             Serial.println("📥 URL del firmware: " + firmwareURL);
+            http.end();
             return firmwareURL;
         }
     } else {
         Serial.printf("❌ Error HTTP al obtener URL del firmware. Código: %d\n", httpCode);
         writeLog("❌ Error HTTP al obtener URL del firmware. Código: " + String(httpCode));
+        http.end();
         
     }
     return"";
@@ -91,11 +103,18 @@ String getFinalURL(String initialURL) {
 void checkForUpdates() {
     Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
 
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("❌ WiFi no conectado. Omitiendo verificación de Releases.");
+        writeLog("❌ WiFi no conectado. Omitiendo verificación de Releases.");
+        return;
+    }
+
     WiFiClientSecure client;
-    client.setInsecure();
-    client.stop();
+    client.setInsecure(); // Preferible usar certificados CA en producción
+    client.setTimeout(10);
 
     HTTPClient http;
+    http.setTimeout(10000);
     http.begin(client, githubAPIURL);
     int httpCode = http.GET();
 
@@ -108,6 +127,7 @@ void checkForUpdates() {
         if (error) {
             Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
             writeLog("❌ Error al parsear JSON: " + String(error.c_str()));
+            http.end();
             return;
         }
 
@@ -121,6 +141,7 @@ void checkForUpdates() {
         
         if (newVersion == version) {
             Serial.println("✅ El ESP32 ya está actualizado.");
+            http.end();
             return;
          } else {
             Serial.println("🚀 Nueva versión detectada. Iniciando OTA...");
@@ -130,15 +151,15 @@ void checkForUpdates() {
             // Liberar algo de memoria si es posible antes de empezar
             heap_caps_free(heap_caps_malloc(1, MALLOC_CAP_8BIT));
 
+            http.end();
             downloadAndUpdate();
          }
         
     } else {
            Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
            writeLog("❌ Error HTTP: " + String(httpCode) + " al obtener información de Releases.");
+           http.end();
     }
-
-    http.end();
 }
 
 void checkForIndexUpdate() {
@@ -148,13 +169,21 @@ void checkForIndexUpdate() {
 
     Serial.println("🔍 Verificando actualización de index.html...");
 
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("❌ WiFi no conectado. Omitiendo verificación de index.html.");
+        writeLog("❌ WiFi no conectado. Omitiendo verificación de index.html.");
+        return;
+    }
+
     WiFiClientSecure client;
     client.setInsecure();
-    client.stop();
+    client.setTimeout(10);
 
+    // Intentar conexión TLS con timeout
     if (!client.connect(host, 443)) {
-        Serial.println("❌ Error al conectar con GitHub.");
-        writeLog("❌ Error al conectar con GitHub.");
+        Serial.println("❌ Error al conectar con GitHub (TLS)." );
+        writeLog("❌ Error al conectar con GitHub (TLS).");
+        client.stop();
         return;
     }
 
@@ -166,10 +195,11 @@ void checkForIndexUpdate() {
     request += "\r\nUser-Agent: ESP32\r\nConnection: close\r\n\r\n";
     client.print(request);
 
-    // Leer respuesta del servidor
+    // Leer respuesta del servidor (con límite de tiempo para evitar bloqueos)
     String response = "";
     String remoteETag = "";
-    while (client.connected() || client.available()) {
+    unsigned long start = millis();
+    while ((client.connected() || client.available()) && (millis() - start < 10000)) {
         String line = client.readStringUntil('\n');
         response += line + "\n";
 

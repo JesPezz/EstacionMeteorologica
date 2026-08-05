@@ -25,6 +25,9 @@
 #include "MQTTManager.h"
 #include "led_task.h"
 #include "OfflineManager.h"
+#include "VoltageMonitor.h"
+#include "esp_system.h" // Para diagnosticar motivo de reinicio
+#include "VoltageMonitor.h"
 
 // En main.cpp (variables globales o estáticas)
 int lastProcessedHour = -1; 
@@ -37,7 +40,22 @@ void setup() {
   
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
-  
+
+  // --- Diagnóstico de motivo del último reinicio (nuevo)
+  esp_reset_reason_t reset_reason = esp_reset_reason();
+  String reasonStr = "unknown";
+  switch (reset_reason) {
+    case ESP_RST_PANIC: reasonStr = "Panic/Crash"; break;
+    case ESP_RST_WDT: reasonStr = "Watchdog Timer"; break;
+    case ESP_RST_BROWNOUT: reasonStr = "Brownout (caída de voltaje)"; break;
+    case ESP_RST_EXT: reasonStr = "Reset externo"; break;
+    case ESP_RST_SW: reasonStr = "Reset por software"; break;
+    case ESP_RST_DEEPSLEEP: reasonStr = "Wake from deep sleep"; break;
+    default: reasonStr = String((int)reset_reason);
+  }
+  Serial.printf("🔁 Motivo del último reinicio: %s\n", reasonStr.c_str());
+  writeLog("🔁 Motivo del último reinicio: " + reasonStr);
+
   if(!SPIFFS.begin(true)) {
     Serial.println("Error al montar SPIFFS");
     writeLog("❌ Error al montar SPIFFS");
@@ -145,11 +163,14 @@ printConfig();  // ✅ Ver los valores actuales de configuración
   pinMode(LED_BUILTIN, OUTPUT);
   
   
-  // Sincronizar el reloj una vez al mes
-  syncClock();
+// Inicializar monitor de voltaje (nuevo)
+initVoltageMonitor();
+  
+// Sincronizar el reloj una vez al mes
+syncClock();
   
   
-  // Configurar sensores
+// Configurar sensores
   bsec_virtual_sensor_t sensorList[13] = {
     BSEC_OUTPUT_IAQ,
     BSEC_OUTPUT_STATIC_IAQ,
@@ -204,6 +225,9 @@ xTimerStart(sseTimer, 0);
 void loop() {
   // 1. MANTENIMIENTO DEL SISTEMA
   checkWiFiConnection(); 
+  
+  // Chequeo de voltaje periódicamente (nuevo)
+  checkVoltage();
   
   if (otaInProgress) {
       yield(); 
