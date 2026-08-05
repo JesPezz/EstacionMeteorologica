@@ -5,8 +5,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estación Meteorológica MQTT</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+
+    <style>
+        :root{
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --primary: #0b74de;
+            --accent: #10b981;
+            --text: #17202a;
+            --muted: #6b7280;
+            --error: #ef4444;
+            --card-radius: 10px;
+            --gap: 1rem;
+            --max-width: 1200px;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:var(--text);}
+        .dashboard{
+            max-width:var(--max-width);
+            margin:24px auto;
+            display:grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap:var(--gap);
+            padding:0 16px;
+        }
+        .card{
+            background:var(--card);
+            border-radius:var(--card-radius);
+            padding:16px;
+            box-shadow:0 6px 18px rgba(15,23,42,0.06);
+            border:1px solid rgba(15,23,42,0.04);
+        }
+        .card h2{margin:0 0 12px 0;font-size:1.1rem;display:flex;align-items:center;gap:8px}
+
+        .status-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:var(--muted)}
+        .status-summary-right{display:flex;gap:8px;align-items:center}
+
+        .sensor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+        .sensor-box{background:linear-gradient(180deg, rgba(15,23,42,0.02), transparent);border-radius:8px;padding:12px;display:flex;flex-direction:column;align-items:flex-start}
+        .sensor-value{font-weight:700;font-size:1.15rem}
+        .sensor-label{color:var(--muted);font-size:0.85rem}
+
+        .status-version{margin-top:12px;color:var(--muted);font-size:0.85rem}
+
+        form .form-group{display:flex;flex-direction:column;gap:8px}
+        label{font-size:0.9rem}
+        input[type="text"], input[type="number"], input[type="password"], input[type="file"]{width:100%;padding:8px;border-radius:6px;border:1px solid rgba(15,23,42,0.08);background:transparent}
+        button{cursor:pointer;padding:10px 14px;border-radius:8px;border:none;background:var(--primary);color:white;font-weight:600}
+        .btn-secondary{background:transparent;border:1px solid rgba(15,23,42,0.08);color:var(--text);padding:8px 12px}
+        .btn-danger{background:var(--error);color:white}
+
+        .config-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
+        .mqtt-grid{display:flex;gap:8px}
+        .mqtt-grid > div{flex:1}
+
+        /* WiFi list */
+        .network-item{display:flex;justify-content:space-between;padding:8px;border-radius:6px;margin-bottom:6px;background:#f8fafc;border:1px solid rgba(15,23,42,0.03)}
+
+        /* Modal */
+        .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:40}
+        .modal-content{background:var(--card);padding:16px;border-radius:8px;min-width:260px}
+        .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+        /* Loading overlay */
+        .loading-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:50}
+        .spinner{width:36px;height:36px;border-radius:50%;border:4px solid rgba(0,0,0,0.06);border-top-color:var(--primary);animation:spin 1s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* OTA progress */
+        .ota-progress-container{background:#e6eef9;border-radius:8px;height:10px;margin-top:8px}
+        .progress-track{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:8px}
+
+        /* Toast */
+        .toast{position:fixed;right:16px;bottom:16px;padding:10px 14px;border-radius:8px;background:var(--card);box-shadow:0 6px 18px rgba(15,23,42,0.06);display:none}
+        .toast.success{border-left:4px solid var(--accent)}
+        .toast.error{border-left:4px solid var(--error)}
+
+        /* Accessibility helpers */
+        .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+        @media (max-width:480px){
+            .dashboard{padding:12px}
+            .card{padding:12px}
+            .sensor-value{font-size:1rem}
+        }
+    </style>
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="dashboard">
