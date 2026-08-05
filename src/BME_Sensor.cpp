@@ -110,38 +110,38 @@ void updateState() { // <--- SIN "BME_Sensor::"
     byte currentAccuracy = iaqSensor.iaqAccuracy;
     unsigned long now = millis();
 
-    // Variable "estática": Se guarda en memoria y no se borra al salir de la función
-    // Es perfecta para recordar cuándo fue la última vez que guardamos sin crear variables globales.
+    // Variables estáticas para recordar tiempos entre guardados
     static unsigned long lastPeriodicSave = 0; 
+    static unsigned long lastSuccessfulSave = 0; // NEW: timestamp of last successful NVS write
+    const unsigned long SAVE_COOLDOWN_MS = 15UL * 60UL * 1000UL; // 15 minutos
 
-    // 1. Guardar en cambios de precisión
-    if ((lastStoredAccuracy != currentAccuracy) && 
-        (currentAccuracy >= 1 && currentAccuracy <= 3)) {
-         
-         shouldUpdate = true;
-         Serial.printf("\n🔄 Cambio de precisión %d -> %d\n", lastStoredAccuracy, currentAccuracy);
-         // writeLog("🔄 Cambio de precisión " + String(lastStoredAccuracy) + " -> " + String(currentAccuracy)); // Descomenta si tienes writeLog accesible
-         lastStoredAccuracy = currentAccuracy;
-         
-         // Truco: Si guardamos por cambio de precisión, reseteamos el reloj del guardado periódico
-         lastPeriodicSave = now;
+    unsigned long intervalMs = STATE_SAVE_PERIOD * 60000UL; // Periodic save interval
+
+    // --- Regla 1: Si la precisión cae a 0 => guardar inmediatamente (critico)
+    if (currentAccuracy == 0 && currentAccuracy != lastStoredAccuracy) {
+        shouldUpdate = true;
+        Serial.printf("\n🔻 Precisión caída a 0 (de %d). Forzando guardado inmediato.\n", lastStoredAccuracy);
     }
 
-    // 2. Guardado periódico (Cada 6 horas o lo que definas)
-    // Usamos STATE_SAVE_PERIOD que definiste arriba en tu archivo (ej. #define STATE_SAVE_PERIOD 360)
-    unsigned long intervalMs = STATE_SAVE_PERIOD * 60000UL;
+    // --- Regla 2: Guardar al cambiar precisión, pero respetando cooldown de 15 minutos
+    else if (currentAccuracy != lastStoredAccuracy && (now - lastSuccessfulSave >= SAVE_COOLDOWN_MS)) {
+        // Evitar guardar solo por fluctuaciones rápidas (por ejemplo 2<->3) gracias al cooldown
+        shouldUpdate = true;
+        Serial.printf("\n🔄 Cambio de precisión %d -> %d (cooldown OK).\n", lastStoredAccuracy, currentAccuracy);
+    }
 
-    if (!shouldUpdate && currentAccuracy >= 3) {
-        if (intervalMs > 0 && (now - lastPeriodicSave >= intervalMs)) {
+    // --- Regla 3: Guardado periódico (ej. cada 6 horas) si no hemos guardado recientemente
+    else if (currentAccuracy >= 3 && (intervalMs > 0) && (now - lastPeriodicSave >= intervalMs)) {
+        // Además aseguramos no escribir más de lo razonable: respetar cooldown
+        if (now - lastSuccessfulSave >= SAVE_COOLDOWN_MS) {
             shouldUpdate = true;
-            lastPeriodicSave = now; // Actualizamos el reloj
-            
-            Serial.println("\n⏰ Guardado periódico programado (Intervalo cumplido)");
-            // writeLog("⏰ Guardado periódico programado");
+            Serial.println("\n⏰ Guardado periódico programado (Intervalo cumplido y cooldown OK)");
+        } else {
+            Serial.println("\n⏰ Guardado periódico pendiente, pero en cooldown. Se pospone para evitar escrituras repetitivas.");
         }
     }
 
-    // Ejecutar el guardado
+    // Ejecutar el guardado si es necesario
     if (shouldUpdate) {
       iaqSensor.getState(bsecState);
       checkIaqSensorStatus();
@@ -159,6 +159,9 @@ void updateState() { // <--- SIN "BME_Sensor::"
       if (saveResult) {
           Serial.println("✅ Guardado en NVS exitoso");
           writeLog("✅ Guardado en NVS exitoso, tamaño: " + String(BSEC_MAX_STATE_BLOB_SIZE) + " bytes");
+          lastSuccessfulSave = now;           // Actualizamos tiempo del último guardado exitoso
+          lastPeriodicSave = now;            // Reiniciamos contador periódico
+          lastStoredAccuracy = currentAccuracy; // Actualizamos estado conocido solo tras guardado exitoso
       } else {
           Serial.println("❌ Error al guardar en NVS");
           writeLog("❌ Error al guardar estado en NVS");

@@ -41,25 +41,62 @@ void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
         return;
     }
     Serial.println();
-    Serial.println("🔍 Escaneando redes WiFi...");
-    
-    int numNetworks = WiFi.scanNetworks();
+    Serial.println("🔍 Escaneando redes WiFi (async seguro)...");
     networks.clear();
 
-    if (numNetworks == 0) {
-        Serial.println("❌ No se encontraron redes WiFi.");
-    } else {
-        Serial.println("✅ Redes encontradas:");
+    // Proteger contra escaneos durante OTA o si el stack WiFi está inestable
+    if (otaInProgress) {
+        Serial.println("⚠️ OTA en progreso, escaneo cancelado.");
+        return;
+    }
+
+    // Iniciar escaneo asíncrono (no bloqueante)
+    int scanStarted = WiFi.scanNetworks(true, false);
+    if (scanStarted < 0) {
+        // Si no se pudo iniciar el escaneo, intentar modo síncrono como fallback
+        Serial.println("⚠️ No se pudo iniciar escaneo asíncrono, intentando escaneo síncrono...");
+        int numNetworks = WiFi.scanNetworks();
+        if (numNetworks <= 0) {
+            Serial.println("❌ Error al escanear redes WiFi (síncrono)");
+            writeLog("❌ Error al escanear redes WiFi (síncrono)");
+            return;
+        }
         for (int i = 0; i < numNetworks; ++i) {
             WiFiNetwork network;
             strlcpy(network.ssid, WiFi.SSID(i).c_str(), sizeof(network.ssid));
             network.rssi = WiFi.RSSI(i);
             network.encryptionType = WiFi.encryptionType(i);
             networks.push_back(network);
-
-            // 📌 Imprimir en la consola como scanWiFiNetworks()
             Serial.printf("  %d: %s (%d dBm)\n", i + 1, network.ssid, network.rssi);
         }
+        WiFi.scanDelete();
+        return;
+    }
+
+    // Esperar hasta que el escaneo async finalice (timeout para evitar bloqueo)
+    unsigned long start = millis();
+    int numNetworks = -2;
+    while (millis() - start < 10000) { // 10s timeout
+        numNetworks = WiFi.scanComplete();
+        if (numNetworks != -2) break; // -2 => still in progress
+        delay(200);
+    }
+
+    if (numNetworks <= 0) {
+        Serial.println("❌ No se encontraron redes o error en escaneo asíncrono.");
+        writeLog("❌ No se encontraron redes o error en escaneo asíncrono.");
+        WiFi.scanDelete();
+        return;
+    }
+
+    Serial.println("✅ Redes encontradas:");
+    for (int i = 0; i < numNetworks; ++i) {
+        WiFiNetwork network;
+        strlcpy(network.ssid, WiFi.SSID(i).c_str(), sizeof(network.ssid));
+        network.rssi = WiFi.RSSI(i);
+        network.encryptionType = WiFi.encryptionType(i);
+        networks.push_back(network);
+        Serial.printf("  %d: %s (%d dBm)\n", i + 1, network.ssid, network.rssi);
     }
 
     WiFi.scanDelete(); // Liberar memoria del escaneo

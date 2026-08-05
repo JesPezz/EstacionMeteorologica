@@ -19,7 +19,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v4.2.0-MQTT"; 
+const char* version = "v4.2.1-MQTT"; 
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
@@ -96,6 +96,26 @@ bool loadConfig() {
     if (doc["mqttPassword"].is<String>()) config.mqttPassword = doc["mqttPassword"].as<String>();
     if (doc["mqttTopic"].is<String>()) config.mqttTopic = doc["mqttTopic"].as<String>();
 
+    // Voltage monitoring fields (optional in config.json)
+    if (doc["vbatPin"].is<int>()) config.vbatPin = doc["vbatPin"].as<int>();
+    else config.vbatPin = 35; // default ADC pin (change according to your hardware)
+
+    if (doc["vdivRatio"].is<float>()) config.vdivRatio = doc["vdivRatio"].as<float>();
+    else if (doc["vdivRatio"].is<int>()) config.vdivRatio = (float)doc["vdivRatio"].as<int>();
+    else config.vdivRatio = 2.0; // default divider ratio (e.g., 2 => equal resistors)
+
+    if (doc["voltageThreshold"].is<float>()) config.voltageThreshold = doc["voltageThreshold"].as<float>();
+    else if (doc["voltageThreshold"].is<int>()) config.voltageThreshold = (float)doc["voltageThreshold"].as<int>();
+    else config.voltageThreshold = 3.3; // default threshold in volts
+
+    if (doc["voltageCheckIntervalMs"].is<unsigned long>()) config.voltageCheckIntervalMs = doc["voltageCheckIntervalMs"].as<unsigned long>();
+    else if (doc["voltageCheckIntervalMs"].is<int>()) config.voltageCheckIntervalMs = (unsigned long)doc["voltageCheckIntervalMs"].as<int>();
+    else config.voltageCheckIntervalMs = 60000; // default: 60s
+
+    if (doc["minDetectVoltage"].is<float>()) config.minDetectVoltage = doc["minDetectVoltage"].as<float>();
+    else if (doc["minDetectVoltage"].is<int>()) config.minDetectVoltage = (float)doc["minDetectVoltage"].as<int>();
+    else config.minDetectVoltage = 0.2; // default: 0.2V
+
     return true;
 }
 
@@ -116,6 +136,13 @@ bool saveConfig(const Config& newConfig) {
     doc["mqttUser"] = newConfig.mqttUser;
     doc["mqttPassword"] = newConfig.mqttPassword;
     doc["mqttTopic"] = newConfig.mqttTopic;
+
+    // Voltage monitoring fields
+    doc["vbatPin"] = newConfig.vbatPin;
+    doc["vdivRatio"] = newConfig.vdivRatio;
+    doc["voltageThreshold"] = newConfig.voltageThreshold;
+    doc["voltageCheckIntervalMs"] = newConfig.voltageCheckIntervalMs;
+    doc["minDetectVoltage"] = newConfig.minDetectVoltage;
 
     File file = SPIFFS.open(configFilePath, "w");
     if (!file) return false;
