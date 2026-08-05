@@ -446,7 +446,8 @@ void startWebServer() {
     server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(204); // Respuesta vacía (No Content)
     });
-    server.on("/events", HTTP_GET, handleSSE);
+    // AsyncEventSource provides the /events endpoint via the handler below.
+    // Avoid registering a separate handler that sends a plain 200 which would close the connection.
     server.addHandler(&events);
     server.on("/api/savedNetworks", HTTP_GET, handleSavedNetworks);
     server.on("/api/wifi/scanInternal", HTTP_GET, [](AsyncWebServerRequest *request){
