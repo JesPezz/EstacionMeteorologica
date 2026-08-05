@@ -6,3 +6,4 @@ Data/config.json
 .vscode/
 Data/wifi.json
 *.back
+*.json

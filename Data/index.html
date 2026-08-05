@@ -6,112 +6,15 @@
     <title>Estación Meteorológica MQTT</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <style>
-        /* Estilos base */
-        :root {
-            --primary: #2196F3;
-            --success: #4CAF50;
-            --error: #f44336;
-            --text: #2c3e50;
-            --background: #f5f6fa;
-            --card-bg: #ffffff;
-        }
-        
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: var(--background);
-            color: var(--text);
-        }
-        
-        .dashboard {
-            max-width: 800px; /* Más estrecho al no tener gráfica */
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-
-        h2 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-size: 1.2rem; }
-        
-        /* Formularios */
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; margin-top: 10px; font-weight: 500; font-size: 0.9em;}
-        input, select, button {
-            width: 100%; padding: 10px; margin-top: 5px;
-            border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;
-        }
-        
-        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:disabled { opacity: 0.7; cursor: not-allowed; }
-        button.btn-secondary { background: #607D8B; }
-        
-        /* Sensores */
-        .sensor-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 15px;
-        }
-        .sensor-box {
-            text-align: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        .sensor-value { font-size: 1.5rem; font-weight: bold; color: var(--primary); display: block;}
-        .sensor-label { font-size: 0.9rem; color: #666; }
-        
-        /* Redes WiFi */
-        .network-item {
-            padding: 10px; border-bottom: 1px solid #eee;
-            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
-        }
-        .network-item:hover { background: #f9f9f9; }
-
-        /* Modales */
-        .modal {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8); display: none;
-            justify-content: center; align-items: center; z-index: 9999;
-        }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
-        
-        /* Loading */
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255,255,255,0.9); display: none;
-            place-items: center; z-index: 1000; flex-direction: column; justify-content: center;
-        }
-        .spinner {
-            border: 4px solid #f3f3f3; border-top: 4px solid var(--primary);
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .toast {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            padding: 12px 24px; border-radius: 8px; color: white; display: none; z-index: 10000;
-        }
-        .toast.success { background: var(--success); }
-        .toast.error { background: var(--error); }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="dashboard">
         <div class="card">
             <h2><i class="fas fa-heartbeat"></i> Estado Actual</h2>
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.9em; color:#555;">
+            <div class="status-header">
                 <span>📍 <span id="location-display">--</span></span>
-                <div style="text-align: right;">
+                <div class="status-summary-right">
                     <div>📶 <span id="wifi-ssid">--</span></div>
                     <div>📡 <span id="esp-ip">--</span></div>
                 </div>
@@ -135,7 +38,7 @@
                     <span class="sensor-label">Presión</span>
                 </div>
             </div>
-            <div style="font-size:0.8em; color:#666; margin-top:15px; text-align:right">
+            <div class="status-version">
                 Versión: <span id="version">--</span>
             </div>
         </div>
@@ -144,87 +47,90 @@
             <h2><i class="fas fa-cog"></i> Configuración MQTT</h2>
             <form id="configForm">
                 <div class="form-group">
-                    <label>📍 Ubicación del Sensor</label>
-                    <input type="text" id="location" name="location">
+<label for="location">📍 Ubicación del Sensor</label>
+            <input type="text" id="location" name="location">
 
-                    <label>⛰️ Altitud (metros s.n.m.)</label>
-                    <input type="number" id="altitude" step="0.1" placeholder="Ej: 2240.5">
+            <label for="altitude">⛰️ Altitud (metros s.n.m.)</label>
+            <input type="number" id="altitude" step="0.1" placeholder="Ej: 2240.5">
 
-                    <h3>☁️ ThingSpeak</h3>
-                    <div class="form-group">
-                        <label>API Key (Write)</label>
-                        <input type="text" id="thingSpeakAPIKey" placeholder="XXXXXXXXXXXX">
-    
-                        <label>Channel ID</label>
+            <h3>☁️ ThingSpeak</h3>
+            <div class="form-group">
+                <label for="thingSpeakAPIKey">API Key (Write)</label>
+                <input type="text" id="thingSpeakAPIKey" placeholder="XXXXXXXXXXXX">
+
+                <label for="channelID">Channel ID</label>
                         <input type="number" id="channelID">
                     </div>
                     
                     <h3>📡 Servidor MQTT</h3>
-                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px">
+                    <div class="mqtt-grid">
                         <div>
-                            <label>Host / IP</label>
+                            <label for="mqttServer">Host / IP</label>
                             <input type="text" id="mqttServer">
                         </div>
                         <div>
-                            <label>Puerto</label>
+                            <label for="mqttPort">Puerto</label>
                             <input type="number" id="mqttPort">
                         </div>
                     </div>
 
-                    <label>Usuario MQTT</label>
+                    <label for="mqttUser">Usuario MQTT</label>
                     <input type="text" id="mqttUser">
 
-                    <label>Contraseña MQTT</label>
+                    <label for="mqttPassword">Contraseña MQTT</label>
                     <input type="password" id="mqttPassword">
 
-                    <label>Tópico Base</label>
+                    <label for="mqttTopic">Tópico Base</label>
                     <input type="text" id="mqttTopic">
                     
                     <h3>🔔 Notificaciones & OTA</h3>
-                    <label>Token Telegram</label>
+                    <label for="telegramToken">Token Telegram</label>
                     <input type="password" id="telegramToken">
                     
-                    <label>Chat ID Telegram</label>
+                    <label for="chatId">Chat ID Telegram</label>
                     <input type="text" id="chatId">
 
-                    <label>Intervalo OTA (horas)</label>
+                    <label for="updateOta">Intervalo OTA (horas)</label>
                     <input type="number" id="updateOta" min="1">
                 </div>
                 
                 <button type="submit">Guardar Configuración</button>
             </form>
 
-            <div style="margin-top: 20px; display:flex; gap:10px">
+            <div class="config-actions">
                 <button onclick="downloadLog()" class="btn-secondary"><i class="fas fa-file-alt"></i> Log</button>
-                <button onclick="confirmRestart()" class="btn-secondary" style="background:#f44336"><i class="fas fa-power-off"></i> Reiniciar</button>
+                <button onclick="confirmRestart()" class="btn-secondary btn-danger"><i class="fas fa-power-off"></i> Reiniciar</button>
             </div>
         </div>
 
         <div class="card">
             <h2><i class="fas fa-wifi"></i> WiFi</h2>
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px">
+            <div class="wifi-card-header">
                 <span>Redes Disponibles</span>
-                <button id="refresh-wifi" style="width:auto; padding:5px 10px"><i class="fas fa-sync-alt"></i></button>
+                <button id="refresh-wifi" title="Actualizar redes"><i class="fas fa-sync-alt"></i><span class="sr-only">Actualizar redes</span></button>
             </div>
             <div id="wifi-list-container"></div>
         </div>
 
         <div class="card">
             <h2><i class="fas fa-cloud-upload-alt"></i> Actualizar Firmware</h2>
+            <label for="firmwareFile">Archivo firmware</label>
             <input type="file" id="firmwareFile" accept=".bin">
             <button onclick="uploadFirmware()">Subir .bin</button>
-            <div id="otaStatus" style="margin-top:10px; font-weight:bold; text-align:center">0%</div>
-            <div style="height:5px; background:#eee; border-radius:3px; margin-top:5px; overflow:hidden">
-                <div id="progressFill" style="height:100%; background:var(--primary); width:0%"></div>
+            <div id="otaStatus" class="status-version">0%</div>
+            <div class="ota-progress-container">
+                <div id="progressFill" class="progress-track"></div>
             </div>
         </div>
     </div>
 
-    <div id="authModal" class="modal" style="display:flex">
+    <div id="authModal" class="modal">
         <div class="modal-content">
             <h2>🔐 Acceso</h2>
             <form id="loginForm">
+                <label for="username" class="sr-only">Usuario</label>
                 <input type="text" id="username" placeholder="Usuario" autocomplete="username">
+                <label for="password" class="sr-only">Contraseña</label>
                 <input type="password" id="password" placeholder="Contraseña" autocomplete="current-password">
                 <button type="submit">Entrar</button>
             </form>
@@ -234,8 +140,9 @@
     <div id="wifiModal" class="modal">
         <div class="modal-content">
             <h3>Conectar a <span id="currentSSID"></span></h3>
+            <label for="wifiPassword" class="sr-only">Contraseña WiFi</label>
             <input type="password" id="wifiPassword" placeholder="Contraseña WiFi">
-            <div style="display:flex; gap:10px; margin-top:10px">
+            <div class="modal-actions">
                 <button id="connectWifiBtn">Conectar</button>
                 <button onclick="document.getElementById('wifiModal').style.display='none'" class="btn-secondary">Cancelar</button>
             </div>
@@ -244,7 +151,7 @@
 
     <div class="loading-overlay" id="loading">
         <div class="spinner"></div>
-        <div id="loadingText" style="margin-top:15px">Cargando...</div>
+        <div id="loadingText">Cargando...</div>
     </div>
     
     <div id="toast" class="toast"></div>
