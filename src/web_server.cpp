@@ -76,6 +76,8 @@ String processorHTML(const String& var) {
     return String();
 }
 
+#include "VoltageMonitor.h"
+
 String getSensorJson() {
     JsonDocument doc;
     
@@ -84,6 +86,12 @@ String getSensorJson() {
         doc["humidity"] = iaqSensor.humidity;
         xSemaphoreGive(sensorMutex);
     }
+
+    // Añadir estado de batería/voltaje para el frontend
+    float v = getMeasuredVoltage();
+    String status = getBatteryStatus();
+    doc["battery_voltage"] = v;
+    doc["battery_status"] = status; // "absent", "undervoltage", "ok", "unknown"
     
     String output;
     serializeJson(doc, output);

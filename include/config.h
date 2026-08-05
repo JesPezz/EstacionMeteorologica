@@ -45,6 +45,13 @@ struct Config {
     String mqttUser;
     String mqttPassword;
     String mqttTopic;
+
+    // Voltage monitoring (hardware)
+    int vbatPin;                  // ADC pin used to measure battery/rail via voltage divider
+    float vdivRatio;              // Voltage divider ratio (Vout = Vin / vdivRatio)
+    float voltageThreshold;       // Voltage threshold (Volts) below which a fault is logged
+    unsigned long voltageCheckIntervalMs; // How often to check voltage (ms)
+    float minDetectVoltage;        // Voltage below which we assume battery is absent (e.g., 0.2 V)
 };
 
 // --- Variables Globales ---
