@@ -351,44 +351,57 @@
     async function updateSensorData() {
         try {
             const res = await apiCall('/sensor_data');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
-            
-            document.getElementById('temp').innerText = data.temp?.toFixed(1) || '--';
-            document.getElementById('humidity').innerText = data.humidity?.toFixed(1) || '--';
-            document.getElementById('pressure').innerText = data.pressure?.toFixed(1) || '--';
-            document.getElementById('air_quality').innerText = data.air_quality?.toFixed(1) || '--';
-            document.getElementById('precision').innerText = data.precision || '--';
-            document.getElementById('version').innerText = data.version || '--';
 
-            // Mostrar estado/voltaje de batería
+            const setText = (id, value) => { const el = document.getElementById(id); if (el) el.innerText = value; };
+
+            setText('temp', (typeof data.temp === 'number') ? data.temp.toFixed(1) : '--');
+            setText('humidity', (typeof data.humidity === 'number') ? data.humidity.toFixed(1) : '--');
+            setText('pressure', (typeof data.pressure === 'number') ? data.pressure.toFixed(1) : '--');
+            setText('air_quality', (typeof data.air_quality === 'number') ? data.air_quality.toFixed(1) : '--');
+            setText('precision', (typeof data.precision === 'string') ? data.precision : (data.precision || '--'));
+            setText('version', data.version || '--');
+
+            // Mostrar estado/voltaje de batería con checks de existencia
             try {
-                const battStatus = data.battery_status || 'unknown';
-                const battVolt = parseFloat(data.battery_voltage) || 0.0;
                 const display = document.getElementById('battery_display');
-                if (battStatus === 'absent') {
-                    display.innerText = 'Ausente';
-                    display.style.color = 'var(--error)';
-                } else if (battStatus === 'undervoltage') {
-                    display.innerText = battVolt.toFixed(2) + ' V (Baja)';
-                    display.style.color = 'var(--error)';
-                } else if (battStatus === 'ok') {
-                    display.innerText = battVolt.toFixed(2) + ' V';
-                    display.style.color = 'var(--primary)';
-                } else {
-                    display.innerText = '--';
-                    display.style.color = '';
+                if (display) {
+                    const battStatus = (typeof data.battery_status === 'string') ? data.battery_status : 'unknown';
+                    const battVolt = (data.battery_voltage !== undefined && data.battery_voltage !== null) ? parseFloat(data.battery_voltage) : NaN;
+
+                    if (battStatus === 'absent') {
+                        display.innerText = 'Ausente';
+                        display.style.color = 'var(--error)';
+                    } else if (battStatus === 'undervoltage') {
+                        display.innerText = (!isNaN(battVolt) ? battVolt.toFixed(2) : '--') + ' V (Baja)';
+                        display.style.color = 'var(--error)';
+                    } else if (battStatus === 'ok') {
+                        display.innerText = !isNaN(battVolt) ? battVolt.toFixed(2) + ' V' : '--';
+                        display.style.color = 'var(--primary)';
+                    } else {
+                        display.innerText = '--';
+                        display.style.color = '';
+                    }
                 }
-            } catch(e) { console.warn('Error mostrando batería', e); }
-        } catch(e) { console.log(e); }
+            } catch (e) { console.warn('Error mostrando batería', e); }
+
+        } catch (err) {
+            console.error('updateSensorData error', err);
+        }
     }
 
     async function updateESPStatus() {
         try {
             const res = await apiCall('/esp_status');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
-            document.getElementById('esp-ip').innerText = data.ip;
-            document.getElementById('wifi-ssid').innerText = data.ssid || 'Desconectado';
-        } catch(e) {}
+            const setText = (id, value) => { const el = document.getElementById(id); if (el) el.innerText = value; };
+            setText('esp-ip', data.ip || '--');
+            setText('wifi-ssid', data.ssid || 'Desconectado');
+        } catch (err) {
+            console.error('updateESPStatus error', err);
+        }
     }
 
     // --- SYSTEM ---
@@ -402,8 +415,26 @@
         
         // SSE Simplificado (Sin updateChart)
         const evtSource = new EventSource('/events');
-        evtSource.addEventListener('update', () => updateSensorData());
+        evtSource.onopen = () => console.log('SSE connected');
+        evtSource.onerror = (e) => console.warn('SSE error', e);
+        evtSource.addEventListener('update', (ev) => {
+            try {
+                // Event may already contain the JSON payload; prefer to refresh via HTTP for consistent parsing
+                updateSensorData();
+            } catch (e) { console.warn('SSE update handling error', e); }
+        });
     }
+
+    // Auto-start dashboard and load config when page opens (no login required to show read-only data)
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            startDashboard();
+            apiCall('/getConfig')
+                .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+                .then(config => loadConfigToForm(config))
+                .catch(err => console.warn('Config check:', err));
+        } catch (e) { console.warn('Auto-start failed', e); }
+    });
 
     // --- WIFI ---
     async function scanNetworks() {

@@ -161,7 +161,12 @@ void initSSETimer() {
 }
 
 void handleSSE(AsyncWebServerRequest *request) {
-    request->send(200, "text/event-stream");
+    // Ensure headers that keep event-streams open and prevent caching.
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/event-stream", "");
+    response->addHeader("Connection", "keep-alive");
+    response->addHeader("Cache-Control", "no-cache");
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(response);
 }
 
 void handleSavedNetworks(AsyncWebServerRequest* request) { //WiFiManager::loadSavedNetworks(std::vector<WiFiNetwork>& networks)
@@ -220,12 +225,11 @@ void handleWiFiScan(AsyncWebServerRequest* request) {
         return;
     }
 
-    // 🛑 CAMBIO IMPORTANTE:
-    // No escaneamos aquí porque bloquea el servidor y causa reinicios (WDT).
-    // En su lugar, pedimos al loop principal que lo haga.
-    scanRequested = true; 
-
-    Serial.println("📤 Solicitud de escaneo recibida. Enviando lista en caché...");
+    // Iniciar un escaneo asincrónico no bloqueante y devolver la lista en caché inmediatamente.
+    // Llamada a WiFi.scanNetworks(true) para iniciar el scan de forma asíncrona.
+    Serial.println("📤 Solicitud de escaneo recibida. Iniciando escaneo asíncrono...");
+    WiFi.scanNetworks(true);
+    scanRequested = true; // señal para la tarea de fondo si necesita procesamiento adicional
 
     // Enviamos lo que tengamos en memoria en este momento (puede estar vacío la primera vez)
     JsonDocument doc;
@@ -446,7 +450,8 @@ void startWebServer() {
     server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(204); // Respuesta vacía (No Content)
     });
-    server.on("/events", HTTP_GET, handleSSE);
+    // AsyncEventSource provides the /events endpoint via the handler below.
+    // Avoid registering a separate handler that sends a plain 200 which would close the connection.
     server.addHandler(&events);
     server.on("/api/savedNetworks", HTTP_GET, handleSavedNetworks);
     server.on("/api/wifi/scanInternal", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -644,6 +649,17 @@ void handleSensorData(AsyncWebServerRequest *request) {
     } else {
         doc["error"] = "Timeout de sensor";
     }
+
+    // Siempre incluir estado/voltaje de batería para que el frontend no reciba objetos incompletos
+    float v = getMeasuredVoltage();
+    String status = getBatteryStatus();
+    // Si no hay lectura válida, marcar como ausente
+    if (v <= 0.0f || status == "unknown") {
+        status = "absent";
+        v = 0.00;
+    }
+    doc["battery_voltage"] = v;
+    doc["battery_status"] = status; // "absent", "undervoltage", "ok", "unknown"
 
     String json;
     serializeJson(doc, json); // Serializa a String
