@@ -563,29 +563,28 @@
     }
     
     async function downloadLog() {
-        toggleLoading(true, 'Descargando log...');
         try {
+            toggleLoading(true, 'Descargando log...');
             const res = await apiCall('/downloadLog');
-            if (res.status === 401) {
-                // require auth: show modal and enqueue
-                document.getElementById('authModal').style.display = 'flex';
-                pendingAdminAction = downloadLog;
-                return;
-            }
-            if (!res.ok) { showToast('No hay log disponible', 'error'); return; }
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
+            a.style.display = 'none';
             a.href = url;
-            a.download = 'esp32_log.txt';
+            a.download = 'error.log';
             document.body.appendChild(a);
             a.click();
+            window.URL.revokeObjectURL(url);
             a.remove();
-            URL.revokeObjectURL(url);
-        } catch (e) {
-            console.error('downloadLog error', e);
+            showToast('Log descargado correctamente', 'success');
+        } catch (err) {
+            console.error('Error al descargar log:', err);
             showToast('Error al descargar log', 'error');
-        } finally { toggleLoading(false); }
+        } finally {
+            toggleLoading(false);
+        }
     }
 
     document.getElementById('loginForm').onsubmit = login;
