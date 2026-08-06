@@ -250,12 +250,6 @@ void loop() {
       ESP.restart();
   }
 
-  // ✅ ESCANEO MANUAL (Solicitado desde la Web)
-  if (scanRequested) {
-      Serial.println("🔍 Escaneo solicitado por usuario web...");
-      WiFiManager::scanNetworks(networks); 
-      scanRequested = false; 
-  }
 
   // 2. GESTIÓN DEL SENSOR (BSEC)
   bool nuevosDatos = readSensorData(); 

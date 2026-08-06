@@ -425,6 +425,17 @@
         });
     }
 
+    // Auto-start dashboard and load config when page opens (no login required to show read-only data)
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            startDashboard();
+            apiCall('/getConfig')
+                .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+                .then(config => loadConfigToForm(config))
+                .catch(err => console.warn('Config check:', err));
+        } catch (e) { console.warn('Auto-start failed', e); }
+    });
+
     // --- WIFI ---
     async function scanNetworks() {
         const res = await apiCall('/api/wifi/scan');
