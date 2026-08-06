@@ -30,8 +30,13 @@ void restartESP32Task(void *parameter);
 
 // Handler para descargar el log
 void handleDownloadLog(AsyncWebServerRequest *request) {
+    // Require Basic Auth for admin download actions
+    if (webUsername.length() > 0 && !request->authenticate(webUsername.c_str(), webPassword.c_str())) {
+        return request->requestAuthentication();
+    }
+
     if (!SPIFFS.exists(LOG_FILE)) {
-        request->send(404, "text/plain", "No hay archivo de log disponible");
+        request->send(404, "text/plain", "Archivo error.log no encontrado");
         return;
     }
 
@@ -41,15 +46,15 @@ void handleDownloadLog(AsyncWebServerRequest *request) {
         return;
     }
 
-    // Configurar los headers correctamente
+    // Configurar los headers correctamente y forzar descarga
     AsyncWebServerResponse *response = request->beginResponse(
-        SPIFFS, 
-        LOG_FILE, 
-        "text/plain", 
-        false  // No descargar como adjunto
+        SPIFFS,
+        LOG_FILE,
+        "text/plain",
+        true // fuerza como attachment
     );
-    
-    response->addHeader("Content-Disposition", "attachment; filename=esp32_log.txt");
+
+    response->addHeader("Content-Disposition", "attachment; filename=\"error.log\"");
     response->addHeader("Cache-Control", "no-cache");
     request->send(response);
 }
