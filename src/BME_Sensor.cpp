@@ -2,7 +2,7 @@
 #include "config.h"
 #include <Preferences.h>
 #include <EEPROM.h>
-#include "led.h"
+#include "led_task.h"
 #include <bsec.h>
 
 #define STATE_SAVE_PERIOD 360  // Intervalo en minutos (360 = 6 horas)
@@ -22,7 +22,7 @@ void checkIaqSensorStatus(void)
       writeLog("BSEC error code : " + String(iaqSensor.bsecStatus));
 
       for (;;)
-        errLeds(); /* Halt in case of failure */
+        signalLed(LED_ERROR); /* Halt in case of failure */
     } else {
       output = "BSEC warning code : " + String(iaqSensor.bsecStatus);
       Serial.println();
@@ -40,7 +40,7 @@ void checkIaqSensorStatus(void)
       Serial.println();
       writeLog("BME68X error code : " + String(iaqSensor.bme68xStatus));
       for (;;)
-        errLeds(); /* Halt in case of failure */
+        signalLed(LED_ERROR); /* Halt in case of failure */
     } else {
       output = "BME68X warning code : " + String(iaqSensor.bme68xStatus);
       Serial.println();

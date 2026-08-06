@@ -5,7 +5,7 @@
 #include "mbedtls/base64.h"
 #include <Update.h>
 #include "SensorManager.h"
-#include "led.h"
+#include "led_task.h"
 #include "notifications.h"
 #include <WiFi.h>
 #include <ArduinoJson.h>
@@ -410,12 +410,12 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         
         size_t firmwareSize = request->contentLength();
         Serial.printf("📥 Iniciando OTA: %s (%d bytes)\n", filename.c_str(), firmwareSize);
-        ledInProgress();
+        signalLed(LED_PROGRESS);
         
         if (!Update.begin(firmwareSize, U_FLASH)) {
             Serial.println("❌ No se pudo iniciar la OTA");
             writeLog("❌ No se pudo iniciar la OTA");
-            errLeds();
+            signalLed(LED_ERROR);
             request->send(500, "text/plain", "Error al iniciar actualización");
             enableWatchdog(); // Reactiva el Watchdog y reanuda la tarea 
             return;
@@ -429,7 +429,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
     if (written != len) {
         Serial.println("❌ Error al escribir en Flash");
         writeLog("❌ Error al escribir en Flash");
-        errLeds();
+        signalLed(LED_ERROR);
         request->send(500, "text/plain", "Error al escribir en Flash");
         otaInProgress = false;
         return;
@@ -441,7 +441,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         if (Update.hasError()) {
             Serial.println("❌ Error en la transferencia OTA.");
             writeLog("❌ Error en la transferencia OTA.");
-            errLeds();
+            signalLed(LED_ERROR);
             request->send(500, "text/plain", "Error en la transferencia OTA.");
             otaInProgress = false;
             return;
@@ -456,7 +456,7 @@ void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t in
         } else {
             Serial.println("❌ Error finalizando OTA");
             writeLog("❌ Error finalizando OTA.");
-            errLeds();
+            signalLed(LED_ERROR);
             request->send(500, "text/plain", "Error finalizando OTA.");
             otaInProgress = false;
         }
