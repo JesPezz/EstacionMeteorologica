@@ -413,7 +413,16 @@
         setInterval(updateSensorData, 5000);
         setInterval(updateESPStatus, 10000);
         
-        // SSE disabled for this release — use periodic HTTP polling instead.
+        const evtSource = new EventSource('/events');
+        evtSource.onopen = () => console.log('SSE connected');
+        evtSource.onerror = (e) => console.warn('SSE error', e);
+        evtSource.addEventListener('update', () => {
+            try {
+                updateSensorData();
+            } catch (err) {
+                console.warn('SSE update handling error', err);
+            }
+        });
     }
 
     // Auto-start dashboard and load config when page opens (no login required to show read-only data)
