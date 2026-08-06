@@ -225,23 +225,55 @@ void handleWiFiScan(AsyncWebServerRequest* request) {
         return;
     }
 
-    // Iniciar un escaneo asincrónico no bloqueante y devolver la lista en caché inmediatamente.
-    // Llamada a WiFi.scanNetworks(true) para iniciar el scan de forma asíncrona.
-    Serial.println("📤 Solicitud de escaneo recibida. Iniciando escaneo asíncrono...");
-    WiFi.scanNetworks(true);
-    scanRequested = true; // señal para la tarea de fondo si necesita procesamiento adicional
+    // Comprobar estado del escaneo asíncrono
+    int scanRes = WiFi.scanComplete();
+    if (scanRes == -2) {
+        // No iniciado: arrancar escaneo asíncrono y devolver lista vacía temporalmente
+        Serial.println("📤 Escaneo no iniciado. Lanzando WiFi.scanNetworks(true) y devolviendo [].");
+        WiFi.scanNetworks(true);
+        request->send(200, "application/json", "[]");
+        return;
+    }
 
-    // Enviamos lo que tengamos en memoria en este momento (puede estar vacío la primera vez)
+    if (scanRes == 0) {
+        // Sin redes encontradas
+        request->send(200, "application/json", "[]");
+        return;
+    }
+
+    if (scanRes > 0) {
+        Serial.printf("📡 Escaneo completado: %d redes encontradas\n", scanRes);
+        JsonDocument doc;
+        JsonArray jsonNetworks = doc.to<JsonArray>();
+
+        for (int i = 0; i < scanRes; ++i) {
+            JsonObject obj = jsonNetworks.add<JsonObject>();
+            String ssid = WiFi.SSID(i);
+            int rssi = WiFi.RSSI(i);
+            int enc = WiFi.encryptionType(i);
+            obj["ssid"] = ssid;
+            obj["rssi"] = rssi;
+            obj["secured"] = enc != WIFI_AUTH_OPEN;
+        }
+
+        // Opcional: limpiar resultados en la pila de escaneo
+        WiFi.scanDelete();
+
+        String jsonResponse;
+        serializeJson(doc, jsonResponse);
+        request->send(200, "application/json", jsonResponse);
+        return;
+    }
+
+    // Estado de escaneo en progreso u otro: devolver la caché si la tenemos
     JsonDocument doc;
     JsonArray jsonNetworks = doc.to<JsonArray>();
-
     for (const auto& net : networks) {
         JsonObject obj = jsonNetworks.add<JsonObject>();
         obj["ssid"] = net.ssid;
         obj["rssi"] = net.rssi;
         obj["secured"] = net.encryptionType != WIFI_AUTH_OPEN;
     }
-
     String jsonResponse;
     serializeJson(doc, jsonResponse);
     request->send(200, "application/json", jsonResponse);
@@ -464,15 +496,8 @@ void startWebServer() {
     server.on("/sensor_data", HTTP_GET, handleSensorData);
     server.on("/esp_status", HTTP_GET, handleESPStatus);
     server.on("/restart", HTTP_POST, handleRestart);
-    server.on("/downloadLog", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (SPIFFS.exists("/error.log")) {
-        // El último argumento 'true' le dice a la librería:
-        // "Configura automáticamente los encabezados para que esto sea una descarga"
-        request->send(SPIFFS, "/error.log", "text/plain", true);
-    } else {
-        request->send(404, "text/plain", "Log no encontrado");
-    }
-});
+    // Use the dedicated handler that opens the file and sets Content-Disposition
+    server.on("/downloadLog", HTTP_GET, handleDownloadLog);
 server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
     if(SPIFFS.exists(LOG_FILE)) {
         request->send(SPIFFS, LOG_FILE, "text/plain");

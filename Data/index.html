@@ -251,42 +251,57 @@
     let selectedNetwork = null;
 
     // --- API & DATA ---
+    // Basic API call helper. Does NOT auto-show modal on 401 so callers can decide to prompt for credentials.
     async function apiCall(endpoint, options = {}) {
         if (authToken) {
             options.headers = { ...options.headers, 'Authorization': `Basic ${authToken}` };
         }
         const res = await fetch(endpoint, options);
-        if (res.status === 401) {
-            document.getElementById('authModal').style.display = 'flex';
-            throw new Error('Unauthorized');
-        }
         return res;
+    }
+
+    // Pending admin action to retry after successful login
+    let pendingAdminAction = null;
+
+    // Attempt login with given username/password. Returns a promise that resolves true on success, false on failure.
+    async function attemptLogin(username, password) {
+        authToken = btoa(`${username}:${password}`);
+        try {
+            toggleLoading(true, 'Verificando credenciales...');
+            const res = await apiCall('/getConfig');
+            if (res.ok) {
+                const config = await res.json();
+                loadConfigToForm(config);
+                document.getElementById('authModal').style.display = 'none';
+                showToast('Acceso concedido', 'success');
+
+                // If there was a pending admin action, run it now
+                if (pendingAdminAction) {
+                    const f = pendingAdminAction;
+                    pendingAdminAction = null;
+                    try { await f(); } catch (e) { console.warn('Pending action failed after login', e); }
+                }
+                return true;
+            } else {
+                authToken = null; // clear token on bad auth
+                showToast('Credenciales incorrectas', 'error');
+                return false;
+            }
+        } catch (err) {
+            console.error('attemptLogin error', err);
+            authToken = null;
+            showToast('Error de conexión', 'error');
+            return false;
+        } finally {
+            toggleLoading(false);
+        }
     }
 
     async function login(e) {
         e.preventDefault();
         const u = document.getElementById('username').value;
         const p = document.getElementById('password').value;
-        authToken = btoa(`${u}:${p}`);
-        
-        try {
-            toggleLoading(true);
-            const res = await apiCall('/getConfig');
-            if (res.ok) {
-                const config = await res.json();
-                loadConfigToForm(config);
-                document.getElementById('authModal').style.display = 'none';
-                startDashboard();
-                showToast('Bienvenido', 'success');
-            } else {
-                showToast('Credenciales incorrectas', 'error');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('Error de conexión', 'error');
-        } finally {
-            toggleLoading(false);
-        }
+        await attemptLogin(u, p);
     }
 
     function loadConfigToForm(config) {
@@ -307,10 +322,38 @@
         document.getElementById('mqttTopic').value = config.mqttTopic || '';
     }
 
+    async function sendConfig(data) {
+        const jsonString = JSON.stringify(data);
+        const formBody = 'plain=' + encodeURIComponent(jsonString);
+        try {
+            const res = await apiCall('/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formBody
+            });
+            if (res.status === 401) {
+                // require auth: show modal and enqueue
+                document.getElementById('authModal').style.display = 'flex';
+                pendingAdminAction = async () => { await sendConfig(data); };
+                return false;
+            }
+            if (!res.ok) {
+                showToast('Error al guardar', 'error');
+                return false;
+            }
+            showToast('Configuración guardada. Reiniciando...', 'success');
+            setTimeout(() => location.reload(), 5000);
+            return true;
+        } catch (err) {
+            console.error('sendConfig error', err);
+            showToast('Error al guardar', 'error');
+            return false;
+        }
+    }
+
     async function saveConfig(e) {
         e.preventDefault();
         toggleLoading(true, 'Guardando...');
-        
         const data = {
             location: document.getElementById('location').value,
             altitude: parseFloat(document.getElementById('altitude').value),
@@ -319,33 +362,14 @@
             telegramToken: document.getElementById('telegramToken').value,
             chatId: document.getElementById('chatId').value,
             updateOta: parseInt(document.getElementById('updateOta').value),
-            
-            // MQTT
             mqttServer: document.getElementById('mqttServer').value,
             mqttPort: parseInt(document.getElementById('mqttPort').value),
             mqttUser: document.getElementById('mqttUser').value,
             mqttPassword: document.getElementById('mqttPassword').value,
             mqttTopic: document.getElementById('mqttTopic').value
         };
-
-        // 🛑 CORRECCIÓN: Envolver el JSON en un parámetro 'plain'
-        const jsonString = JSON.stringify(data);
-        const formBody = 'plain=' + encodeURIComponent(jsonString);
-
-        try {
-            await apiCall('/config', {
-                method: 'POST',
-                // Usamos el tipo de contenido estándar para formularios
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: formBody
-            });
-            showToast('Configuración guardada. Reiniciando...', 'success');
-            setTimeout(() => location.reload(), 5000);
-        } catch (err) {
-            showToast('Error al guardar', 'error');
-        } finally {
-            toggleLoading(false);
-        }
+        await sendConfig(data);
+        toggleLoading(false);
     }
 
     async function updateSensorData() {
@@ -455,18 +479,30 @@
         document.getElementById('wifiModal').style.display = 'flex';
     }
 
+    async function sendSaveWiFi(obj) {
+        try {
+            const res = await apiCall('/saveWiFi', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(obj)
+            });
+            if (res.status === 401) {
+                document.getElementById('authModal').style.display = 'flex';
+                pendingAdminAction = async () => { await sendSaveWiFi(obj); };
+                return false;
+            }
+            if (!res.ok) { showToast('Error al guardar WiFi', 'error'); return false; }
+            showToast('WiFi guardado. Reiniciando...', 'success');
+            setTimeout(() => location.reload(), 10000);
+            return true;
+        } catch (e) { console.error('sendSaveWiFi error', e); showToast('Error al guardar WiFi', 'error'); return false; }
+    }
+
     document.getElementById('connectWifiBtn').onclick = async () => {
         const pass = document.getElementById('wifiPassword').value;
         toggleLoading(true, 'Conectando...');
-        try {
-            await apiCall('/saveWiFi', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ ssid: selectedNetwork, password: pass })
-            });
-            showToast('WiFi guardado. Reiniciando...', 'success');
-            setTimeout(() => location.reload(), 10000);
-        } catch { showToast('Error al guardar WiFi', 'error'); }
+        await sendSaveWiFi({ ssid: selectedNetwork, password: pass });
+        toggleLoading(false);
     };
 
     // --- UTILS ---
@@ -492,25 +528,64 @@
     function uploadFirmware() {
         const file = document.getElementById('firmwareFile').files[0];
         if(!file) return showToast('Selecciona un archivo', 'error');
-        
+
+        // If no auth yet, request auth first and retry
+        if (!authToken) {
+            document.getElementById('authModal').style.display = 'flex';
+            pendingAdminAction = uploadFirmware;
+            return;
+        }
+
         const data = new FormData();
         data.append('update', file);
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/update', true);
+        // Attach Basic Auth header if available
+        if (authToken) {
+            xhr.setRequestHeader('Authorization', 'Basic ' + authToken);
+        }
         xhr.upload.onprogress = e => {
-            const p = Math.round((e.loaded / e.total) * 100);
-            document.getElementById('otaStatus').innerText = p + '%';
-            document.getElementById('progressFill').style.width = p + '%';
+            if (e.lengthComputable) {
+                const p = Math.round((e.loaded / e.total) * 100);
+                document.getElementById('otaStatus').innerText = p + '%';
+                document.getElementById('progressFill').style.width = p + '%';
+            }
         };
         xhr.onload = () => {
             if(xhr.status === 200) showToast('Actualizado. Reiniciando...', 'success');
-            else showToast('Error en subida', 'error');
+            else if (xhr.status === 401) {
+                document.getElementById('authModal').style.display = 'flex';
+                pendingAdminAction = uploadFirmware;
+            } else showToast('Error en subida', 'error');
         };
+        xhr.onerror = () => { showToast('Error en subida', 'error'); };
         xhr.send(data);
     }
     
-    function downloadLog() {
-        if(authToken) window.location.href = '/downloadLog'; 
+    async function downloadLog() {
+        toggleLoading(true, 'Descargando log...');
+        try {
+            const res = await apiCall('/downloadLog');
+            if (res.status === 401) {
+                // require auth: show modal and enqueue
+                document.getElementById('authModal').style.display = 'flex';
+                pendingAdminAction = downloadLog;
+                return;
+            }
+            if (!res.ok) { showToast('No hay log disponible', 'error'); return; }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'esp32_log.txt';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('downloadLog error', e);
+            showToast('Error al descargar log', 'error');
+        } finally { toggleLoading(false); }
     }
 
     document.getElementById('loginForm').onsubmit = login;
