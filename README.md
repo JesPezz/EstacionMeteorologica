@@ -1,20 +1,20 @@
-# 🌦️ Estación Meteorológica IoT v4.3.4-MQTT (MQTT + Edge Computing)
+# 🌦️ Estación Meteorológica IoT v4.3.4.1-MQTT (MQTT + Edge Computing)
 
 ![Status](https://img.shields.io/badge/Estado-Producción-green)
-![Version](https://img.shields.io/badge/Versión-v4.3.4--MQTT-blue)
+![Version](https://img.shields.io/badge/Versión-v4.3.4.1--MQTT-blue)
 ![Stack](https://img.shields.io/badge/Stack-ESP32%20%7C%20Node--RED%20%7C%20InfluxDB%20%7C%20Grafana-orange)
 ![PlatformIO](https://img.shields.io/badge/PlatformIO-Ready-brightgreen)
 ![License](https://img.shields.io/badge/License-AGPL--3.0-yellow)
 
 ---
 
-## 🆕 Novedades (v4.3.4)
+## 🆕 Novedades (v4.3.4.1)
 
 - 🔐 On-demand Basic Auth: la interfaz de lectura es pública; el modal de login solo se solicita cuando se ejecutan acciones administrativas (guardar configuración, guardar WiFi, subir firmware OTA, descargar logs). Al introducir credenciales válidas, la acción solicitada se reintenta automáticamente.
 - 📄 Descarga de logs corregida: `/downloadLog` ahora exige autenticación para acciones administrativas y sirve `/error.log` con `Content-Disposition` para forzar descarga; el frontend descarga el archivo como Blob para compatibilidad con navegadores.
 - 📡 Escaneo Wi‑Fi asíncrono: `/api/wifi/scan` comprueba `WiFi.scanComplete()` y inicia `WiFi.scanNetworks(true)` cuando sea necesario, devolviendo `[]` mientras se completa el escaneo y los resultados cuando estén disponibles.
 - 💡 Feedback visual más rápido: se acortaron los intervalos de parpadeo del LED para una retroalimentación visual más inmediata.
-- 🛠️ Version bump: firmware marcado como `v4.3.4-MQTT`.
+- 🛠️ Version bump: firmware marcado como `v4.3.4.1-MQTT`.
 
 ---
 

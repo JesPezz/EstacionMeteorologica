@@ -2,22 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
-## v4.3.4-MQTT - 2026-08-06
+## v4.3.4.1-MQTT - 2026-08-06
 
-Released: https://github.com/JesPezz/EstacionMeteorologica/releases/tag/v4.3.4-MQTT
+Released: https://github.com/JesPezz/EstacionMeteorologica/releases/tag/v4.3.4.1-MQTT
 
 Summary
-- Bumped firmware version to `v4.3.4-MQTT` and published updated firmware binary.
-- Implemented on-demand Basic Auth for administrative actions (config save, WiFi save, OTA and log download) to keep the dashboard public for read-only data.
-- Fixed `/downloadLog` to enforce auth and serve `/error.log` with correct Content-Disposition for browser downloads; frontend now downloads via Blob.
-- Hardened `/api/wifi/scan` to use `WiFi.scanComplete()` and support asynchronous scans (returns `[]` while scanning, serves results when complete).
-- Shortened LED blink intervals for faster visual feedback.
+- Bumped firmware version to `v4.3.4.1-MQTT` and published updated firmware binary.
+- Refactored LED control module to use FreeRTOS task-based signaling via `led_task.cpp` and removed obsolete `led.cpp`.
+- Replaced legacy LED helper calls with `signalLed(...)` and migrated include references to `led_task.h`.
+- Preserved original LED timing semantics for success, progress, and error states.
 
 Notes
 - Binary firmware attached to the release: .pio/build/esp32doit-devkit-v1/firmware.bin
-- Devices must be flashed with the attached firmware to receive the security and UX fixes.
+- Devices must be flashed with the attached firmware to prevent OTA loops and ensure the version tag matches the code.
 
-## v4.3.2-MQTT - 2026-08-06
+## v4.3.4-MQTT - 2026-08-06
 
 Released: https://github.com/JesPezz/EstacionMeteorologica/releases/tag/v4.3.2-MQTT
 
