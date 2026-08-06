@@ -1,10 +1,20 @@
-# 🌦️ Estación Meteorológica IoT v4.0 (MQTT + Edge Computing)
+# 🌦️ Estación Meteorológica IoT v4.2.0 (MQTT + Edge Computing)
 
 ![Status](https://img.shields.io/badge/Estado-Producción-green)
-![Version](https://img.shields.io/badge/Versión-v4.0.0--MQTT-blue)
+![Version](https://img.shields.io/badge/Versión-v4.2.0-blue)
 ![Stack](https://img.shields.io/badge/Stack-ESP32%20%7C%20Node--RED%20%7C%20InfluxDB%20%7C%20Grafana-orange)
 ![PlatformIO](https://img.shields.io/badge/PlatformIO-Ready-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![License](https://img.shields.io/badge/License-AGPL--3.0-yellow)
+
+---
+
+## 🆕 Novedades (v4.2.0)
+
+- 🔋 Monitoreo de batería: se incorpora un módulo de medición de voltaje que expone `battery_voltage` y `battery_status` en la API (`/sensor_data`) y en la interfaz web. Permite detectar batería ausente, undervoltage y estado OK.
+- 🔁 Registro de motivo de reinicio: al iniciar, el firmware registra `esp_reset_reason` (Watchdog, Brownout, Panic, etc.) en el log para facilitar diagnóstico de problemas de alimentación o WDT.
+- 🧰 Reducción de escrituras NVS (throttling): el guardado del estado BSEC en NVS ahora respeta un cooldown de 15 minutos entre escrituras exitosas para evitar escrituras redundantes y prolongar la vida de la memoria Flash.
+- 🛡️ Robustez UI: el frontend ahora valida y captura errores JSON/SSE evitando que respuestas malformadas detengan las actualizaciones de la interfaz.
+- 🎨 UI offline: se embebió CSS crítico en la web UI para que el panel conserve estilos aun sin conexión a CDNs.
 
 ---
 
@@ -13,7 +23,6 @@
 El sistema utiliza un patrón de **Edge Gateway**. El ESP32 se dedica exclusivamente a la lectura precisa del sensor y transmisión rápida, mientras que la Raspberry Pi gestiona la lógica de negocio, almacenamiento y visualización.
 
 ```mermaid
-%% Gráfico mejorado: sin etiquetas HTML, con saltos de línea y estilo
 graph LR
   A[BME680\nSensor] -->|I2C| B(ESP32)
   B -->|MQTT / 3s| C[Raspberry Pi 5\nMosquitto Broker]
@@ -29,11 +38,6 @@ graph LR
     D -->|Promedio 1h| H[Google Sheets]
     D -->|Cada 20s| I[ThingSpeak]
   end
-
-  classDef broker fill:#f9f,stroke:#333,stroke-width:1px;
-  class C broker;
-  classDef dbs fill:#cff,stroke:#333,stroke-width:1px;
-  class E,F,H,I dbs;
 ```
 
 ---
@@ -43,10 +47,10 @@ graph LR
   <div style="flex:1;min-width:220px;border-radius:8px;padding:12px;background:#f7f9fc;border:1px solid #e1e4e8;">
     <h3 style="margin:0 0 8px 0">Firmware ESP32</h3>
     <ul style="margin:0 0 0 16px;padding:0">
-      <li>Algoritmo BSEC (Bosch) v1.4.8.0 — IAQ.</li>
-      <li>AsyncMqttClient — comunicaciones no bloqueantes.</li>
-      <li>Persistencia NVS (bsec_clean) para calibración.</li>
-      <li>Interfaz web de configuración + OTA.</li>
+      <li>Algoritmo BSEC (Bosch) — IAQ y calibración persistente (NVS).</li>
+      <li>Monitoreo de batería y reporte de voltaje/estado al frontend.</li>
+      <li>Persistencia NVS con throttling (cooldown 15 min) para proteger la Flash.</li>
+      <li>Interfaz web de configuración embebida + OTA.</li>
     </ul>
   </div>
 
@@ -87,14 +91,39 @@ graph LR
 ## 🚀 Instalación y Configuración (resumen)
 
 1. Plataforma: PlatformIO en VS Code.  
-2. Verifica platformio.ini (ej. `lib_archive = false` para BSEC).  
-3. Subir firmware (include SPIFFS/LittleFS image para Web UI).  
-4. Configurar WiFi/MQTT/ThingSpeak desde la UI del dispositivo.
+2. Verifica platformio.ini (ej. `lib_archive = no` para BSEC).  
+3. Compilar con `pio run -e esp32doit-devkit-v1` y flashear el bin (`.pio/build/esp32doit-devkit-v1/firmware.bin`).  
+4. Subir firmware y la imagen SPIFFS/LittleFS para la Web UI.  
+5. Configurar WiFi/MQTT/ThingSpeak desde la UI del dispositivo.
 
 **Servidor (Raspberry Pi)**  
 - Mosquitto (broker MQTT)  
 - Node-RED (flows incluidos en `nodered_flow.json`)  
 - InfluxDB + Grafana (datasource apuntando a DB `sensores`)
+
+---
+
+## ⚙️ Configuración (config.json)
+
+Las claves principales (además de las usuales) disponibles en `config.json` son:
+
+| Clave | Tipo | Descripción |
+|---|---|---|
+| location | string | Identificador legible de la ubicación del sensor |
+| altitude | float | Altitud en metros para calibraciones |
+| mqttServer | string | Host o IP del broker MQTT |
+| mqttPort | int | Puerto MQTT (default 1883) |
+| mqttUser | string | Usuario MQTT |
+| mqttPassword | string | Contraseña MQTT |
+| mqttTopic | string | Tópico base para publicación |
+| vbatPin | int | Pin ADC para lectura de batería (ej. 35) |
+| vdivRatio | float | Ratio del divisor de tensión (ej. 2.0) |
+| voltageThreshold | float | Voltaje umbral para alertas (V) |
+| voltageCheckIntervalMs | int | Intervalo de chequeo del voltaje (ms) |
+| minDetectVoltage | float | Voltaje mínimo detectado por el ADC (V) |
+| updateOta | int | Intervalo OTA en horas |
+
+> Nota: Las claves de voltaje son opcionales y tienen valores por defecto en el firmware. Ajusta `vdivRatio` y `vbatPin` según tu montaje.
 
 ---
 
@@ -110,6 +139,8 @@ Los datos se guardan en la base `sensores`, measurement `clima`.
 | iaq | Float | Índice de Calidad de Aire (0-500) |
 | iaq_accuracy | Int | Precisión (0=Estabilizando, 3=Calibrado) |
 | gas_resistance | Float | Resistencia del sensor (Ohms) |
+| battery_voltage | Float | Voltaje medido de la batería (V) — v4.2.0 |
+| battery_status | String | Estado de batería: absent / undervoltage / ok |
 
 **Tags:** `location`, `device_id`
 
@@ -122,9 +153,18 @@ Los datos se guardan en la base `sensores`, measurement `clima`.
 
 ---
 
+## 🧾 Notas de mantenimiento y diagnóstico
+
+- Al arrancar el firmware se escribe en el log (SPIFFS) el motivo del último reinicio (`esp_reset_reason`) para facilitar auditoría de reinicios por WDT, brownout o pánicos.
+- El mecanismo de persistencia BSEC (NVS) implementa un cooldown de 15 minutos entre escrituras exitosas para evitar desgaste de la memoria flash.
+- Si necesitas forzar la recarga del estado BSEC o depurar la NVS, revisa las trazas serie y el archivo de log en `/error.log` dentro del SPIFFS.
+
+---
+
 ## 📜 Licencia
 
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![License](https://img.shields.io/badge/License-AGPL--3.0-yellow)
 
 Este proyecto es open-source bajo la licencia AGPL-3.0.  
 Desarrollado por JesPezz.
+
