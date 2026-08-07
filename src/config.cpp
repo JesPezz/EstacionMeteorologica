@@ -19,7 +19,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v4.3.4.3-MQTT";
+const char* version = "v4.3.4.4-MQTT";
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
@@ -86,31 +86,68 @@ bool loadConfig() {
                 else if (wdoc["savedNetworks"].is<JsonArray>()) arr = wdoc["savedNetworks"].as<JsonArray>();
 
                 if (!arr.isNull()) {
-                    // Cargar config.json si existe para fusionar
-                    if (SPIFFS.exists(configFilePath)) {
-                        File cf = SPIFFS.open(configFilePath, "r");
-                        if (cf) {
-                            size_t csz = cf.size();
-                            size_t cbuf = csz + 1024;
-                            DynamicJsonDocument cdoc(cbuf);
-                            if (!deserializeJson(cdoc, cf)) {
-                                // Cargar savedNetworks existentes si hay
-                                if (cdoc["savedNetworks"].is<JsonArray>()) {
-                                    config.savedNetworks.clear();
-                                    for (JsonObject o : cdoc["savedNetworks"].as<JsonArray>()) {
-                                        WiFiNetwork wn;
-                                        strlcpy(wn.ssid, o["ssid"] | "", sizeof(wn.ssid));
-                                        strlcpy(wn.password, o["password"] | "", sizeof(wn.password));
-                                        config.savedNetworks.push_back(wn);
-                                    }
-                                }
-                            }
-                            cf.close();
-                        }
-                    }
+                                    // Cargar el contenido actual de /config.json en un Config temporal para no perder claves
+                                    Config tempConfig;
+                                    // Valores por defecto seguros
+                                    tempConfig.location = "";
+                                    tempConfig.altitude = 320.0;
+                                    tempConfig.telegramToken = "";
+                                    tempConfig.chatId = "";
+                                    tempConfig.updateOta = 3600000;
+                                    tempConfig.thingSpeakAPIKey = "";
+                                    tempConfig.channelID = 0;
+                                    tempConfig.mqttServer = "";
+                                    tempConfig.mqttPort = 1883;
+                                    tempConfig.mqttUser = "";
+                                    tempConfig.mqttPassword = "";
+                                    tempConfig.mqttTopic = "";
+                                    tempConfig.vbatPin = 35; // ADC1 safe default
+                                    tempConfig.vdivRatio = 2.0;
+                                    tempConfig.voltageThreshold = 3.3;
+                                    tempConfig.voltageCheckIntervalMs = 60000;
+                                    tempConfig.minDetectVoltage = 0.2;
 
-                    // Fusionar redes desde wifi.json evitando duplicados (por ssid)
-                    for (JsonVariant v : arr) {
+                                    if (SPIFFS.exists(configFilePath)) {
+                                        File cf = SPIFFS.open(configFilePath, "r");
+                                        if (cf) {
+                                            size_t csz = cf.size();
+                                            size_t cbuf = csz + 1024;
+                                            DynamicJsonDocument cdoc(cbuf);
+                                            if (!deserializeJson(cdoc, cf)) {
+                                                // Copiar campos existentes a tempConfig
+                                                if (cdoc["location"].is<String>()) tempConfig.location = cdoc["location"].as<String>();
+                                                if (cdoc["altitude"].is<float>()) tempConfig.altitude = cdoc["altitude"].as<float>();
+                                                if (cdoc["telegramToken"].is<String>()) tempConfig.telegramToken = cdoc["telegramToken"].as<String>();
+                                                if (cdoc["chatId"].is<String>()) tempConfig.chatId = cdoc["chatId"].as<String>();
+                                                if (cdoc["updateOta"].is<unsigned long>()) tempConfig.updateOta = cdoc["updateOta"].as<unsigned long>() * 3600000;
+                                                if (cdoc["thingSpeakAPIKey"].is<String>()) tempConfig.thingSpeakAPIKey = cdoc["thingSpeakAPIKey"].as<String>();
+                                                if (cdoc["channelID"].is<long>()) tempConfig.channelID = cdoc["channelID"].as<long>();
+                                                if (cdoc["mqttServer"].is<String>()) tempConfig.mqttServer = cdoc["mqttServer"].as<String>();
+                                                tempConfig.mqttPort = cdoc["mqttPort"] | 1883;
+                                                if (cdoc["mqttUser"].is<String>()) tempConfig.mqttUser = cdoc["mqttUser"].as<String>();
+                                                if (cdoc["mqttPassword"].is<String>()) tempConfig.mqttPassword = cdoc["mqttPassword"].as<String>();
+                                                if (cdoc["mqttTopic"].is<String>()) tempConfig.mqttTopic = cdoc["mqttTopic"].as<String>();
+                                                if (cdoc["vbatPin"].is<int>()) tempConfig.vbatPin = cdoc["vbatPin"].as<int>();
+                                                if (cdoc["vdivRatio"].is<float>()) tempConfig.vdivRatio = cdoc["vdivRatio"].as<float>();
+                                                if (cdoc["voltageThreshold"].is<float>()) tempConfig.voltageThreshold = cdoc["voltageThreshold"].as<float>();
+                                                if (cdoc["voltageCheckIntervalMs"].is<unsigned long>()) tempConfig.voltageCheckIntervalMs = cdoc["voltageCheckIntervalMs"].as<unsigned long>();
+                                                if (cdoc["minDetectVoltage"].is<float>()) tempConfig.minDetectVoltage = cdoc["minDetectVoltage"].as<float>();
+
+                                                if (cdoc["savedNetworks"].is<JsonArray>()) {
+                                                    for (JsonObject o : cdoc["savedNetworks"].as<JsonArray>()) {
+                                                        WiFiNetwork wn;
+                                                        strlcpy(wn.ssid, o["ssid"] | "", sizeof(wn.ssid));
+                                                        strlcpy(wn.password, o["password"] | "", sizeof(wn.password));
+                                                        tempConfig.savedNetworks.push_back(wn);
+                                                    }
+                                                }
+                                            }
+                                            cf.close();
+                                        }
+                                    }
+
+                                    // Fusionar redes desde wifi.json evitando duplicados (por ssid)
+                                    for (JsonVariant v : arr) {
                         String ssid = "";
                         String pwd = "";
                         if (v.is<JsonObject>()) {
@@ -125,7 +162,7 @@ bool loadConfig() {
 
                         if (ssid.length() == 0) continue;
                         bool found = false;
-                        for (const auto &e : config.savedNetworks) {
+                        for (const auto &e : tempConfig.savedNetworks) {
                             if (ssid.equals(String(e.ssid))) { found = true; break; }
                         }
                         if (!found) {
@@ -134,12 +171,12 @@ bool loadConfig() {
                             strlcpy(wn.password, pwd.c_str(), sizeof(wn.password));
                             wn.rssi = 0;
                             wn.encryptionType = 0;
-                            config.savedNetworks.push_back(wn);
+                            tempConfig.savedNetworks.push_back(wn);
                         }
                     }
 
-                    // Persistir config fusionado
-                    if (saveConfig(config)) {
+                    // Persistir config fusionado (escribir tempConfig para no perder claves existentes)
+                    if (saveConfig(tempConfig)) {
                         writeLog("✅ Migración de wifi.json a config.json completada exitosamente.");
                         // Eliminar archivo legacy
                         SPIFFS.remove("/wifi.json");
@@ -173,6 +210,9 @@ bool loadConfig() {
     
     if (doc["updateOta"].is<unsigned long>()) config.updateOta = doc["updateOta"].as<unsigned long>() * 3600000;
     else config.updateOta = 3600000;
+    // Safety: if updateOta is 0 or invalid, set to 1 hour
+    if (config.updateOta == 0) config.updateOta = 3600000;
+
     if (doc["thingSpeakAPIKey"].is<String>()) config.thingSpeakAPIKey = doc["thingSpeakAPIKey"].as<String>();
     if (doc["channelID"].is<long>()) config.channelID = doc["channelID"].as<long>();
 
@@ -185,7 +225,13 @@ bool loadConfig() {
 
     // Voltage monitoring fields (optional in config.json)
     if (doc["vbatPin"].is<int>()) config.vbatPin = doc["vbatPin"].as<int>();
-    else config.vbatPin = 35; // default ADC pin (change according to your hardware)
+    else config.vbatPin = 35; // default ADC1 pin
+
+    // Safety: ensure vbatPin is ADC1 (GPIO 32..39). If not, reset to safe default 35
+    if (config.vbatPin < 32 || config.vbatPin > 39) {
+        writeLog(String("⚠️ vbatPin inválido o ADC2 detectado (") + String(config.vbatPin) + "). Forzando a GPIO35 (ADC1).");
+        config.vbatPin = 35;
+    }
 
     if (doc["vdivRatio"].is<float>()) config.vdivRatio = doc["vdivRatio"].as<float>();
     else if (doc["vdivRatio"].is<int>()) config.vdivRatio = (float)doc["vdivRatio"].as<int>();
