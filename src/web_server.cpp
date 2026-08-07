@@ -51,7 +51,7 @@ void handleDownloadLog(AsyncWebServerRequest *request) {
         SPIFFS,
         LOG_FILE,
         "text/plain",
-        true // fuerza como attachment
+        false // no automático, usamos addHeader explícito
     );
 
     response->addHeader("Content-Disposition", "attachment; filename=\"error.log\"");
@@ -59,31 +59,7 @@ void handleDownloadLog(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void handleRestore(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {
-    if (!isAuthenticated(request)) {
-        return;
-    }
-    static File restoreFile;
-    if (index == 0) {
-        if (!filename.endsWith(".json")) {
-            return;
-        }
-        restoreFile = SPIFFS.open("/config_temp.json", "w");
-    }
-    if (restoreFile) {
-        restoreFile.write(data, len);
-    }
-    if (final) {
-        if (restoreFile) {
-            restoreFile.close();
-            if (SPIFFS.exists(configFilePath)) {
-                SPIFFS.remove(configFilePath);
-            }
-            SPIFFS.rename("/config_temp.json", configFilePath);
-            loadConfig();
-        }
-    }
-}
+
 
 struct NetworkConfig {
     char ssid[32];       // Tamaño fijo para SSID
@@ -527,12 +503,15 @@ void startWebServer() {
 
     // Endpoint: Backup (descarga de config.json)
     server.on("/api/backup", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (!isAuthenticated(request)) {
+            return;
+        }
         if (SPIFFS.exists(configFilePath)) {
             AsyncWebServerResponse *response = request->beginResponse(
                 SPIFFS,
                 configFilePath,
                 "application/json",
-                true // attachment
+                false // no automático, usamos addHeader explícito
             );
             response->addHeader("Content-Disposition", "attachment; filename=\"backup_config.json\"");
             response->addHeader("Cache-Control", "no-cache");
@@ -545,10 +524,16 @@ void startWebServer() {
     // Endpoint: Restore (subida y reemplazo de config.json)
     server.on("/api/restore", HTTP_POST,
         [](AsyncWebServerRequest *request){
+            if (!isAuthenticated(request)) {
+                return;
+            }
             // finalize handler is empty because upload handler will manage write and response
             request->send(400, "application/json", "{\"error\":\"Use multipart file upload to /api/restore\"}");
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+        if (!isAuthenticated(request)) {
+            return;
+        }
         // Filename may be arbitrary; write chunks to temporary file
         const char* tmpPath = "/config_tmp.json";
         if (!index) {
@@ -649,16 +634,7 @@ void startWebServer() {
     server.on("/sensor_data", HTTP_GET, handleSensorData);
     server.on("/esp_status", HTTP_GET, handleESPStatus);
     server.on("/restart", HTTP_POST, handleRestart);
-    // Use the dedicated handler that opens the file and sets Content-Disposition
     server.on("/downloadLog", HTTP_GET, handleDownloadLog);
-    server.on("/api/restore", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!isAuthenticated(request)) {
-            request->send(401, "text/plain", "Unauthorized");
-            return;
-        }
-        request->send(200, "text/plain", "Restored successfully. Restarting...");
-        shouldRestart = true;
-    }, handleRestore);
 server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
     if(SPIFFS.exists(LOG_FILE)) {
         request->send(SPIFFS, LOG_FILE, "text/plain");

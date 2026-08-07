@@ -13,7 +13,7 @@
 #include "TimeManager.h"
 //#include <bme68xLibrary.h>
 #include "web_server.h"
-#include "BME_sensor.h"
+
 #include <bsec.h>
 #include "SensorManager.h"
 #include "ota_update.h"
