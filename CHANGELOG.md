@@ -2,11 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
-## v4.3.4.3-MQTT - 2026-08-07
+## v4.3.4.4-MQTT - 2026-08-07
 
-- Migración automática de `/wifi.json` a `/config.json` al arrancar (fusiona savedNetworks y elimina el archivo legacy).
-- Corrección en OTA: espera 1s antes de reiniciar tras una actualización y evita reactivar el watchdog justo antes del restart.
-- Ajustes menores: LED_SUCCESS corto y endpoints /api/backup y /api/restore añadidos.
+- Corregido borrado accidental de claves en `/config.json` durante migración desde `/wifi.json` (ahora se fusionan correctamente sin borrar campos existentes).
+- Valores por defecto seguros: `updateOta` por defecto 1 hora si está a 0, y `vbatPin` forzado a GPIO35 si se detecta un pin inválido o ADC2.
+- Evitado bucle infinito de OTA al garantizar que `updateOta >= 3600000` antes de ejecutar comprobaciones periódicas.
+- Evitado conflicto ADC2/WiFi: lecturas de ADC2 se omiten si WiFi está activo para prevenir timeouts y errores.
+- Otras correcciones menores y mejoras de logging.
 
 
 

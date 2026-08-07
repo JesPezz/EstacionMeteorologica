@@ -2,6 +2,7 @@
 #include "config.h"
 #include "FS.h"
 #include "SPIFFS.h"
+#include <WiFi.h>
 
 // Estado interno
 static unsigned long lastVoltageCheck = 0;
@@ -32,7 +33,18 @@ void checkVoltage() {
     int pin = config.vbatPin;
     if (pin < 0) return;
 
-    // Leer ADC
+    // Determinar si es ADC1 (GPIO 32..39)
+    bool isADC1 = (pin >= 32 && pin <= 39);
+    // ADC2 pins: 0,2,4,12-15,25-27
+    bool isADC2 = (pin == 0 || pin == 2 || pin == 4 || (pin >= 12 && pin <= 15) || (pin >= 25 && pin <= 27));
+
+    // Si es ADC2 y el WiFi está activo, evitar la lectura para prevenir ESP_ERR_TIMEOUT
+    if (!isADC1 && isADC2 && WiFi.status() == WL_CONNECTED) {
+        writeLog(String("⚠️ Saltando lectura de voltaje: vbatPin ") + String(pin) + " es ADC2 y WiFi está conectado (conflicto ADC2).");
+        return;
+    }
+
+    // Leer ADC (solo si ADC1 o ADC2 y WiFi desconectado)
     int raw = analogRead(pin);
     const float maxAdc = 4095.0; // 12-bit ADC
     const float adcVref = 3.3;  // Referencia asumida

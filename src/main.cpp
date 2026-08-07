@@ -121,18 +121,21 @@ if (!testFile) {
   
   loadConfig();
   setupMQTT();
-   // Definir el nombre del código y la ubicación
+   // Inicializar control de cheques de actualización
+  lastUpdateCheck = millis();
+
+  // Definir el nombre del código y la ubicación
   Serial.println();
   Serial.print("Version: ");
   Serial.print(nombreCodigo);
   Serial.print(" ");
   Serial.println(version);
   Serial.println("Ubicacion: " + config.location);
-  
-    
+   
+   
   printWiFiNetwork();
   Serial.println();
-  
+   
   esp_partition_t *runningPartition = (esp_partition_t *)esp_ota_get_running_partition();
   Serial.printf("🔍 Ejecutando desde la partición: %s\n", runningPartition->label);
   
@@ -235,7 +238,8 @@ void loop() {
   }
   
   // Actualizaciones OTA y reinicio
-  if (millis() - lastUpdateCheck >= config.updateOta) {
+  // Ejecutar chequeo de actualizaciones solo si updateOta está habilitado (>= 1 hora)
+  if (config.updateOta >= 3600000 && (millis() - lastUpdateCheck >= config.updateOta)) {
       stateUpdateCounter = 0;
       updateState();
       checkForIndexUpdate();
