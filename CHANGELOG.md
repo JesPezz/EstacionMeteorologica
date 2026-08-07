@@ -2,7 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
-## v4.3.4.2-MQTT - 2026-08-07
+## v4.3.4.3-MQTT - 2026-08-07
+
+- Migración automática de `/wifi.json` a `/config.json` al arrancar (fusiona savedNetworks y elimina el archivo legacy).
+- Corrección en OTA: espera 1s antes de reiniciar tras una actualización y evita reactivar el watchdog justo antes del restart.
+- Ajustes menores: LED_SUCCESS corto y endpoints /api/backup y /api/restore añadidos.
+
+
 
 Released: https://github.com/JesPezz/EstacionMeteorologica/releases/tag/v4.3.4.1-MQTT
 

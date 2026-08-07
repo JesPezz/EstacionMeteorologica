@@ -384,8 +384,9 @@ void downloadAndUpdate() {
                 Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
                 sendTelegramMessage("✅ Firmware actualizado correctamente. Reiniciando...", config);
                 http.end();
-                enableWatchdog();
-                ESP.restart();
+            // Esperar un momento para asegurar entrega de notificaciones y evitar re-activar watchdog justo antes del reinicio
+            delay(1000);
+            ESP.restart();
             } else {
                 Serial.println("❌ Error al finalizar la actualización.");
                 writeLog("❌ Error al finalizar la actualización.");
