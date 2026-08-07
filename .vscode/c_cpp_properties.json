@@ -8,14 +8,20 @@
         {
             "name": "PlatformIO",
             "includePath": [
+<<<<<<< HEAD
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/include",
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/src",
+=======
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/include",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/src",
+>>>>>>> 6a7ce66a2d1b77dd88ca8c4c7c925dd72749d9a0
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/Update/src",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/EEPROM/src",
+<<<<<<< HEAD
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/AsyncMqttClient-esphome/src",
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/ThingSpeak/src",
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/Arduino_JSON/src",
@@ -30,6 +36,22 @@
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/AsyncTCP-esphome/src",
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/Blynk/src",
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/BlynkNcpDriver/src",
+=======
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/AsyncMqttClient-esphome/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/ThingSpeak/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/Arduino_JSON/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/PubSubClient/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/BSEC Software Library/src",
+                "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src",
+                "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/ESPAsyncWebServer-esphome/src",
+                "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
+                "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/FS/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/ArduinoJson/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/AsyncTCP-esphome/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/Blynk/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/BlynkNcpDriver/src",
+>>>>>>> 6a7ce66a2d1b77dd88ca8c4c7c925dd72749d9a0
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/esp_additions/freertos",
@@ -226,9 +248,15 @@
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/dio_qspi/include",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/variants/doitESP32devkitV1",
+<<<<<<< HEAD
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/lib/BSEC-Arduino-library/src/inc",
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/lib/BSEC-Arduino-library/src",
                 "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/lib/ESP-Mail-Client-master/src",
+=======
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/lib/BSEC-Arduino-library/src/inc",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/lib/BSEC-Arduino-library/src",
+                "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/lib/ESP-Mail-Client-master/src",
+>>>>>>> 6a7ce66a2d1b77dd88ca8c4c7c925dd72749d9a0
                 "C:/Users/jespe/.platformio/lib/bsec2/src/inc",
                 "C:/Users/jespe/.platformio/lib/bsec2/src",
                 "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",
@@ -259,14 +287,20 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
+<<<<<<< HEAD
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/include",
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/src",
+=======
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/include",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/src",
+>>>>>>> 6a7ce66a2d1b77dd88ca8c4c7c925dd72749d9a0
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/Update/src",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/EEPROM/src",
+<<<<<<< HEAD
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/AsyncMqttClient-esphome/src",
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/ThingSpeak/src",
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/Arduino_JSON/src",
@@ -281,6 +315,22 @@
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/AsyncTCP-esphome/src",
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/Blynk/src",
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/.pio/libdeps/esp32doit-devkit-v1/BlynkNcpDriver/src",
+=======
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/AsyncMqttClient-esphome/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/ThingSpeak/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/Arduino_JSON/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/PubSubClient/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/BSEC Software Library/src",
+                    "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src",
+                    "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/ESPAsyncWebServer-esphome/src",
+                    "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
+                    "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/FS/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/ArduinoJson/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/AsyncTCP-esphome/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/Blynk/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/.pio/libdeps/esp32doit-devkit-v1/BlynkNcpDriver/src",
+>>>>>>> 6a7ce66a2d1b77dd88ca8c4c7c925dd72749d9a0
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/esp_additions/freertos",
@@ -477,9 +527,15 @@
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/dio_qspi/include",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/variants/doitESP32devkitV1",
+<<<<<<< HEAD
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/lib/BSEC-Arduino-library/src/inc",
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/lib/BSEC-Arduino-library/src",
                     "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica/lib/ESP-Mail-Client-master/src",
+=======
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/lib/BSEC-Arduino-library/src/inc",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/lib/BSEC-Arduino-library/src",
+                    "c:/Users/jespe/Documents/PlatformIO/Projects/EstacionMeteorologica.worktrees/refactorizar-control-led-modulo/lib/ESP-Mail-Client-master/src",
+>>>>>>> 6a7ce66a2d1b77dd88ca8c4c7c925dd72749d9a0
                     "C:/Users/jespe/.platformio/lib/bsec2/src/inc",
                     "C:/Users/jespe/.platformio/lib/bsec2/src",
                     "C:/Users/jespe/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",

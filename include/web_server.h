@@ -22,7 +22,7 @@ void initSSETimer();
 void initSensorMutex();
 void listSPIFFS();
 bool isValidURL(String url, const char* domain);
-bool parseRequestJSON(AsyncWebServerRequest* request, JsonDocument& doc);
+bool parseRequestJSON(AsyncWebServerRequest* request, DynamicJsonDocument& doc);
 void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
 void wifiScanTask(void *parameter);
 void initWiFiScanner();

@@ -74,7 +74,7 @@ void saveNotificationConfig() {
         return;
     }
 
-    JsonDocument doc;
+    DynamicJsonDocument doc(512);
     doc["telegramToken"] = config.telegramToken;
     doc["chatId"] = config.chatId;
     

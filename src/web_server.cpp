@@ -233,7 +233,7 @@ void sendSensorData() {
 }
 
 // Función auxiliar para parsear JSON
-bool parseRequestJSON(AsyncWebServerRequest* request, JsonDocument& doc) {
+bool parseRequestJSON(AsyncWebServerRequest* request, DynamicJsonDocument& doc) {
     String body;
     if (request->hasParam("plain", true)) {
         body = request->getParam("plain", true)->value();
@@ -379,25 +379,26 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     }
 
     const char* WiFiManager::getLastError() {
-        if (!SPIFFS.exists("/wifi.json")) {  // Cambiado a wifi.json
-            writeLog("❌ Archivo wifi.json no existe");
-            return "Archivo wifi.json no existe";
+        // Proporciona mensajes de error basados en la existencia/lectura de /config.json
+        if (!SPIFFS.exists(configFilePath)) {
+            writeLog(String("❌ Archivo ") + configFilePath + " no existe");
+            return "Archivo config.json no existe";
         }
-        
-        File file = SPIFFS.open("/wifi.json", FILE_READ);
+
+        File file = SPIFFS.open(configFilePath, FILE_READ);
         if (!file) {
-            writeLog("❌ No se pudo abrir wifi.json");
-            return "No se pudo abrir wifi.json";
+            writeLog(String("❌ No se pudo abrir ") + configFilePath);
+            return "No se pudo abrir config.json";
         }
-        
+
         if (file.size() == 0) {
             file.close();
-            writeLog("❌ wifi.json está vacío");
-            return "wifi.json está vacío";
+            writeLog(String("❌ ") + configFilePath + " está vacío");
+            return "config.json está vacío";
         }
-        
+
         file.close();
-        return "Error desconocido al guardar en wifi.json";
+        return "Error desconocido al guardar en config.json";
     }
 
 void handleESPStatus(AsyncWebServerRequest *request) {
@@ -523,6 +524,130 @@ void startWebServer() {
     server.on("/api/wifi/scan", HTTP_GET, handleWiFiScan);
     server.on("/saveWiFi", HTTP_POST, [](AsyncWebServerRequest *request) {},
           NULL, handleWiFiSave);
+
+    // Endpoint: Backup (descarga de config.json)
+    server.on("/api/backup", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (webUsername.length() > 0 && !request->authenticate(webUsername.c_str(), webPassword.c_str())) {
+            return request->requestAuthentication();
+        }
+        if (!SPIFFS.exists(configFilePath)) {
+            request->send(404, "application/json", "{\"error\":\"config.json not found\"}");
+            return;
+        }
+        AsyncWebServerResponse *response = request->beginResponse(
+            SPIFFS,
+            configFilePath,
+            "application/json",
+            true // attachment
+        );
+        response->addHeader("Content-Disposition", "attachment; filename=\"config_backup.json\"");
+        response->addHeader("Cache-Control", "no-cache");
+        request->send(response);
+    });
+
+    // Endpoint: Restore (subida y reemplazo de config.json)
+    server.on("/api/restore", HTTP_POST,
+        [](AsyncWebServerRequest *request){
+            // finalize handler is empty because upload handler will manage write and response
+            request->send(400, "application/json", "{\"error\":\"Use multipart file upload to /api/restore\"}");
+        },
+        [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+        // Filename may be arbitrary; write chunks to temporary file
+        const char* tmpPath = "/config_tmp.json";
+        if (!index) {
+            // First chunk - create/overwrite file
+            File f = SPIFFS.open(tmpPath, FILE_WRITE);
+            if (!f) {
+                writeLog("❌ Error al crear archivo temporal de restauración");
+                request->send(500, "application/json", "{\"error\":\"Cannot create temp file\"}");
+                return;
+            }
+            f.close();
+        }
+        // Append chunk
+        File f = SPIFFS.open(tmpPath, FILE_APPEND);
+        if (!f) {
+            writeLog("❌ Error al abrir archivo temporal para append");
+            request->send(500, "application/json", "{\"error\":\"Cannot open temp file\"}");
+            return;
+        }
+        f.write(data, len);
+        f.close();
+
+        if (final) {
+            // Validate JSON
+            File tf = SPIFFS.open(tmpPath, FILE_READ);
+            if (!tf) {
+                writeLog("❌ Error al leer archivo temporal de restauración");
+                request->send(500, "application/json", "{\"error\":\"Cannot read temp file\"}");
+                return;
+            }
+
+            // Parse into dynamic doc
+            const size_t buf = tf.size() + 1024;
+            DynamicJsonDocument doc(buf);
+            DeserializationError err = deserializeJson(doc, tf);
+            tf.close();
+            if (err) {
+                writeLog(String("❌ Error parseando JSON de restore: ") + err.c_str());
+                request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+                SPIFFS.remove(tmpPath);
+                return;
+            }
+
+            // Basic validation: expect at least one of known keys
+            if (!doc.containsKey("mqttServer") && !doc.containsKey("location") && !doc.containsKey("savedNetworks")) {
+                writeLog("❌ JSON de restauración no contiene claves esperadas");
+                request->send(400, "application/json", "{\"error\":\"JSON missing expected keys\"}");
+                SPIFFS.remove(tmpPath);
+                return;
+            }
+
+            // Overwrite /config.json
+            File cf = SPIFFS.open(configFilePath, FILE_WRITE);
+            if (!cf) {
+                writeLog("❌ No se pudo abrir /config.json para escritura");
+                request->send(500, "application/json", "{\"error\":\"Cannot write config.json\"}");
+                SPIFFS.remove(tmpPath);
+                return;
+            }
+            // Re-open temp and copy
+            File tf2 = SPIFFS.open(tmpPath, FILE_READ);
+            if (!tf2) {
+                cf.close();
+                writeLog("❌ No se pudo reabrir temp file para copiar");
+                request->send(500, "application/json", "{\"error\":\"Cannot read temp file\"}");
+                SPIFFS.remove(tmpPath);
+                return;
+            }
+            // Copy contents
+            while (tf2.available()) {
+                cf.write(tf2.read());
+            }
+            tf2.close();
+            cf.close();
+            SPIFFS.remove(tmpPath);
+
+            // Reload config into runtime and persist via saveConfig to normalize format
+            if (!loadConfig()) {
+                writeLog("⚠️ Restauración: no se pudo recargar config.json después de sobrescribir");
+            } else {
+                // Re-save to ensure normalized formatting
+                if (!saveConfig(config)) writeLog("⚠️ Restauración: no se pudo guardar config.json tras validar");
+            }
+
+            // Log and respond
+            writeLog("✅ Restauración de configuración completada. Reiniciando...");
+            request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Restauración exitosa. Reiniciando...\"}");
+
+            // Programar reinicio en tarea separada para no bloquear
+            xTaskCreate([](void*){
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                ESP.restart();
+                vTaskDelete(NULL);
+            }, "restart_after_restore", 2048, NULL, 1, NULL);
+        }
+    });
     
     server.on("/sensor_data", HTTP_GET, handleSensorData);
     server.on("/esp_status", HTTP_GET, handleESPStatus);

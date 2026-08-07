@@ -63,7 +63,7 @@ void setupMQTT() {
 void publishSensorData() {
     if (!mqttClient.connected()) return;
 
-    JsonDocument doc; // Creamos el documento vacío
+    DynamicJsonDocument doc(2048); // Creamos el documento con tamaño suficiente
     
     // ¡MAGIA! ✨ Llenamos los datos con una sola línea
     populateSensorJson(doc); 
