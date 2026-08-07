@@ -527,22 +527,19 @@ void startWebServer() {
 
     // Endpoint: Backup (descarga de config.json)
     server.on("/api/backup", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (webUsername.length() > 0 && !request->authenticate(webUsername.c_str(), webPassword.c_str())) {
-            return request->requestAuthentication();
+        if (SPIFFS.exists(configFilePath)) {
+            AsyncWebServerResponse *response = request->beginResponse(
+                SPIFFS,
+                configFilePath,
+                "application/json",
+                true // attachment
+            );
+            response->addHeader("Content-Disposition", "attachment; filename=\"backup_config.json\"");
+            response->addHeader("Cache-Control", "no-cache");
+            request->send(response);
+        } else {
+            request->send(500, "application/json", "{\"status\":\"error\",\"message\":\"Archivo config.json no encontrado\"}");
         }
-        if (!SPIFFS.exists(configFilePath)) {
-            request->send(404, "application/json", "{\"error\":\"config.json not found\"}");
-            return;
-        }
-        AsyncWebServerResponse *response = request->beginResponse(
-            SPIFFS,
-            configFilePath,
-            "application/json",
-            true // attachment
-        );
-        response->addHeader("Content-Disposition", "attachment; filename=\"config_backup.json\"");
-        response->addHeader("Cache-Control", "no-cache");
-        request->send(response);
     });
 
     // Endpoint: Restore (subida y reemplazo de config.json)

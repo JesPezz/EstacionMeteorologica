@@ -604,34 +604,8 @@
 
     let selectedRestoreFile = null;
 
-    async function downloadBackup() {
-        try {
-            toggleLoading(true, 'Descargando respaldo...');
-            const res = await apiCall('/api/backup');
-            if (res.status === 401) {
-                document.getElementById('authModal').style.display = 'flex';
-                pendingAdminAction = downloadBackup;
-                return;
-            }
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'config_backup.json';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-            showToast('Respaldo descargado correctamente', 'success');
-        } catch (err) {
-            console.error('Error al descargar respaldo:', err);
-            showToast('Error al descargar respaldo', 'error');
-        } finally {
-            toggleLoading(false);
-        }
+    function downloadBackup() {
+        window.location.href = '/api/backup';
     }
 
     function handleFileSelect(event) {
