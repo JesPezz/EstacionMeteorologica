@@ -71,5 +71,13 @@ Cuando el usuario pida realizar un release (ej. *"haz el release"* o *"publica l
 
 ---
 
+## Notificaciones
+- Al finalizar una tarea exitosamente (después de realizar el commit y/o push), ejecuta el siguiente comando en la shell para notificar por Telegram:
+  ```bash
+  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=✅ OpenCode finalizó la tarea en EstacionMeteorologica"
+  ```
+
+---
+
 ## Referencia a otras instrucciones
 - El archivo `.github/instructions/copilot-instructions.md.instructions.md` está **obsoleto** y contiene conflictos de merge sin resolver. Ignóralo por completo; este `AGENTS.md` es la única fuente de verdad para agentes en este repositorio.
