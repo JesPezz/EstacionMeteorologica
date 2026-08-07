@@ -19,7 +19,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v4.3.4-MQTT"; 
+const char* version = "v4.3.4.2-MQTT";
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
@@ -116,11 +116,26 @@ bool loadConfig() {
     else if (doc["minDetectVoltage"].is<int>()) config.minDetectVoltage = (float)doc["minDetectVoltage"].as<int>();
     else config.minDetectVoltage = 0.2; // default: 0.2V
 
+    // savedNetworks: cargar si existe
+    if (doc["savedNetworks"].is<JsonArray>()) {
+        config.savedNetworks.clear();
+        for (JsonObject obj : doc["savedNetworks"].as<JsonArray>()) {
+            WiFiNetwork wn;
+            strlcpy(wn.ssid, obj["ssid"] | "", sizeof(wn.ssid));
+            strlcpy(wn.password, obj["password"] | "", sizeof(wn.password));
+            wn.rssi = 0;
+            wn.encryptionType = 0;
+            config.savedNetworks.push_back(wn);
+        }
+    }
+
     return true;
 }
 
 bool saveConfig(const Config& newConfig) {
-    JsonDocument doc;
+    // Use a dynamic document sized reasonably for config + networks
+    const size_t bufferSize = 8192;
+    DynamicJsonDocument doc(bufferSize);
     doc["location"] = newConfig.location;
     doc["altitude"] = newConfig.altitude;
     doc["telegramToken"] = newConfig.telegramToken;
@@ -144,9 +159,20 @@ bool saveConfig(const Config& newConfig) {
     doc["voltageCheckIntervalMs"] = newConfig.voltageCheckIntervalMs;
     doc["minDetectVoltage"] = newConfig.minDetectVoltage;
 
+    // savedNetworks
+    JsonArray arr = doc.createNestedArray("savedNetworks");
+    for (const auto& wn : newConfig.savedNetworks) {
+        JsonObject o = arr.createNestedObject();
+        o["ssid"] = String(wn.ssid);
+        o["password"] = String(wn.password);
+    }
+
     File file = SPIFFS.open(configFilePath, "w");
     if (!file) return false;
-    serializeJson(doc, file);
+    if (serializeJson(doc, file) == 0) {
+        file.close();
+        return false;
+    }
     file.close();
     return true;
 }

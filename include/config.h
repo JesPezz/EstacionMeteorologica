@@ -52,6 +52,9 @@ struct Config {
     float voltageThreshold;       // Voltage threshold (Volts) below which a fault is logged
     unsigned long voltageCheckIntervalMs; // How often to check voltage (ms)
     float minDetectVoltage;        // Voltage below which we assume battery is absent (e.g., 0.2 V)
+
+    // Redes WiFi guardadas (ssid + password)
+    std::vector<WiFiNetwork> savedNetworks;
 };
 
 // --- Variables Globales ---

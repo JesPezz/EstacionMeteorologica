@@ -104,112 +104,60 @@ void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
 
 bool WiFiManager::saveNetwork(const WiFiNetwork& network) {
 
-    // Crear archivo si no existe
-    if (!SPIFFS.exists("/wifi.json")) {
-        File file = SPIFFS.open("/wifi.json", FILE_WRITE);
-        if (!file) {
-            Serial.println("❌ Error al crear wifi.json inicial");
-            return false;
-        }
-        file.print("[]"); // Array JSON vacío
-        file.close();
-        Serial.println("✅ Creado wifi.json inicial");
-    }
-    
-    // 1. Leer redes existentes
-    std::vector<WiFiNetwork> existingNetworks;
-    if (!loadSavedNetworks(existingNetworks)) {
-        Serial.println("❌ Error al cargar redes existentes");
-        return false;
+    // Use config.savedNetworks as source of truth
+    // Load current config (best-effort)
+    if (!loadConfig()) {
+        Serial.println("⚠️ No se pudo cargar config.json antes de guardar la red");
     }
 
-    if (!loadSavedNetworks(existingNetworks)) {
-        existingNetworks.clear(); // Limpiar si hay error
-        Serial.println("⚠️ Usando lista vacía (fallo al cargar)");
-    }
-
-    // 2. Buscar y actualizar red existente (si existe)
+    // Update existing entry or add
     bool found = false;
-    for (auto& net : existingNetworks) {
+    for (auto& net : config.savedNetworks) {
         if (strcmp(net.ssid, network.ssid) == 0) {
             strlcpy(net.password, network.password, sizeof(net.password));
             found = true;
-            Serial.printf("✅ Red '%s' actualizada\n", network.ssid);
+            Serial.printf("✅ Red '%s' actualizada en config.json\n", network.ssid);
             break;
         }
     }
 
-    // 3. Si no existe, añadirla
     if (!found) {
-        existingNetworks.push_back(network);
-        Serial.printf("✅ Red '%s' añadida\n", network.ssid);
+        config.savedNetworks.push_back(network);
+        Serial.printf("✅ Red '%s' añadida en config.json\n", network.ssid);
     }
 
-    // 4. Guardar todo el array actualizado
-    File file = SPIFFS.open("/wifi.json", "w");
-    if (!file) {
-        Serial.println("❌ Error al abrir wifi.json para escritura");
+    if (!saveConfig(config)) {
+        Serial.println("❌ Error al guardar config.json con la nueva red");
+        writeLog("❌ Error al guardar config.json con la nueva red");
         return false;
     }
 
-    JsonDocument doc;
-    JsonArray arr = doc.to<JsonArray>();
-    
-    for (const auto& net : existingNetworks) {
-        JsonObject obj = arr.add<JsonObject>();
-        obj["ssid"] = net.ssid;
-        obj["password"] = net.password;
-    }
-
-    if (serializeJson(doc, file) == 0) {
-        Serial.println("❌ Error al serializar JSON");
-        file.close();
-        return false;
-    }
-
-    file.close();
     return true;
 }
 
-bool WiFiManager::loadSavedNetworks(std::vector<WiFiNetwork>& networks) {
-    networks.clear();
-    if (!SPIFFS.exists("/wifi.json")) return false;
 
-    File file = SPIFFS.open("/wifi.json", "r");
-    if (!file || file.size() == 0) return false;
-
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, file);
-    
-    if (error || !doc.is<JsonArray>()) {
-        file.close();
-        return false;
+bool WiFiManager::loadSavedNetworks(std::vector<WiFiNetwork>& outNetworks) {
+    outNetworks.clear();
+    // Ensure config is loaded
+    if (!loadConfig()) {
+        Serial.println("⚠️ No se pudo cargar config.json para leer redes guardadas");
     }
 
-    for (JsonObject obj : doc.as<JsonArray>()) {
-        WiFiNetwork net;
-        strlcpy(net.ssid, obj["ssid"] | "", sizeof(net.ssid));
-        strlcpy(net.password, obj["password"] | "", sizeof(net.password));
-        networks.push_back(net);
+    for (const auto& wn : config.savedNetworks) {
+        outNetworks.push_back(wn);
     }
-
-    file.close();
     return true;
 }
 
 void printWiFiNetwork() {
-    File file = SPIFFS.open("/wifi.json", "r");
-    if (!file) {
-        Serial.println("❌ No se encontró wifi.json.");
+    if (!loadConfig()) {
+        Serial.println("⚠️ No se pudo cargar config.json para imprimir redes");
         return;
     }
-
-    Serial.println("📜 Configuración de redes WiFi:");
-    while (file.available()) {
-        Serial.write(file.read());
+    Serial.println("📜 Configuración de redes WiFi (config.json):");
+    for (const auto& wn : config.savedNetworks) {
+        Serial.printf(" - SSID: %s\n", wn.ssid);
     }
-    Serial.println();
-    file.close();
 }
 
 std::vector<WiFiNetwork> getAvailableNetworks() {
