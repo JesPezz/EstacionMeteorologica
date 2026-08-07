@@ -19,7 +19,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v4.3.4.2-MQTT";
+const char* version = "v4.3.4.3-MQTT";
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
@@ -69,6 +69,93 @@ void initSPIFFS() {
 }
 
 bool loadConfig() {
+    // Migrator: Si existe /wifi.json, migrar redes a /config.json y eliminar el archivo legacy
+    if (SPIFFS.exists("/wifi.json")) {
+        writeLog("ℹ️ Encontrado archivo legacy /wifi.json. Iniciando migración a /config.json...");
+        File wf = SPIFFS.open("/wifi.json", "r");
+        if (wf) {
+            size_t sz = wf.size();
+            size_t bufSize = sz + 1024;
+            DynamicJsonDocument wdoc(bufSize);
+            DeserializationError werr = deserializeJson(wdoc, wf);
+            wf.close();
+            if (!werr) {
+                // Obtener array raíz o campo savedNetworks
+                JsonArray arr;
+                if (wdoc.is<JsonArray>()) arr = wdoc.as<JsonArray>();
+                else if (wdoc["savedNetworks"].is<JsonArray>()) arr = wdoc["savedNetworks"].as<JsonArray>();
+
+                if (!arr.isNull()) {
+                    // Cargar config.json si existe para fusionar
+                    if (SPIFFS.exists(configFilePath)) {
+                        File cf = SPIFFS.open(configFilePath, "r");
+                        if (cf) {
+                            size_t csz = cf.size();
+                            size_t cbuf = csz + 1024;
+                            DynamicJsonDocument cdoc(cbuf);
+                            if (!deserializeJson(cdoc, cf)) {
+                                // Cargar savedNetworks existentes si hay
+                                if (cdoc["savedNetworks"].is<JsonArray>()) {
+                                    config.savedNetworks.clear();
+                                    for (JsonObject o : cdoc["savedNetworks"].as<JsonArray>()) {
+                                        WiFiNetwork wn;
+                                        strlcpy(wn.ssid, o["ssid"] | "", sizeof(wn.ssid));
+                                        strlcpy(wn.password, o["password"] | "", sizeof(wn.password));
+                                        config.savedNetworks.push_back(wn);
+                                    }
+                                }
+                            }
+                            cf.close();
+                        }
+                    }
+
+                    // Fusionar redes desde wifi.json evitando duplicados (por ssid)
+                    for (JsonVariant v : arr) {
+                        String ssid = "";
+                        String pwd = "";
+                        if (v.is<JsonObject>()) {
+                            JsonObject jo = v.as<JsonObject>();
+                            if (jo["ssid"].is<const char*>()) ssid = String((const char*)jo["ssid"]);
+                            else if (jo["ssid"].is<String>()) ssid = jo["ssid"].as<String>();
+                            if (jo["password"].is<const char*>()) pwd = String((const char*)jo["password"]);
+                            else if (jo["password"].is<String>()) pwd = jo["password"].as<String>();
+                        } else if (v.is<const char*>()) {
+                            ssid = String((const char*)v.as<const char*>());
+                        }
+
+                        if (ssid.length() == 0) continue;
+                        bool found = false;
+                        for (const auto &e : config.savedNetworks) {
+                            if (ssid.equals(String(e.ssid))) { found = true; break; }
+                        }
+                        if (!found) {
+                            WiFiNetwork wn;
+                            strlcpy(wn.ssid, ssid.c_str(), sizeof(wn.ssid));
+                            strlcpy(wn.password, pwd.c_str(), sizeof(wn.password));
+                            wn.rssi = 0;
+                            wn.encryptionType = 0;
+                            config.savedNetworks.push_back(wn);
+                        }
+                    }
+
+                    // Persistir config fusionado
+                    if (saveConfig(config)) {
+                        writeLog("✅ Migración de wifi.json a config.json completada exitosamente.");
+                        // Eliminar archivo legacy
+                        SPIFFS.remove("/wifi.json");
+                    } else {
+                        writeLog("❌ Falló al guardar config.json tras migración.");
+                    }
+                }
+            } else {
+                writeLog(String("❌ Error parseando /wifi.json: ") + werr.c_str());
+            }
+        } else {
+            writeLog("❌ No se pudo abrir /wifi.json para migración.");
+        }
+    }
+
+    // Continuar con carga normal de config.json
     JsonDocument doc;
     File file = SPIFFS.open(configFilePath, "r");
     if (!file) return false;
