@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## v4.3.4.4-MQTT - 2026-08-07
+## v4.3.5-MQTT - 2026-08-07
 
 - Corregido borrado accidental de claves en `/config.json` durante migración desde `/wifi.json` (ahora se fusionan correctamente sin borrar campos existentes).
 - Valores por defecto seguros: `updateOta` por defecto 1 hora si está a 0, y `vbatPin` forzado a GPIO35 si se detecta un pin inválido o ADC2.

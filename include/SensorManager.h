@@ -12,5 +12,4 @@ void setupBsecSensor();
 void checkClockSync();
 bool readSensorData(); // <--- CAMBIAR void POR bool AQUÍ TAMBIÉN
 void populateSensorJson(JsonDocument& doc);
-
 #endif

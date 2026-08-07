@@ -19,7 +19,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v4.3.4.4-MQTT";
+const char* version = "v4.3.5-MQTT";
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
@@ -69,6 +69,10 @@ void initSPIFFS() {
 }
 
 bool loadConfig() {
+    // Proteger acceso concurrente a SPIFFS
+    bool took = false;
+    if (sensorMutex) took = (xSemaphoreTake(sensorMutex, pdMS_TO_TICKS(2000)) == pdTRUE);
+
     // Migrator: Si existe /wifi.json, migrar redes a /config.json y eliminar el archivo legacy
     if (SPIFFS.exists("/wifi.json")) {
         writeLog("ℹ️ Encontrado archivo legacy /wifi.json. Iniciando migración a /config.json...");
@@ -193,12 +197,20 @@ bool loadConfig() {
     }
 
     // Continuar con carga normal de config.json
-    JsonDocument doc;
     File file = SPIFFS.open(configFilePath, "r");
-    if (!file) return false;
+    if (!file) {
+        if (took) xSemaphoreGive(sensorMutex);
+        return false;
+    }
+    size_t fsz = file.size();
+    size_t fbuf = fsz + 1024;
+    DynamicJsonDocument doc(fbuf);
     DeserializationError error = deserializeJson(doc, file);
     file.close();
-    if (error) return false;
+    if (error) {
+        if (took) xSemaphoreGive(sensorMutex);
+        return false;
+    }
 
     if (doc["location"].is<String>()) config.location = doc["location"].as<String>();
     if (doc["altitude"].is<float>()) config.altitude = doc["altitude"].as<float>();
@@ -262,10 +274,15 @@ bool loadConfig() {
         }
     }
 
+    if (took) xSemaphoreGive(sensorMutex);
     return true;
 }
 
 bool saveConfig(const Config& newConfig) {
+    // Proteger acceso concurrente a SPIFFS
+    bool took = false;
+    if (sensorMutex) took = (xSemaphoreTake(sensorMutex, pdMS_TO_TICKS(2000)) == pdTRUE);
+
     // Use a dynamic document sized reasonably for config + networks
     const size_t bufferSize = 8192;
     DynamicJsonDocument doc(bufferSize);
@@ -301,12 +318,17 @@ bool saveConfig(const Config& newConfig) {
     }
 
     File file = SPIFFS.open(configFilePath, "w");
-    if (!file) return false;
+    if (!file) {
+        if (took) xSemaphoreGive(sensorMutex);
+        return false;
+    }
     if (serializeJson(doc, file) == 0) {
         file.close();
+        if (took) xSemaphoreGive(sensorMutex);
         return false;
     }
     file.close();
+    if (took) xSemaphoreGive(sensorMutex);
     return true;
 }
 

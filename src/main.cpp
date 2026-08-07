@@ -41,6 +41,11 @@ void setup() {
   EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
   Serial.begin(115200);
 
+  // Inicializaciones RTOS críticas: asegurar mutex/colas antes de cualquier tarea/callback
+  initSensorMutex();
+  setupLedTask();
+  initSSETimer();
+
   // --- Diagnóstico de motivo del último reinicio (nuevo)
   esp_reset_reason_t reset_reason = esp_reset_reason();
   String reasonStr = "unknown";
@@ -145,7 +150,6 @@ if (!testFile) {
   // Obtener el tamaño de la partición OTA
   Serial.printf("📦 Tamaño de la partición actual: %u bytes (%.2f MB)\n", ESP.getSketchSize(), ESP.getSketchSize() / (1024.0 * 1024.0));
   Serial.printf("📦 Espacio libre para OTA: %u bytes (%.2f MB)\n", ESP.getFreeSketchSpace(), ESP.getFreeSketchSpace() / (1024.0 * 1024.0));
-  setupLedTask();
   startAPMode();
   startWebServer();
   Serial.println();
@@ -158,8 +162,6 @@ if (!testFile) {
   Serial.println();
 
 initWiFiScanner();
-initSensorMutex();
-initSSETimer();
 Serial.println();
 printConfig();  // ✅ Ver los valores actuales de configuración
   
@@ -214,14 +216,7 @@ syncClock();
     0               // Núcleo (evitar core donde corre AsyncTCP)
 );
   
-  sseTimer = xTimerCreate(
-    "SSETimer",
-    pdMS_TO_TICKS(5000),
-    pdTRUE,
-    (void*)0,
-    sendSSEData
-);
-xTimerStart(sseTimer, 0);
+  xTimerStart(sseTimer, 0);
             
 }
 

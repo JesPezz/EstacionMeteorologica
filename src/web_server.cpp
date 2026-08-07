@@ -207,7 +207,7 @@ void sendSensorData() {
 }
 
 // Función auxiliar para parsear JSON
-bool parseRequestJSON(AsyncWebServerRequest* request, JsonDocument& doc) {
+bool parseRequestJSON(AsyncWebServerRequest* request, DynamicJsonDocument& doc) {
     String body;
     if (request->hasParam("plain", true)) {
         body = request->getParam("plain", true)->value();
