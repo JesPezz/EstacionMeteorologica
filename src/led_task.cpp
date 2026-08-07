@@ -12,8 +12,9 @@ void ledTask(void *parameter) {
         if (xQueueReceive(ledQueue, &currentState, portMAX_DELAY)) {
             switch (currentState) {
                 case LED_SUCCESS:
+                    // Flasheo corto: 100 ms ON
                     digitalWrite(LED_BUILTIN, HIGH);
-                    vTaskDelay(1000 / portTICK_PERIOD_MS); // Encendido continuo durante 1000 ms
+                    vTaskDelay(100 / portTICK_PERIOD_MS);
                     digitalWrite(LED_BUILTIN, LOW);
                     break;
 
