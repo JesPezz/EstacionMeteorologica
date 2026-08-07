@@ -7,3 +7,6 @@ Data/config.json
 Data/wifi.json
 *.back
 *.json
+.vscode/launch.json
+.vscode/c_cpp_properties.json
+.gitignore

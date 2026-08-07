@@ -191,6 +191,21 @@
                 <button onclick="downloadLog()" class="btn-secondary"><i class="fas fa-file-alt"></i> Log</button>
                 <button onclick="confirmRestart()" class="btn-secondary btn-danger"><i class="fas fa-power-off"></i> Reiniciar</button>
             </div>
+
+            <div style="margin-top: 16px; border-top: 1px solid rgba(15,23,42,0.06); padding-top: 16px;">
+                <h3 style="margin: 0 0 12px 0; font-size: 1rem;"><i class="fas fa-database"></i> Respaldo y Restauración</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="downloadBackup()" class="btn-secondary"><i class="fas fa-download"></i> Descargar Respaldo (Backup)</button>
+                    <div>
+                        <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="handleFileSelect(event)">
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <button type="button" onclick="document.getElementById('restoreFile').click()" class="btn-secondary"><i class="fas fa-file-upload"></i> Seleccionar Archivo</button>
+                            <span id="selectedFileName" style="color:var(--muted); font-size:0.85rem;">Ningún archivo seleccionado</span>
+                            <button type="button" id="restoreBtn" onclick="uploadRestore()" disabled><i class="fas fa-upload"></i> Restaurar Configuración</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="card">
@@ -582,6 +597,58 @@
         } catch (err) {
             console.error('Error al descargar log:', err);
             showToast('Error al descargar log', 'error');
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    let selectedRestoreFile = null;
+
+    function downloadBackup() {
+        window.location.href = '/api/backup';
+    }
+
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+            selectedRestoreFile = file;
+            document.getElementById('selectedFileName').innerText = file.name;
+            document.getElementById('restoreBtn').removeAttribute('disabled');
+        } else {
+            selectedRestoreFile = null;
+            document.getElementById('selectedFileName').innerText = 'Ningún archivo seleccionado';
+            document.getElementById('restoreBtn').setAttribute('disabled', 'true');
+        }
+    }
+
+    async function uploadRestore() {
+        if (!selectedRestoreFile) return;
+        if (!confirm("¿Estás seguro de sobrescribir la configuración actual? El dispositivo se reiniciará.")) return;
+
+        const formData = new FormData();
+        formData.append('config', selectedRestoreFile);
+
+        try {
+            toggleLoading(true, 'Restaurando configuración...');
+            const res = await apiCall('/api/restore', {
+                method: 'POST',
+                body: formData
+            });
+            if (res.status === 401) {
+                document.getElementById('authModal').style.display = 'flex';
+                pendingAdminAction = uploadRestore;
+                return;
+            }
+            if (!res.ok) {
+                throw new Error('Error al restaurar configuración');
+            }
+            showToast('Restauración exitosa. Reiniciando estación...', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 10000);
+        } catch (err) {
+            console.error('uploadRestore error', err);
+            showToast('Error al restaurar configuración', 'error');
         } finally {
             toggleLoading(false);
         }

@@ -59,6 +59,32 @@ void handleDownloadLog(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+void handleRestore(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {
+    if (!isAuthenticated(request)) {
+        return;
+    }
+    static File restoreFile;
+    if (index == 0) {
+        if (!filename.endsWith(".json")) {
+            return;
+        }
+        restoreFile = SPIFFS.open("/config_temp.json", "w");
+    }
+    if (restoreFile) {
+        restoreFile.write(data, len);
+    }
+    if (final) {
+        if (restoreFile) {
+            restoreFile.close();
+            if (SPIFFS.exists(configFilePath)) {
+                SPIFFS.remove(configFilePath);
+            }
+            SPIFFS.rename("/config_temp.json", configFilePath);
+            loadConfig();
+        }
+    }
+}
+
 struct NetworkConfig {
     char ssid[32];       // Tamaño fijo para SSID
     char password[64];    // Tamaño fijo para contraseña
@@ -503,6 +529,26 @@ void startWebServer() {
     server.on("/restart", HTTP_POST, handleRestart);
     // Use the dedicated handler that opens the file and sets Content-Disposition
     server.on("/downloadLog", HTTP_GET, handleDownloadLog);
+    server.on("/api/backup", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!isAuthenticated(request)) {
+            return request->requestAuthentication();
+        }
+        if (!SPIFFS.exists(configFilePath)) {
+            request->send(404, "text/plain", "Config not found");
+            return;
+        }
+        AsyncWebServerResponse *response = request->beginResponse(SPIFFS, configFilePath, "application/json", true);
+        response->addHeader("Content-Disposition", "attachment; filename=\"config_backup.json\"");
+        request->send(response);
+    });
+    server.on("/api/restore", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (!isAuthenticated(request)) {
+            request->send(401, "text/plain", "Unauthorized");
+            return;
+        }
+        request->send(200, "text/plain", "Restored successfully. Restarting...");
+        shouldRestart = true;
+    }, handleRestore);
 server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
     if(SPIFFS.exists(LOG_FILE)) {
         request->send(SPIFFS, LOG_FILE, "text/plain");
