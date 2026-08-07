@@ -51,10 +51,9 @@ void handleDownloadLog(AsyncWebServerRequest *request) {
         SPIFFS,
         LOG_FILE,
         "text/plain",
-        false // no automático, usamos addHeader explícito
+        true
     );
 
-    response->addHeader("Content-Disposition", "attachment; filename=\"error.log\"");
     response->addHeader("Cache-Control", "no-cache");
     request->send(response);
 }
@@ -511,9 +510,8 @@ void startWebServer() {
                 SPIFFS,
                 configFilePath,
                 "application/json",
-                false // no automático, usamos addHeader explícito
+                true
             );
-            response->addHeader("Content-Disposition", "attachment; filename=\"backup_config.json\"");
             response->addHeader("Cache-Control", "no-cache");
             request->send(response);
         } else {
