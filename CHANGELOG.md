@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## v4.3.4.1-MQTT - 2026-08-06
+## v4.3.4.2-MQTT - 2026-08-07
 
 Released: https://github.com/JesPezz/EstacionMeteorologica/releases/tag/v4.3.4.1-MQTT
 
