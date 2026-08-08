@@ -63,19 +63,21 @@ void setupMQTT() {
 void publishSensorData() {
     if (!mqttClient.connected()) return;
 
-    DynamicJsonDocument doc(2048); // Creamos el documento con tamaño suficiente
+    // 🔄 Usar JsonDocument estático para evitar fragmentación y consumo de Stack
+    static JsonDocument doc;
+    doc.clear();
     
-    // ¡MAGIA! ✨ Llenamos los datos con una sola línea
     populateSensorJson(doc); 
 
-    String payload;
-    serializeJson(doc, payload);
+    // Usar un búfer estático serializado en lugar de concatenaciones masivas de String
+    static char payloadBuffer[1024];
+    size_t n = serializeJson(doc, payloadBuffer, sizeof(payloadBuffer));
 
-    mqttClient.publish(config.mqttTopic.c_str(), 1, false, payload.c_str());
-    // ... logs y leds ...
-
-    
-    Serial.printf("📤 Publicando MQTT Completo [%s]: %s\n", config.mqttTopic.c_str(), payload.c_str());
-    
-    signalLed(LED_SUCCESS); 
+    if (n > 0) {
+        mqttClient.publish(config.mqttTopic.c_str(), 1, false, payloadBuffer);
+        Serial.printf("📤 Publicando MQTT Completo [%s]: %s\n", config.mqttTopic.c_str(), payloadBuffer);
+        signalLed(LED_SUCCESS); 
+    } else {
+        Serial.println("❌ Error al serializar JSON para MQTT");
+    }
 }

@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.2-MQTT - 2026-08-08
+
+- **Corregido:** Crash por `abort()` en Core 1 tras ~7 minutos de ejecución continua, causado por agotamiento de Stack de la tarea `loopTask` combinado con `JsonDocument` locales pesados en el Stack.
+- **Agregado:** Monitoreo de memoria Heap en `loop()` (cada 30 s): se registra en el log `ESP.getFreeHeap()` y `ESP.getMinFreeHeap()`, con alerta en Serial cuando quedan menos de 40 KB libres.
+- **Optimizado:** `publishSensorData()` en `src/MQTTManager.cpp` ahora usa un `JsonDocument` estático (`static`) y serializa sobre un búfer estático (`char payloadBuffer[1024]`), eliminando el `DynamicJsonDocument` y las asignaciones de `String` en cada publicación MQTT.
+- **Configuración:** Aumentado el Stack de la tarea Arduino a 16 KB mediante `-DCONFIG_ARDUINO_LOOP_STACK_SIZE=16384` en `build_flags` de `platformio.ini`.
+
 ## v5.0.1-MQTT - 2026-08-08
 
 - **Corregido:** Error de descarga SSL en OTA: el cliente HTTPS (`WiFiClientSecure`) de `downloadAndUpdate()` ahora usa `client.setInsecure()` (omite validación estricta de certificados y ahorra RAM SSL) y aumenta el timeout del socket a 30 segundos (`client.setTimeout(30)`) en `src/ota_update.cpp`.

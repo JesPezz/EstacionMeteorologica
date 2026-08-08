@@ -238,6 +238,16 @@ void loop() {
   // Chequeo de voltaje periódicamente (nuevo)
   checkVoltage();
   
+  // 🧠 Monitoreo periódico de memoria para diagnosticar fugas/fragmentación (cada ~30 seg)
+  static unsigned long lastHeapLog = 0;
+  if (millis() - lastHeapLog >= 30000) {
+      lastHeapLog = millis();
+      writeLog("🧠 Heap Libre: " + String(ESP.getFreeHeap()) + " bytes | Min Heap: " + String(ESP.getMinFreeHeap()) + " bytes");
+      if (ESP.getFreeHeap() < 40000) {
+          Serial.printf("⚠️ HEAP BAJO: %u bytes libres\n", ESP.getFreeHeap());
+      }
+  }
+  
   if (otaInProgress) {
       yield(); 
       return; 
