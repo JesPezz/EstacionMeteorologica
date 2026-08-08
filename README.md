@@ -1,12 +1,16 @@
-# 🌦️ Estación Meteorológica IoT v4.4.0-MQTT (MQTT + Edge Computing)
+# 🌦️ Estación Meteorológica IoT v5.0-MQTT (MQTT + Edge Computing)
 
 ![Status](https://img.shields.io/badge/Estado-Producción-green)
-![Version](https://img.shields.io/badge/Versión-v4.4.0--MQTT-blue)
+![Version](https://img.shields.io/badge/Versión-v5.0--MQTT-blue)
 ![Stack](https://img.shields.io/badge/Stack-ESP32%20%7C%20Node--RED%20%7C%20InfluxDB%20%7C%20Grafana-orange)
 ![PlatformIO](https://img.shields.io/badge/PlatformIO-Ready-brightgreen)
 ![License](https://img.shields.io/badge/License-AGPL--3.0-yellow)
 
 ---
+
+## 🆕 Novedades (v5.0)
+
+- 🔄 **Auto-Rollback OTA (Fail-Safe):** tras una actualización, el firmware se confirma como válido (`esp_ota_mark_app_valid_cancel_rollback`) cuando arranca correctamente con Wi-Fi; si la conexión agota reintentos, marca la imagen como inválida y vuelve a la partición funcional anterior (`esp_ota_mark_app_invalid_rollback_and_reboot`).
 
 ## 🆕 Novedades (v4.3.4.1)
 

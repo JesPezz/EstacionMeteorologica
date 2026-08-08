@@ -206,6 +206,13 @@ syncClock();
   sendTelegramMessage("ℹ️ Estado del ESP32", config);
   Serial.println();
   
+  // ✅ Auto-Rollback OTA (Fail-Safe): confirmar la app como válida y cancelar rollback pendiente
+  if (WiFi.status() == WL_CONNECTED) {
+      esp_ota_mark_app_valid_cancel_rollback();
+      Serial.println("✅ Firmware verificado y confirmado como válido. Auto-rollback cancelado.");
+      writeLog("✅ Firmware verificado y confirmado como válido. Auto-rollback cancelado.");
+  }
+  Serial.println();
   // Imprimir el encabezado
   output = "Timestamp [ms], IAQ, IAQ accuracy, Static IAQ, CO2 equivalent, breath VOC equivalent, raw temp[°C], pressure [hPa], raw relative humidity [%], gas [Ohm], Stab Status, run in status, comp temp[°C], comp humidity [%], gas percentage";
   Serial.println(output);

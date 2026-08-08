@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0-MQTT - 2026-08-08
+
+- **Agregado:** Mecanismo de Auto-Rollback OTA (Fail-Safe) para recuperación automática ante fallos tras una actualización:
+  - Validación de firmware: Al confirmar la conexión Wi-Fi y el funcionamiento inicial del sistema, `setup()` ejecuta `esp_ota_mark_app_valid_cancel_rollback()` (en `src/main.cpp`) confirmando la imagen como válida y cancelando el rollback pendiente.
+  - Recuperación ante fallo: Si la secuencia de conexión Wi-Fi agota todos sus reintentos, `connectToBestWiFi()` (en `src/WiFiManager.cpp`) marca la imagen como inválida con `esp_ota_mark_app_invalid_rollback_and_reboot()` para volver a la partición funcional anterior. Si el arranque no proviene de OTA, se reinicia el sistema normalmente.
+  - Requiere el esquema de particiones duales OTA (`otadata` + `ota_0`/`ota_1`) ya presente en `partitions.csv`.
+
 ## v4.4.0-MQTT - 2026-08-08
 
 - **Eliminado:** Removido completamente el sistema obsoleto de actualización automática de `index.html` desde GitHub (`checkForIndexUpdate()` y `updateFileFromURL()`), incluyendo las variables globales asociadas (`host`, `url`, `etagFilePath`, `indexURL`). La interfaz web se embebe en el firmware desde el binario (PROGMEM) desde la v4.3.9, por lo que este mecanismo era dead code que consumía recursos y generaba ruido de notificaciones.

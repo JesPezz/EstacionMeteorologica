@@ -6,6 +6,7 @@
 #include "FS.h"
 #include "SPIFFS.h"
 #include <ArduinoJson.h>
+#include "esp_ota_ops.h"
 
 bool APmode = false;
 unsigned long lastConnectionAttempt = 0;
@@ -215,8 +216,13 @@ bool connectToBestWiFi() {
         }
     }
 
-    Serial.println("⚠️ Fallo crítico de Wi-Fi. Reiniciando sistema para liberar memoria...");
-    writeLog("⚠️ Fallo crítico de Wi-Fi. Reiniciando sistema para liberar memoria...");
+    Serial.println("❌ Fallo crítico tras actualización. Ejecutando Rollback...");
+    writeLog("❌ Fallo crítico tras actualización. Ejecutando Rollback...");
+    delay(1000);
+    esp_ota_mark_app_invalid_rollback_and_reboot();
+    // Si el rollback no es posible (arranque normal sin OTA previa), reiniciar el sistema normalmente
+    Serial.println("⚠️ Rollback no disponible (arranque normal). Reiniciando sistema...");
+    writeLog("⚠️ Rollback no disponible (arranque normal). Reiniciando sistema...");
     delay(1000);
     ESP.restart();
     return false;
