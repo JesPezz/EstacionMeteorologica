@@ -234,6 +234,17 @@ syncClock();
 void loop() {
   // 1. MANTENIMIENTO DEL SISTEMA
   checkWiFiConnection(); 
+
+  // 🔄 Detectar transición WiFi off→online y reconstruir el cliente MQTT:
+  // el AsyncClient interno de AsyncMqttClient queda con estado corrupto tras
+  // una caída de WiFi y connect() repetido nunca vuelve a conectar (TCP_DISCONNECTED).
+  static bool wifiWasConnected = (WiFi.status() == WL_CONNECTED);
+  bool wifiNowConnected = (WiFi.status() == WL_CONNECTED);
+  if (wifiNowConnected && !wifiWasConnected) {
+      Serial.println("📶 WiFi (re)conectado. Reiniciando cliente MQTT...");
+      resetMQTTClient();
+  }
+  wifiWasConnected = wifiNowConnected; 
   
   // Chequeo de voltaje periódicamente (nuevo)
   checkVoltage();

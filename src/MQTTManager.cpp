@@ -59,10 +59,24 @@ void setupMQTT() {
       mqttClient.setCredentials(config.mqttUser.c_str(), config.mqttPassword.c_str());
   }
 
-  // Timer para reconexión automática sin bloquear
-  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, [](TimerHandle_t xTimer) {
-    connectToMqtt();
-  });
+  // Timer para reconexión automática sin bloquear (crear solo una vez)
+  if (mqttReconnectTimer == nullptr) {
+      mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, [](TimerHandle_t xTimer) {
+        connectToMqtt();
+      });
+  }
+}
+
+// 🔄 Reconstruir el cliente MQTT para eliminar el estado TCP corrupto tras una caída de WiFi.
+// AsyncMqttClient::connect() reutiliza el mismo AsyncClient interno que queda inválido
+// tras una desconexión, provocando reintentos infinitos con motivo TCP_DISCONNECTED.
+void resetMQTTClient() {
+  Serial.println("🔄 Reconstruyendo cliente MQTT (reset AsyncClient interno)...");
+  mqttClient.~AsyncMqttClient();
+  new (&mqttClient) AsyncMqttClient();
+  lastMqttRetry = 0; // Permitir reconexión inmediata
+  setupMQTT();
+  connectToMqtt();
 }
 
 void publishSensorData() {

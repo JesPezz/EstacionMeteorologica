@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.8-MQTT - 2026-08-08
+
+- **Corregido:** El MQTT ya no queda incapaz de reconectarse tras una caída/reconexión WiFi. El `AsyncClient` TCP interno de `AsyncMqttClient` queda con estado corrupto después de una desconexión WiFi y `connect()` repetido (guard de 15s) reintentaba infinitamente con motivo `TCP_DISCONNECTED`.
+  - Nueva función `resetMQTTClient()` en `src/MQTTManager.cpp` que **reconstruye el objeto** `AsyncMqttClient` con placement-new (método recomendado para la librería), pone `lastMqttRetry = 0` para permitir reconexión inmediata y vuelve a configurar credenciales/servidor.
+  - En `src/main.cpp` `loop()` se detecta la **transición de WiFi de off→online**: al reconectar, se llama `resetMQTTClient()` exactamente una vez.
+  - `setupMQTT()` ahora solo crea `mqttReconnectTimer` si aún no existe (evita fugas de timers al reconstruir repetidamente).
+
 ## v5.0.7-MQTT - 2026-08-08
 
 - **Corregido:** La descarga OTA ya no se cuelga ni falla permanentemente si la conexión TLS con el CDN de GitHub se corta a mitad de descarga (error `(-76)` en `ssl_client.cpp`).
