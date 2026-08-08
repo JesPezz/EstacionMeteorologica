@@ -6,6 +6,9 @@
 
 // DECLARACIÓN: Informa al compilador que esta variable existe en alguna parte.
 extern const char* BACKLOG_FILE;
+extern const char* BACKLOG_PROC_FILE;
+
+#define MAX_BATCH 5 // Máximo de registros por llamada a processBacklog()
 
 // Guarda el JSON actual en un archivo de texto en SPIFFS
 void saveToBacklog(JsonDocument& doc);

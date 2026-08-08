@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.4-MQTT - 2026-08-08
+
+- **Agregado:** Reducción del intervalo de guardado offline en `src/main.cpp` de 1 hora a **30 segundos** (`OFFLINE_SAVE_INTERVAL_MS = 30000`) para generar rápidamente múltiples registros durante simulaciones de desconexión Wi-Fi.
+- **Refactorizado:** `src/OfflineManager.cpp` — `processBacklog()`:
+  - Al iniciar la sincronización, renombra `/backlog.txt` a `/backlog_proc.txt` (`SPIFFS.rename`) para separar la escritura de nuevos registros de la lectura de históricos.
+  - Lee los registros con un búfer estático `char lineBuffer[512]` usando `file.readBytesUntil('\n')`, eliminando asignaciones dinámicas de `String` (cero fragmentación de Heap).
+  - Envío limitado a un máximo de **5 registros por llamada** (`MAX_BATCH = 5`) con `delay(100)` entre publicaciones para no saturar la cola en RAM de `AsyncMqttClient`; los registros no enviados se conservan en `/backlog_rest.txt` y se renombran para la próxima llamada.
+  - Elimina `/backlog_proc.txt` al vaciar todo el archivo.
+
 ## v5.0.3-MQTT - 2026-08-08
 
 - **Agregado (diagnóstico):** Impresiones temporales de `ESP.getFreeHeap()` ANTES y DESPUÉS de las rutinas de armado/publicación MQTT (`publishSensorData`), de lectura/escritura NVS (`loadState`/`updateState`) y de la tarea de fondo SSE (timer de 5 s) para identificar qué función provoca la bajada de Heap.

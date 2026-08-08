@@ -319,33 +319,21 @@ void loop() {
       }
 
       // B1. Guardar Respaldo
-      if (nuevosDatos) {
-          struct tm timeinfo;
-          getCurrentTime(&timeinfo);
+      // 🔴 MODO PRUEBAS: guardar cada 30 segundos (30000 ms) para generar múltiples registros
+      // rápidamente durante una simulación de desconexión Wi-Fi. En producción se puede
+      // volver a 3600000 (1 hora).
+      const unsigned long OFFLINE_SAVE_INTERVAL_MS = 30000; // 30s
+      static unsigned long lastOfflineSave = 0;
 
-          // // 🧪 MODO PRUEBAS (Corregido)
+      if (nuevosDatos && (millis() - lastOfflineSave >= OFFLINE_SAVE_INTERVAL_MS)) {
+          lastOfflineSave = millis();
 
-          // if (timeinfo.tm_min != lastProcessedMinute) {
-    
-          //     Serial.printf("⏱️ Nuevo minuto detectado (%d). Guardando respaldo...\n", timeinfo.tm_min);
-          //     writeLog("⚠️ Offline: Guardando respaldo en SPIFFS. Hora: " + getFormattedDateTime());
-          //     lastProcessedMinute = timeinfo.tm_min; // Marcamos como guardado inmediatamente
-            
-          // 🏭 MODO PRODUCCIÓN (Guardar cada hora en punto)
-          
-          if (timeinfo.tm_min == 0 && timeinfo.tm_hour != lastProcessedHour) {
-              Serial.println("⏱️ Hora en punto detectada. Guardando respaldo...");
+          Serial.println("⏱️ Intervalo offline (30s) cumplido. Guardando respaldo...");
+          writeLog("⚠️ Offline: Guardando respaldo en SPIFFS cada 30s. Hora: " + getFormattedDateTime());
 
-              // Registro en el log del sistema
-              writeLog("⚠️ Offline: Guardando respaldo en SPIFFS. Hora: " + getFormattedDateTime());
-              
-              // Actualizamos el candado para que no guarde 20 veces en el mismo minuto
-              lastProcessedHour = timeinfo.tm_hour; 
-
-              JsonDocument doc; 
-              populateSensorJson(doc); 
-              saveToBacklog(doc); 
-          }
+          JsonDocument doc; 
+          populateSensorJson(doc); 
+          saveToBacklog(doc); 
       }
   }
 
