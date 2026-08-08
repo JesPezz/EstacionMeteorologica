@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.6-MQTT - 2026-08-08
+
+- **Corregido:** Ráfaga de logs al conectar/reconectar MQTT. Se eliminaron los mensajes de depuración del cabecera de `connectToMqtt()` (`********` y `📡 Intentando conectar a MQTT...`) que se imprimían en cada vuelta del `loop()` (CASO B) a pesar del guard de 15 s. `connectToMqtt()` queda silencioso salvo cuando de verdad ejecuta `mqttClient.connect()`.
+- **Corregido:** `abort()` (`bad_alloc` → `std::terminate`) durante la descarga OTA. El crash provenía del poll del frontend (`/esp_status` cada 10s y SSE `/events` cada 5s) que con el heap drenado por la OTA lanzaba una excepción C++ no capturada en `request->send`. Ahora:
+  - `handleESPStatus()` en `src/web_server.cpp` responde `202/503 {"ota":true}` sin asignar `String`/JSON cuando `otaInProgress`.
+  - `sendSSEData()` y el callback del `sseTimer` devuelven temprano si `otaInProgress` (no construyen `getSensorJson()`).
+
 ## v5.0.5-MQTT - 2026-08-08
 
 - **Agregado:** Temporizador de reintento MQTT no bloqueante en `src/MQTTManager.cpp` — variable global `unsigned long lastMqttRetry = 0;` y constante `MQTT_RETRY_INTERVAL_MS = 15000`. `connectToMqtt()` ahora solo ejecuta `mqttClient.connect()` si `WiFi.status() == WL_CONNECTED`, el cliente no está conectado y han transcurrido al menos **15 segundos** desde el último intento, evitando `churn` en la pila de sockets TCP/IP. Todas las vías de reconexión (el timer de 10s de `mqttReconnectTimer` y el bucle principal) pasan por este guard.

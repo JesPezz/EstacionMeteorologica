@@ -163,6 +163,7 @@ void initSSETimer() {
         pdTRUE,               // Timer auto-reloading
         (void*)0,             // ID del timer
         [](TimerHandle_t xTimer){  // Función callback
+            if (otaInProgress) return; // No asignar heap durante OTA
             String json = getSensorJson();
             events.send(json.c_str(), "update");
         }
@@ -201,8 +202,10 @@ void handleSavedNetworks(AsyncWebServerRequest* request) { //WiFiManager::loadSa
 }
 
 void sendSSEData(TimerHandle_t xTimer) {
-    // 🧠 DIAGNÓSTICO: tarea de fondo SSE (cada 5 s)
-    Serial.printf("🧠 Heap SSE: %u bytes\n", ESP.getFreeHeap());
+    // Durante la OTA el heap está drenado y los clientes se van a reconectar tras el reboot
+    if (otaInProgress) {
+        return;
+    }
     String json = getSensorJson();
     events.send(json.c_str(), "update");
 }
@@ -382,6 +385,12 @@ void handleWiFiSave(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     }
 
 void handleESPStatus(AsyncWebServerRequest *request) {
+    // Durante la OTA el heap está drenado: no asignar Strings/JSON para evitar bad_alloc
+    if (otaInProgress) {
+        request->send(503, "application/json", "{\"ota\":true,\"status\":\"updating\"}");
+        return;
+    }
+
     AsyncWebServerResponse* response = prepareCORSResponse(request, 200, "application/json");
     JsonDocument doc;
     

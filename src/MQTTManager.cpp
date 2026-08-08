@@ -12,14 +12,6 @@ unsigned long lastMqttRetry = 0;
 const unsigned long MQTT_RETRY_INTERVAL_MS = 15000;
 
 void connectToMqtt() {
-  // 🔍 DEBUG: Imprimir la configuración exacta que se está usando
-  Serial.println("------------------------------------------------");
-  Serial.printf("📡 Intentando conectar a MQTT...\n");
-  /* Serial.printf("🎯 Host: '%s'\n", config.mqttServer.c_str()); // Comillas para ver si está vacío
-  Serial.printf("🔌 Puerto: %d\n", config.mqttPort);
-  Serial.printf("👤 Usuario: '%s'\n", config.mqttUser.c_str()); */
-  Serial.println("------------------------------------------------");
-
   if (config.mqttServer == "") {
       Serial.println("❌ ERROR CRÍTICO: La IP del servidor MQTT está vacía.");
       Serial.println("👉 Ve a la Web > Configuración y guarda la IP de la Raspberry Pi.");
