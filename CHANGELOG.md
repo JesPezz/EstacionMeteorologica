@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## v4.3.7-MQTT - 2026-08-07
+
+- **Corregido:** Fallo crítico de renderizado en la interfaz web donde se mostraba código JavaScript como texto plano en pantalla; se configuró la ruta raíz `/` y `/index.html` en `web_server.cpp` para forzar el Content-Type `"text/html"` y servir con respaldo embebido en PROGMEM (`send_P`) cuando SPIFFS no esté inicializado.
+
 ## v4.3.6-MQTT - 2026-08-07
 
 - **Agregado:** Funcionalidad de "Modo Prueba / Canal Beta" para actualizaciones OTA con persistencia en `Preferences`, endpoints API (`GET/POST /api/test-mode`), interruptor en la interfaz web y soporte dinámico para pre-releases en GitHub Releases (`/releases`).

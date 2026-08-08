@@ -21,6 +21,9 @@
 SemaphoreHandle_t wifiMutex = NULL;
 std::vector<WiFiNetwork> wifiNetworks; // Declare wifiNetworks globally
 
+extern const uint8_t Data_index_html_start[] asm("_binary_Data_index_html_start");
+extern const uint8_t Data_index_html_end[] asm("_binary_Data_index_html_end");
+
 AsyncWebServerResponse* prepareCORSResponse(AsyncWebServerRequest* request, int code, String contentType);
 String contentType;
 AsyncWebServer server(80);
@@ -476,11 +479,19 @@ void startWebServer() {
     });
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!SPIFFS.exists("/index.html")) {
-            request->send(404, "text/plain", "File Not Found");
-            return;
+        if (SPIFFS.exists("/index.html")) {
+            request->send(SPIFFS, "/index.html", "text/html");
+        } else {
+            request->send_P(200, "text/html", Data_index_html_start, (size_t)(Data_index_html_end - Data_index_html_start));
         }
-        request->send(SPIFFS, "/index.html", "text/html");
+    });
+
+    server.on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (SPIFFS.exists("/index.html")) {
+            request->send(SPIFFS, "/index.html", "text/html");
+        } else {
+            request->send_P(200, "text/html", Data_index_html_start, (size_t)(Data_index_html_end - Data_index_html_start));
+        }
     });
     
     server.on("/chart.umd.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
