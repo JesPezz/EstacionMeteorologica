@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.5-MQTT - 2026-08-08
+
+- **Agregado:** Temporizador de reintento MQTT no bloqueante en `src/MQTTManager.cpp` — variable global `unsigned long lastMqttRetry = 0;` y constante `MQTT_RETRY_INTERVAL_MS = 15000`. `connectToMqtt()` ahora solo ejecuta `mqttClient.connect()` si `WiFi.status() == WL_CONNECTED`, el cliente no está conectado y han transcurrido al menos **15 segundos** desde el último intento, evitando `churn` en la pila de sockets TCP/IP. Todas las vías de reconexión (el timer de 10s de `mqttReconnectTimer` y el bucle principal) pasan por este guard.
+- **Cambiado:** En `src/main.cpp`, el bloque CASO B de reconexión MQTT ahora delega en `connectToMqtt()` (que aplica el intervalo de 15 s), eliminando el temporizador local `lastMqttAttempt` de 10 s.
+
 ## v5.0.4-MQTT - 2026-08-08
 
 - **Agregado:** Reducción del intervalo de guardado offline en `src/main.cpp` de 1 hora a **30 segundos** (`OFFLINE_SAVE_INTERVAL_MS = 30000`) para generar rápidamente múltiples registros durante simulaciones de desconexión Wi-Fi.

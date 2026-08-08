@@ -6,6 +6,11 @@
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 
+// 🕒 Control de reintentos MQTT no bloqueante: último instante de intento de conexión
+unsigned long lastMqttRetry = 0;
+// Intervalo mínimo entre intentos de conexión MQTT (15s) para estabilizar la pila TCP/IP
+const unsigned long MQTT_RETRY_INTERVAL_MS = 15000;
+
 void connectToMqtt() {
   // 🔍 DEBUG: Imprimir la configuración exacta que se está usando
   Serial.println("------------------------------------------------");
@@ -21,7 +26,15 @@ void connectToMqtt() {
       return;
   }
 
-  mqttClient.connect();
+  // 🕒 Temporizador de reintento no bloqueante: solo conectar si han pasado >= 15s
+  // desde el último intento fallido, evitando churn en la pila de sockets TCP/IP.
+  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+      if (millis() - lastMqttRetry >= MQTT_RETRY_INTERVAL_MS) {
+          lastMqttRetry = millis();
+          Serial.println("📡 Intentando conectar a MQTT (Intervalo 15s)...");
+          mqttClient.connect();
+      }
+  }
 }
 
 void onMqttConnect(bool sessionPresent) {

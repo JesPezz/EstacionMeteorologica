@@ -16,5 +16,7 @@ void publishSensorData(); // Esta es la función clave
 
 // Variables externas
 extern AsyncMqttClient mqttClient;
+extern unsigned long lastMqttRetry;
+extern const unsigned long MQTT_RETRY_INTERVAL_MS;
 
 #endif

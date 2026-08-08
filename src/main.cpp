@@ -308,14 +308,9 @@ void loop() {
   
   // CASO B: OFFLINE ❌
   else {
-      // Intentar reconectar MQTT si hay WiFi
+      // Intentar reconectar MQTT si hay WiFi (guard global de 15s en connectToMqtt)
       if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
-          static unsigned long lastMqttAttempt = 0;
-          if (millis() - lastMqttAttempt > 10000) { 
-              lastMqttAttempt = millis();
-              Serial.println("📡 WiFi OK. Intentando recuperar MQTT...");
-              connectToMqtt();
-          }
+          connectToMqtt();
       }
 
       // B1. Guardar Respaldo
