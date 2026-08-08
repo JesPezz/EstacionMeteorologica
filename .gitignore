@@ -9,4 +9,5 @@ Data/wifi.json
 *.json
 .vscode/launch.json
 .vscode/c_cpp_properties.json
+.github/instructions/
 .gitignore
