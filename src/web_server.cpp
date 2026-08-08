@@ -633,6 +633,46 @@ void startWebServer() {
     server.on("/esp_status", HTTP_GET, handleESPStatus);
     server.on("/restart", HTTP_POST, handleRestart);
     server.on("/downloadLog", HTTP_GET, handleDownloadLog);
+
+    // Endpoint: GET /api/test-mode
+    server.on("/api/test-mode", HTTP_GET, [](AsyncWebServerRequest *request){
+        JsonDocument doc;
+        doc["test_mode"] = getTestMode();
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // Endpoint: POST /api/test-mode
+    server.on("/api/test-mode", HTTP_POST, [](AsyncWebServerRequest *request){
+        if (!isAuthenticated(request)) {
+            return;
+        }
+        bool enable = false;
+        if (request->hasParam("enable", true)) {
+            String val = request->getParam("enable", true)->value();
+            enable = (val == "true" || val == "1" || val == "yes" || val == "on");
+        } else if (request->hasParam("enable", false)) {
+            String val = request->getParam("enable", false)->value();
+            enable = (val == "true" || val == "1" || val == "yes" || val == "on");
+        } else if (request->hasParam("plain", true)) {
+            String body = request->getParam("plain", true)->value();
+            JsonDocument doc;
+            if (deserializeJson(doc, body) == DeserializationError::Ok) {
+                if (!doc["enable"].isNull()) {
+                    enable = doc["enable"].as<bool>();
+                }
+            }
+        }
+        setTestMode(enable);
+        writeLog(String("⚙️ Canal OTA (Test Mode) cambiado a: ") + (enable ? "BETA (Pre-releases)" : "ESTABLE"));
+
+        JsonDocument doc;
+        doc["test_mode"] = getTestMode();
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
 server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
     if(SPIFFS.exists(LOG_FILE)) {
         request->send(SPIFFS, LOG_FILE, "text/plain");

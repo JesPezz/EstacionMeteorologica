@@ -87,5 +87,7 @@ bool saveConfig(const Config &newConfig);
 void printConfig();
 void testFlash();
 String getDateTimeString();
+bool getTestMode();
+void setTestMode(bool enable);
 
 #endif

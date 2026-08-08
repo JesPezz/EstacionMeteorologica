@@ -182,6 +182,20 @@
 
                     <label for="updateOta">Intervalo OTA (horas)</label>
                     <input type="number" id="updateOta" min="1">
+
+                    <div style="margin-top: 12px; display: flex; align-items: center; justify-content: space-between; background: rgba(15,23,42,0.03); padding: 10px 12px; border-radius: 6px;">
+                        <div>
+                            <span style="font-weight: 500; font-size: 0.9rem;">Canal OTA (Beta / Pre-releases)</span>
+                            <div style="font-size: 0.8rem; color: var(--muted);" id="otaChannelStatusText">Estado: Canal Estable</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="otaChannelBadge" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e;" title="Canal Estable"></span>
+                            <label style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
+                                <input type="checkbox" id="testModeToggle" onchange="toggleTestMode(this)" style="opacity: 0; width: 0; height: 0;">
+                                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px;" id="testModeSlider"></span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 
                 <button type="submit">Guardar Configuración</button>
@@ -472,6 +486,7 @@
                 .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
                 .then(config => loadConfigToForm(config))
                 .catch(err => console.warn('Config check:', err));
+            loadTestMode();
         } catch (e) { console.warn('Auto-start failed', e); }
     });
 
@@ -675,6 +690,69 @@
         } catch (err) {
             console.error('uploadRestore error', err);
             showToast('Error al restaurar configuración', 'error');
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    async function loadTestMode() {
+        try {
+            const res = await apiCall('/api/test-mode');
+            if (res.ok) {
+                const data = await res.json();
+                const isBeta = !!data.test_mode;
+                const toggle = document.getElementById('testModeToggle');
+                const badge = document.getElementById('otaChannelBadge');
+                const statusText = document.getElementById('otaChannelStatusText');
+                const slider = document.getElementById('testModeSlider');
+                if (toggle) toggle.checked = isBeta;
+                if (badge) {
+                    badge.style.background = isBeta ? '#f97316' : '#22c55e';
+                    badge.title = isBeta ? 'Canal Beta (Pre-releases)' : 'Canal Estable';
+                }
+                if (statusText) statusText.innerText = isBeta ? 'Estado: Canal Beta' : 'Estado: Canal Estable';
+                if (slider) slider.style.backgroundColor = isBeta ? '#f97316' : '#cbd5e1';
+            }
+        } catch (err) {
+            console.error('Error loading test-mode:', err);
+        }
+    }
+
+    async function toggleTestMode(checkbox) {
+        const enable = checkbox.checked;
+        const badge = document.getElementById('otaChannelBadge');
+        const statusText = document.getElementById('otaChannelStatusText');
+        const slider = document.getElementById('testModeSlider');
+        try {
+            toggleLoading(true, 'Actualizando canal OTA...');
+            const res = await apiCall('/api/test-mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ enable: enable })
+            });
+            if (res.status === 401) {
+                document.getElementById('authModal').style.display = 'flex';
+                pendingAdminAction = () => toggleTestMode(checkbox);
+                checkbox.checked = !enable;
+                return;
+            }
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+            const data = await res.json();
+            const isBeta = !!data.test_mode;
+            checkbox.checked = isBeta;
+            if (badge) {
+                badge.style.background = isBeta ? '#f97316' : '#22c55e';
+                badge.title = isBeta ? 'Canal Beta (Pre-releases)' : 'Canal Estable';
+            }
+            if (statusText) statusText.innerText = isBeta ? 'Estado: Canal Beta' : 'Estado: Canal Estable';
+            if (slider) slider.style.backgroundColor = isBeta ? '#f97316' : '#cbd5e1';
+            showToast(isBeta ? 'Canal OTA cambiado a Beta (Pre-releases)' : 'Canal OTA cambiado a Estable', 'success');
+        } catch (err) {
+            console.error('toggleTestMode error', err);
+            checkbox.checked = !enable;
+            showToast('Error al actualizar canal OTA', 'error');
         } finally {
             toggleLoading(false);
         }

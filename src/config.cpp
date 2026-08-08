@@ -3,6 +3,7 @@
 #include "SPIFFS.h"
 #include <ArduinoJson.h>
 #include <bsec.h> 
+#include <Preferences.h>
 
 // --- Definición de Variables ---
 std::vector<WiFiNetwork> networks;
@@ -334,3 +335,18 @@ bool saveConfig(const Config& newConfig) {
 
 void printConfig() { Serial.println("Config Cargada"); }
 void testFlash() { SPIFFS.begin(); }
+
+bool getTestMode() {
+    Preferences prefs;
+    prefs.begin("config", true);
+    bool mode = prefs.getBool("test_mode", false);
+    prefs.end();
+    return mode;
+}
+
+void setTestMode(bool enable) {
+    Preferences prefs;
+    prefs.begin("config", false);
+    prefs.putBool("test_mode", enable);
+    prefs.end();
+}

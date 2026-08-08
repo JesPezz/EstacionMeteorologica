@@ -46,7 +46,11 @@ String getFirmwareURL() {
 
     HTTPClient http;
     http.setTimeout(10000); // Timeout explícito en ms (10s)
-    http.begin(client, githubAPIURL);
+    
+    String apiURL = getTestMode() 
+        ? "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases" 
+        : githubAPIURL;
+    http.begin(client, apiURL);
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
@@ -63,7 +67,18 @@ String getFirmwareURL() {
             return "";
         }
 
-        JsonObject json = doc.as<JsonObject>();
+        JsonObject json;
+        if (getTestMode()) {
+            JsonArray arr = doc.as<JsonArray>();
+            if (arr.size() > 0) {
+                json = arr[0].as<JsonObject>();
+            } else {
+                http.end();
+                return "";
+            }
+        } else {
+            json = doc.as<JsonObject>();
+        }
 
         if (!json["assets"].isNull() && json["assets"].size() > 0) {
             String firmwareURL = json["assets"][0]["browser_download_url"].as<String>();
@@ -78,7 +93,7 @@ String getFirmwareURL() {
         http.end();
         
     }
-    return"";
+    return "";
 }
 
 // 🔹 Seguir redirecciones para obtener la URL final del firmware
@@ -115,7 +130,10 @@ void checkForUpdates() {
 
     HTTPClient http;
     http.setTimeout(10000);
-    http.begin(client, githubAPIURL);
+    String apiURL = getTestMode() 
+        ? "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases" 
+        : githubAPIURL;
+    http.begin(client, apiURL);
     int httpCode = http.GET();
 
     if (httpCode == 200) {
@@ -131,10 +149,21 @@ void checkForUpdates() {
             return;
         }
 
-        String newVersion = doc["tag_name"];
-        // IMPORTANTE: Aquí extraemos la URL de descarga para usarla luego si es necesario
-        // aunque getFirmwareURL la vuelve a pedir, es bueno tenerla o loguearla.
-        String downloadURL = doc["assets"][0]["browser_download_url"];
+        JsonObject json;
+        if (getTestMode()) {
+            JsonArray arr = doc.as<JsonArray>();
+            if (arr.size() > 0) {
+                json = arr[0].as<JsonObject>();
+            } else {
+                http.end();
+                return;
+            }
+        } else {
+            json = doc.as<JsonObject>();
+        }
+
+        String newVersion = json["tag_name"];
+        String downloadURL = json["assets"][0]["browser_download_url"];
 
         Serial.printf("📌 Última versión en GitHub: %s\n", newVersion.c_str());
         Serial.printf("📥 URL del firmware: %s\n", downloadURL.c_str());
