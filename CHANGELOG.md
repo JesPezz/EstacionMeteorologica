@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## v4.3.10-MQTT - 2026-08-07
+
+- **Corregido:** Fuga de memoria (`ESP_ERR_NO_MEM` / error 257) durante la reconexión Wi-Fi agregando desconexión limpia (`WiFi.disconnect(true); delay(100);`) antes de cada reintento, límite global de rondas (3 rondas completas), y reinicio controlado (`ESP.restart()`) en caso de fallo crítico para liberar memoria RAM.
+
 ## v4.3.9-MQTT - 2026-08-07
 
 - **Agregado/Optimizado:** Embebido nativo del archivo HTML (`data/index.html`) mediante PlatformIO (`board_build.embed_txtfiles = data/index.html`) y servicio directo desde PROGMEM (`send_P`) para unificar firmware e interfaz web en un solo binario.

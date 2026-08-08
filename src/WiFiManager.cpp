@@ -182,36 +182,43 @@ bool connectToBestWiFi() {
         return false;
     }
 
-    Serial.println("🔄 Iniciando secuencia de conexión (Modo Directo - Sin Escaneo)...");
+    const int maxGlobalRounds = 3;
+    for (int round = 1; round <= maxGlobalRounds; round++) {
+        Serial.printf("🔄 Iniciando ronda de conexión %d/%d (Modo Directo)...\n", round, maxGlobalRounds);
 
-    // Iteramos sobre las redes guardadas e intentamos conectar una por una
-    for (const auto& network : savedNetworks) {
-        Serial.printf("🔗 Intentando conectar a: %s\n", network.ssid);
-        
-        // ⚡ Desconexión preventiva para limpiar el estado del radio
-        WiFi.disconnect();
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(network.ssid, network.password);
+        // Iteramos sobre las redes guardadas e intentamos conectar una por una
+        for (const auto& network : savedNetworks) {
+            Serial.printf("🔗 Intentando conectar a: %s\n", network.ssid);
+            
+            // ⚡ Desconexión limpia para prevenir fugas de memoria (ESP_ERR_NO_MEM)
+            WiFi.disconnect(true);
+            delay(100);
+            WiFi.mode(WIFI_STA);
+            WiFi.begin(network.ssid, network.password);
 
-        // Esperamos hasta 10 segundos por red
-        unsigned long startAttempt = millis();
-        while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 10000) {
-            delay(500);
-            Serial.print(".");
-            yield(); // Alimentar al perro guardián
-        }
+            // Esperamos hasta 10 segundos por red
+            unsigned long startAttempt = millis();
+            while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 10000) {
+                delay(500);
+                Serial.print(".");
+                yield(); // Alimentar al perro guardián
+            }
 
-        if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("\n✅ ¡Conexión Exitosa!");
-            Serial.print("📡 IP: ");
-            Serial.println(WiFi.localIP());
-            return true; // ¡Éxito! Salimos de la función
-        } else {
-            Serial.println("\n❌ No se pudo conectar. Probando siguiente (si hay)...");
+            if (WiFi.status() == WL_CONNECTED) {
+                Serial.println("\n✅ ¡Conexión Exitosa!");
+                Serial.print("📡 IP: ");
+                Serial.println(WiFi.localIP());
+                return true; // ¡Éxito! Salimos de la función
+            } else {
+                Serial.println("\n❌ No se pudo conectar. Probando siguiente (si hay)...");
+            }
         }
     }
 
-    Serial.println("⚠️ Fallaron todos los intentos de conexión.");
+    Serial.println("⚠️ Fallo crítico de Wi-Fi. Reiniciando sistema para liberar memoria...");
+    writeLog("⚠️ Fallo crítico de Wi-Fi. Reiniciando sistema para liberar memoria...");
+    delay(1000);
+    ESP.restart();
     return false;
 }
 
