@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## v4.3.8-MQTT - 2026-08-07
+
+- **Corregido:** El switch del canal OTA (Beta/Estable) no se mantenía activo debido a discrepancias en el parseo del cuerpo de la petición POST en `web_server.cpp` (ahora soporta `application/x-www-form-urlencoded` con `plain=`) y al procesamiento de la respuesta JSON `{"status":"ok", "test_mode": true}` en `Data/index.html`. El switch ahora actualiza correctamente su estado con la confirmación real del ESP32 y revierte en caso de error.
+
 ## v4.3.7-MQTT - 2026-08-07
 
 - **Corregido:** Fallo crítico de renderizado en la interfaz web donde se mostraba código JavaScript como texto plano en pantalla; se configuró la ruta raíz `/` y `/index.html` en `web_server.cpp` para forzar el Content-Type `"text/html"` y servir con respaldo embebido en PROGMEM (`send_P`) cuando SPIFFS no esté inicializado.

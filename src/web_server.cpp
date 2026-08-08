@@ -660,25 +660,39 @@ void startWebServer() {
             return;
         }
         bool enable = false;
+        String rawVal = "";
+
         if (request->hasParam("enable", true)) {
-            String val = request->getParam("enable", true)->value();
-            enable = (val == "true" || val == "1" || val == "yes" || val == "on");
+            rawVal = request->getParam("enable", true)->value();
         } else if (request->hasParam("enable", false)) {
-            String val = request->getParam("enable", false)->value();
-            enable = (val == "true" || val == "1" || val == "yes" || val == "on");
+            rawVal = request->getParam("enable", false)->value();
         } else if (request->hasParam("plain", true)) {
             String body = request->getParam("plain", true)->value();
+            Serial.println("📦 POST /api/test-mode body: " + body);
             JsonDocument doc;
             if (deserializeJson(doc, body) == DeserializationError::Ok) {
                 if (!doc["enable"].isNull()) {
                     enable = doc["enable"].as<bool>();
+                    rawVal = enable ? "true" : "false";
                 }
+            } else {
+                rawVal = body;
             }
         }
+
+        if (rawVal == "true" || rawVal == "1" || rawVal == "yes" || rawVal == "on" || rawVal == "TRUE") {
+            enable = true;
+        } else if (rawVal == "false" || rawVal == "0" || rawVal == "no" || rawVal == "off" || rawVal == "FALSE") {
+            enable = false;
+        }
+
+        Serial.printf("⚙️ POST /api/test-mode -> rawVal: '%s', parsed enable: %s\n", rawVal.c_str(), enable ? "true" : "false");
+
         setTestMode(enable);
         writeLog(String("⚙️ Canal OTA (Test Mode) cambiado a: ") + (enable ? "BETA (Pre-releases)" : "ESTABLE"));
 
         JsonDocument doc;
+        doc["status"] = "ok";
         doc["test_mode"] = getTestMode();
         String response;
         serializeJson(doc, response);
