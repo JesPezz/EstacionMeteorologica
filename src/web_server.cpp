@@ -201,6 +201,8 @@ void handleSavedNetworks(AsyncWebServerRequest* request) { //WiFiManager::loadSa
 }
 
 void sendSSEData(TimerHandle_t xTimer) {
+    // 🧠 DIAGNÓSTICO: tarea de fondo SSE (cada 5 s)
+    Serial.printf("🧠 Heap SSE: %u bytes\n", ESP.getFreeHeap());
     String json = getSensorJson();
     events.send(json.c_str(), "update");
 }

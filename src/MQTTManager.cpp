@@ -63,6 +63,9 @@ void setupMQTT() {
 void publishSensorData() {
     if (!mqttClient.connected()) return;
 
+    // 🧠 DIAGNÓSTICO: Heap antes de armar/armar payload
+    Serial.printf("🧠 Heap ANTES de armado MQTT: %u bytes\n", ESP.getFreeHeap());
+
     // 🔄 Usar JsonDocument estático para evitar fragmentación y consumo de Stack
     static JsonDocument doc;
     doc.clear();
@@ -72,6 +75,8 @@ void publishSensorData() {
     // Usar un búfer estático serializado en lugar de concatenaciones masivas de String
     static char payloadBuffer[1024];
     size_t n = serializeJson(doc, payloadBuffer, sizeof(payloadBuffer));
+
+    Serial.printf("🧠 Heap DESPUÉS de armado MQTT: %u bytes\n", ESP.getFreeHeap());
 
     if (n > 0) {
         mqttClient.publish(config.mqttTopic.c_str(), 1, false, payloadBuffer);

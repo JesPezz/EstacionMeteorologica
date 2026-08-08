@@ -34,6 +34,7 @@ void setupBsecSensor() {
   
   // ⚠️ IMPORTANTE: Mantener comentada la línea de borrado para no reiniciar el aprendizaje
   // bsecPrefs.clear(); 
+  bsecPrefs.end(); // Cerrar NVS inmediatamente para evitar fuga de manejadores
   
   delay(1000);
   Serial.println();

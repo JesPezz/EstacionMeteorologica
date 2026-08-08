@@ -79,6 +79,7 @@ void printHexDump(const uint8_t* data, size_t size, uint8_t bytesPerLine = 16) {
 }
 
 void loadState() {
+  Serial.printf("🧠 Heap ANTES de loadState (NVS): %u bytes\n", ESP.getFreeHeap());
   bsecPrefs.begin("bsec_data", true); // Modo lectura
   
   if (bsecPrefs.isKey("state")) {
@@ -103,6 +104,7 @@ void loadState() {
   }
   
   bsecPrefs.end();
+  Serial.printf("🧠 Heap DESPUÉS de loadState (NVS): %u bytes\n", ESP.getFreeHeap());
 }
 
 void updateState() { // <--- SIN "BME_Sensor::"
@@ -143,6 +145,7 @@ void updateState() { // <--- SIN "BME_Sensor::"
 
     // Ejecutar el guardado si es necesario
     if (shouldUpdate) {
+      Serial.printf("🧠 Heap ANTES de updateState (NVS): %u bytes\n", ESP.getFreeHeap());
       iaqSensor.getState(bsecState);
       checkIaqSensorStatus();
 
@@ -167,4 +170,5 @@ void updateState() { // <--- SIN "BME_Sensor::"
           writeLog("❌ Error al guardar estado en NVS");
       }
   }
+  Serial.printf("🧠 Heap DESPUÉS de updateState (NVS): %u bytes\n", ESP.getFreeHeap());
 }

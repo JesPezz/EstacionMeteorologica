@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.3-MQTT - 2026-08-08
+
+- **Agregado (diagnóstico):** Impresiones temporales de `ESP.getFreeHeap()` ANTES y DESPUÉS de las rutinas de armado/publicación MQTT (`publishSensorData`), de lectura/escritura NVS (`loadState`/`updateState`) y de la tarea de fondo SSE (timer de 5 s) para identificar qué función provoca la bajada de Heap.
+- **Corregido:** Cierre estricto de NVS (`Preferences`) en `setupBsecSensor()` (`src/SensorManager.cpp`): la apertura `bsecPrefs.begin("bsec_data", false)` ahora se cierra inmediatamente con `bsecPrefs.end()`, evitando manejadores NVS abiertos que acumulaban memoria.
+- **Verificado:** `populateSensorJson()` arma la trama MQTT únicamente con `JsonDocument&` (sin concatenaciones masivas de `String`); `handleDownloadLog` ya sirve `error.log` por stream directo desde SPIFFS (`request->send(SPIFFS, ...)`) sin cargar el archivo en RAM.
+
 ## v5.0.2-MQTT - 2026-08-08
 
 - **Corregido:** Crash por `abort()` en Core 1 tras ~7 minutos de ejecución continua, causado por agotamiento de Stack de la tarea `loopTask` combinado con `JsonDocument` locales pesados en el Stack.
