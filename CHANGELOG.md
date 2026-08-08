@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.7-MQTT - 2026-08-08
+
+- **Corregido:** La descarga OTA ya no se cuelga ni falla permanentemente si la conexión TLS con el CDN de GitHub se corta a mitad de descarga (error `(-76)` en `ssl_client.cpp`).
+  - `downloadAndUpdate()` en `src/ota_update.cpp` ahora reintenta hasta **3 veces** la descarga completa (nueva conexión HTTP+TLS por intento).
+  - Se añadió **timeout de estancamiento** (`STALL_TIMEOUT_MS = 30000`): si no llegan datos durante 30s se aborta el intento y se reintenta en lugar de quedarse en `while (written < contentLength)` indefinidamente.
+  - Búfer de lectura ampliado de `1024` a `2048` bytes para reducir número de llamadas de red.
+  - Se hace `Update.abort()` al fallar cada intento para dejar la partición OTA lista para el siguiente, y solo se notifica por Telegram el fallo total (3 intentos agotados).
+
 ## v5.0.6-MQTT - 2026-08-08
 
 - **Corregido:** Ráfaga de logs al conectar/reconectar MQTT. Se eliminaron los mensajes de depuración del cabecera de `connectToMqtt()` (`********` y `📡 Intentando conectar a MQTT...`) que se imprimían en cada vuelta del `loop()` (CASO B) a pesar del guard de 15 s. `connectToMqtt()` queda silencioso salvo cuando de verdad ejecuta `mqttClient.connect()`.

@@ -209,93 +209,101 @@ void downloadAndUpdate() {
     Serial.println("📥 Descargando firmware...");
     sendTelegramMessage("📥 Descargando firmware desde GitHub...", config);
 
-    WiFiClientSecure client;
-    client.setInsecure(); // Omitir validación estricta de certificados y ahorrar memoria RAM SSL
-    client.setTimeout(30); // Timeout del socket a 30s para descargas grandes
-    
-    HTTPClient http;
-    http.begin(client, firmwareURL);
-    int httpCode = http.GET();
+    const int MAX_ATTEMPTS = 3;
+    const unsigned long STALL_TIMEOUT_MS = 30000;
 
-    if (httpCode == HTTP_CODE_OK) {
+    for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        if (attempt > 1) {
+            Serial.printf("🔄 Reintento %d/%d de la descarga...\n", attempt, MAX_ATTEMPTS);
+            delay(1000);
+        }
+
+        WiFiClientSecure client;
+        client.setInsecure(); // Omitir validación estricta de certificados y ahorrar memoria RAM SSL
+        client.setTimeout(30); // Timeout del socket a 30s para descargas grandes
+
+        HTTPClient http;
+        http.setTimeout(30000);
+        http.begin(client, firmwareURL);
+        int httpCode = http.GET();
+
+        if (httpCode != HTTP_CODE_OK) {
+            Serial.printf("❌ Error HTTP: %d al descargar firmware.\n", httpCode);
+            writeLog("❌ Error HTTP: " + String(httpCode) + " al descargar firmware.");
+            http.end();
+            continue;
+        }
+
         int contentLength = http.getSize();
         Serial.printf("📥 Tamaño del firmware: %d bytes\n", contentLength);
 
         if (contentLength < 100000) { // Ajustado umbral mínimo
-            Serial.println("❌ Tamaño del firmware demasiado pequeño. Reintentando...");
+            Serial.println("❌ Tamaño del firmware demasiado pequeño.");
             writeLog("❌ Tamaño del firmware demasiado pequeño.");
             http.end();
-            enableWatchdog();
-            return;
+            continue;
         }
 
         if (!Update.begin(contentLength, U_FLASH)) {
             Serial.println("❌ Error al iniciar la actualización.");
             writeLog("❌ Error al iniciar la actualización.");
-            sendTelegramMessage("❌ Error al iniciar la actualización.", config);
             http.end();
-            enableWatchdog();
-            return;
+            continue;
         }
 
         WiFiClient *stream = http.getStreamPtr();
-        uint8_t buffer[1024];
+        uint8_t buffer[2048];
         size_t written = 0;
+        unsigned long lastDataAt = millis();
 
         while (written < contentLength) {
-            // 🔄 Alimentar el Watchdog y dar tiempo a MbedTLS para evitar cierres de socket durante la descarga
+            // 🔄 Alimentar al sistema y dar tiempo a MbedTLS para evitar cierres de socket durante la descarga
             yield();
             vTaskDelay(1);
 
             int availableBytes = stream->available();
             if (availableBytes > 0) {
+                lastDataAt = millis();
                 int toRead = min(availableBytes, (int)sizeof(buffer));
                 int bytesRead = stream->readBytes(buffer, toRead);
                 if (bytesRead > 0) {
                     if (Update.write(buffer, bytesRead) != bytesRead) {
                         Serial.println("❌ Error al escribir en flash.");
                         writeLog("❌ Error al escribir en flash.");
-                        sendTelegramMessage("❌ Error al escribir en la memoria flash.", config);
-                        Update.abort();
-                        http.end();
-                        enableWatchdog();
-                        return;
+                        break;
                     }
                     written += bytesRead;
                 }
+            } else if (millis() - lastDataAt > STALL_TIMEOUT_MS) {
+                // Sin datos durante mucho tiempo: la conexión TLS se cortó (ej. error -76)
+                Serial.printf("⏱️ Timeout sin datos durante %lu ms. Conexión perdida (error SSL -76).\n", STALL_TIMEOUT_MS);
+                break;
             }
         }
 
-        Serial.printf("📤 Bytes escritos en Flash: %d bytes\n", written);
-        sendTelegramMessage("📤 Bytes escritos en Flash: " + String(written) + " bytes", config);
+        http.end();
 
         if (written == contentLength) {
             if (Update.end()) {
                 Serial.println("✅ Firmware actualizado correctamente. Reiniciando...");
                 sendTelegramMessage("✅ Firmware actualizado correctamente. Reiniciando...", config);
-                http.end();
-            // Esperar un momento para asegurar entrega de notificaciones y evitar re-activar watchdog justo antes del reinicio
-            delay(1000);
-            ESP.restart();
+                delay(1000);
+                ESP.restart();
             } else {
                 Serial.println("❌ Error al finalizar la actualización.");
                 writeLog("❌ Error al finalizar la actualización.");
-                sendTelegramMessage("❌ Error al finalizar la actualización.", config);
                 Update.printError(Serial);
-                enableWatchdog();
+                Update.abort();
             }
         } else {
-            Serial.println("❌ Error: No se recibió el firmware completo.");
-            writeLog("❌ Error: No se recibió el firmware completo.");
-            sendTelegramMessage("❌ Error: No se recibió el firmware completo.", config);
-            enableWatchdog();
+            Serial.printf("⚠️ Descarga incompleta: %u/%d bytes.\n", (unsigned)written, contentLength);
+            writeLog("⚠️ Descarga incompleta en intento " + String(attempt) + ": " + String(written) + "/" + String(contentLength) + " bytes");
+            Update.abort();
         }
-    } else {
-        Serial.printf("❌ Error HTTP: %d al descargar firmware.\n", httpCode);
-        writeLog("❌ Error HTTP: " + String(httpCode) + " al descargar firmware.");
-        sendTelegramMessage("❌ Error HTTP: " + String(httpCode) + " al descargar firmware.", config);
-        enableWatchdog();
     }
 
-    http.end();
+    Serial.println("❌ OTA falló tras " + String(MAX_ATTEMPTS) + " intentos.");
+    sendTelegramMessage("❌ OTA falló tras " + String(MAX_ATTEMPTS) + " intentos.", config);
+    writeLog("❌ OTA falló tras " + String(MAX_ATTEMPTS) + " intentos.");
+    enableWatchdog();
 }
