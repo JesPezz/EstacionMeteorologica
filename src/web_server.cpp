@@ -21,8 +21,8 @@
 SemaphoreHandle_t wifiMutex = NULL;
 std::vector<WiFiNetwork> wifiNetworks; // Declare wifiNetworks globally
 
-extern const uint8_t Data_index_html_start[] asm("_binary_Data_index_html_start");
-extern const uint8_t Data_index_html_end[] asm("_binary_Data_index_html_end");
+extern const char index_html_start[] asm("_binary_data_index_html_start");
+extern const char index_html_end[]   asm("_binary_data_index_html_end");
 
 AsyncWebServerResponse* prepareCORSResponse(AsyncWebServerRequest* request, int code, String contentType);
 String contentType;
@@ -478,20 +478,12 @@ void startWebServer() {
         request->send(response);
     });
 
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (SPIFFS.exists("/index.html")) {
-            request->send(SPIFFS, "/index.html", "text/html");
-        } else {
-            request->send_P(200, "text/html", Data_index_html_start, (size_t)(Data_index_html_end - Data_index_html_start));
-        }
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send_P(200, "text/html", (const uint8_t*)index_html_start, index_html_end - index_html_start);
     });
 
-    server.on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (SPIFFS.exists("/index.html")) {
-            request->send(SPIFFS, "/index.html", "text/html");
-        } else {
-            request->send_P(200, "text/html", Data_index_html_start, (size_t)(Data_index_html_end - Data_index_html_start));
-        }
+    server.on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send_P(200, "text/html", (const uint8_t*)index_html_start, index_html_end - index_html_start);
     });
     
     server.on("/chart.umd.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -659,37 +651,36 @@ void startWebServer() {
         if (!isAuthenticated(request)) {
             return;
         }
-        bool enable = false;
-        String rawVal = "";
-
+        String val = "";
         if (request->hasParam("enable", true)) {
-            rawVal = request->getParam("enable", true)->value();
+            val = request->getParam("enable", true)->value();
         } else if (request->hasParam("enable", false)) {
-            rawVal = request->getParam("enable", false)->value();
+            val = request->getParam("enable", false)->value();
         } else if (request->hasParam("plain", true)) {
             String body = request->getParam("plain", true)->value();
-            Serial.println("📦 POST /api/test-mode body: " + body);
             JsonDocument doc;
             if (deserializeJson(doc, body) == DeserializationError::Ok) {
                 if (!doc["enable"].isNull()) {
-                    enable = doc["enable"].as<bool>();
-                    rawVal = enable ? "true" : "false";
+                    val = doc["enable"].as<bool>() ? "true" : "false";
                 }
             } else {
-                rawVal = body;
+                val = body;
             }
         }
 
-        if (rawVal == "true" || rawVal == "1" || rawVal == "yes" || rawVal == "on" || rawVal == "TRUE") {
-            enable = true;
-        } else if (rawVal == "false" || rawVal == "0" || rawVal == "no" || rawVal == "off" || rawVal == "FALSE") {
-            enable = false;
+        bool nuevoEstado = (val == "true" || val == "1" || val == "yes" || val == "on" || val == "TRUE");
+        bool modoPrueba = getTestMode();
+
+        Serial.printf("⚙️ POST /api/test-mode -> val recibido: '%s', nuevoEstado: %s, modoPrueba actual: %s\n",
+                      val.c_str(), nuevoEstado ? "true" : "false", modoPrueba ? "true" : "false");
+
+        if (nuevoEstado != modoPrueba) {
+            setTestMode(nuevoEstado);
+            writeLog(String("⚙️ Canal OTA (Test Mode) cambiado a: ") + (nuevoEstado ? "BETA (Pre-releases)" : "ESTABLE"));
+            Serial.printf("💾 Canal OTA actualizado en Preferences a: %s\n", nuevoEstado ? "BETA" : "ESTABLE");
+        } else {
+            Serial.println("ℹ️ Canal OTA sin cambios (ya estaba en ese estado).");
         }
-
-        Serial.printf("⚙️ POST /api/test-mode -> rawVal: '%s', parsed enable: %s\n", rawVal.c_str(), enable ? "true" : "false");
-
-        setTestMode(enable);
-        writeLog(String("⚙️ Canal OTA (Test Mode) cambiado a: ") + (enable ? "BETA (Pre-releases)" : "ESTABLE"));
 
         JsonDocument doc;
         doc["status"] = "ok";

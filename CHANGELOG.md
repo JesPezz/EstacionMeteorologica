@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## v4.3.9-MQTT - 2026-08-07
+
+- **Agregado/Optimizado:** Embebido nativo del archivo HTML (`data/index.html`) mediante PlatformIO (`board_build.embed_txtfiles = data/index.html`) y servicio directo desde PROGMEM (`send_P`) para unificar firmware e interfaz web en un solo binario.
+- **Corregido:** Endpoint `POST /api/test-mode` y función `toggleTestMode` en frontend usando `URLSearchParams` con `application/x-www-form-urlencoded` y optimización de guardado en `Preferences` solo cuando hay cambios reales.
+
 ## v4.3.8-MQTT - 2026-08-07
 
 - **Corregido:** El switch del canal OTA (Beta/Estable) no se mantenía activo debido a discrepancias en el parseo del cuerpo de la petición POST en `web_server.cpp` (ahora soporta `application/x-www-form-urlencoded` con `plain=`) y al procesamiento de la respuesta JSON `{"status":"ok", "test_mode": true}` en `Data/index.html`. El switch ahora actualiza correctamente su estado con la confirmación real del ESP32 y revierte en caso de error.

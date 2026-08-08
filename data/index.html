@@ -703,7 +703,7 @@
         }
     }
 
-    function updateTestModeUI(isBeta) {
+    function actualizarBadgeModo(isBeta) {
         const toggle = document.getElementById('testModeToggle');
         const badge = document.getElementById('otaChannelBadge');
         const statusText = document.getElementById('otaChannelStatusText');
@@ -722,46 +722,45 @@
             const res = await apiCall('/api/test-mode');
             if (res.ok) {
                 const data = await res.json();
-                updateTestModeUI(!!data.test_mode);
+                actualizarBadgeModo(!!data.test_mode);
             }
         } catch (err) {
             console.error('Error loading test-mode:', err);
         }
     }
 
-    async function toggleTestMode(checkbox) {
-        const previousState = !checkbox.checked;
+    function toggleTestMode(checkbox) {
         const enable = checkbox.checked;
-        
-        // Update UI state immediately
-        updateTestModeUI(enable);
-        showToast('Actualizando canal OTA...', 'success');
+        const params = new URLSearchParams();
+        params.append('enable', enable ? 'true' : 'false');
 
-        try {
-            const res = await apiCall('/api/test-mode', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ enable: enable })
-            });
+        fetch('/api/test-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+        .then(res => {
             if (res.status === 401) {
                 document.getElementById('authModal').style.display = 'flex';
                 pendingAdminAction = () => toggleTestMode(checkbox);
-                updateTestModeUI(previousState);
-                return;
+                checkbox.checked = !enable;
+                throw new Error('Unauthorized');
             }
-            if (!res.ok) {
-                throw new Error('HTTP ' + res.status);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            checkbox.checked = data.test_mode;
+            actualizarBadgeModo(data.test_mode);
+            showToast(data.test_mode ? 'Canal OTA cambiado a Beta (Pre-releases)' : 'Canal OTA cambiado a Estable', 'success');
+        })
+        .catch(err => {
+            if (err.message !== 'Unauthorized') {
+                console.error('Error al cambiar canal OTA:', err);
+                checkbox.checked = !enable;
+                showToast('Error al actualizar canal OTA', 'error');
             }
-            const data = await res.json();
-            const isBeta = !!data.test_mode;
-            updateTestModeUI(isBeta);
-            showToast(isBeta ? 'Canal OTA cambiado a Beta (Pre-releases)' : 'Canal OTA cambiado a Estable', 'success');
-        } catch (err) {
-            console.error('toggleTestMode error', err);
-            // Revert state on error
-            updateTestModeUI(previousState);
-            showToast('Error al actualizar canal OTA', 'error');
-        }
+        });
     }
 
     document.getElementById('loginForm').onsubmit = login;
