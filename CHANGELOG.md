@@ -4,11 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## v4.3.5-MQTT - 2026-08-07
 
-- Corregido borrado accidental de claves en `/config.json` durante migración desde `/wifi.json` (ahora se fusionan correctamente sin borrar campos existentes).
-- Valores por defecto seguros: `updateOta` por defecto 1 hora si está a 0, y `vbatPin` forzado a GPIO35 si se detecta un pin inválido o ADC2.
-- Evitado bucle infinito de OTA al garantizar que `updateOta >= 3600000` antes de ejecutar comprobaciones periódicas.
-- Evitado conflicto ADC2/WiFi: lecturas de ADC2 se omiten si WiFi está activo para prevenir timeouts y errores.
-- Otras correcciones menores y mejoras de logging.
+- **Corregido:** Fallos en la lógica de respaldo y restauración (`/api/backup` y `/api/restore`), agregando autenticación requerida y resolviendo colisiones de rutas.
+- **Corregido:** Error `ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION` en descargas (`/api/backup` y `/downloadLog`) usando el manejo nativo `isDownload=true` de `beginResponse`.
+- **Cambiado:** Limpieza del repositorio excluyendo archivos sensibles/auxiliares (`wifi.json`, `.github/instructions`) del control de versiones mediante `.gitignore`.
+- Corregido borrado accidental de claves en `/config.json` durante migración desde `/wifi.json`.
+- Valores por defecto seguros para `updateOta` y `vbatPin`.
+- Prevención de bucles OTA y conflictos ADC2/WiFi.
 
 
 
