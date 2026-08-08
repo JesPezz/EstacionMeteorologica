@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## v4.3.6-MQTT - 2026-08-07
+
+- **Agregado:** Funcionalidad de "Modo Prueba / Canal Beta" para actualizaciones OTA con persistencia en `Preferences`, endpoints API (`GET/POST /api/test-mode`), interruptor en la interfaz web y soporte dinámico para pre-releases en GitHub Releases (`/releases`).
+
 ## v4.3.5-MQTT - 2026-08-07
 
 - **Corregido:** Fallos en la lógica de respaldo y restauración (`/api/backup` y `/api/restore`), agregando autenticación requerida y resolviendo colisiones de rutas.
