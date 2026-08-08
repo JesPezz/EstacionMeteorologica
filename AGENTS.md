@@ -71,6 +71,17 @@ Cuando el usuario pida realizar un release (ej. *"haz el release"* o *"publica l
 
 ---
 
+## Reglas para la creación de Releases en GitHub
+
+- Toda creación de un nuevo Release debe realizarse marcándolo **obligatoriamente como Pre-release** (Lanzamiento anticipado) para no afectar a los dispositivos en producción.
+- Al utilizar la herramienta GitHub CLI (`gh release create`), debes incluir siempre el parámetro `--prerelease`.
+- Ejemplo de comando a ejecutar:
+  ```bash
+  gh release create v1.x.x .pio/build/esp32doit-devkit-v1/firmware.bin --title "Título de la Release" --notes "Notas del cambio" --prerelease
+  ```
+
+---
+
 ## Notificaciones
 - Al finalizar una tarea exitosamente (después de realizar el commit y/o push), ejecuta el siguiente comando en la shell para notificar por Telegram:
   ```bash
