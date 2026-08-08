@@ -12,11 +12,7 @@
 // --- Constantes Globales ---
 extern const char* configFilePath;
 extern const char* LOG_FILE;
-extern const char* indexURL;
 extern const char* version;
-extern const char* host;
-extern const char* url;
-extern const char* etagFilePath;
 extern const char nombreCodigo[]; 
 extern String githubAPIURL;       
 

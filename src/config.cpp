@@ -11,16 +11,12 @@ Config config;
 
 const char* configFilePath = "/config.json";
 const char* LOG_FILE = "/error.log";
-const char* host = "raw.githubusercontent.com";
-const char* url = "/JesPezz/EstacionMeteorologica/main/Data/index.html";
-const char* etagFilePath = "/index_etag.txt";
-const char* indexURL = "https://raw.githubusercontent.com/JesPezz/EstacionMeteorologica/main/Data/index.html";
 const char nombreCodigo[] = "EstacionMQTT"; 
 String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases/latest"; 
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v4.3.10-MQTT";
+const char* version = "v4.4.0-MQTT";
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;

@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## v4.4.0-MQTT - 2026-08-08
+
+- **Eliminado:** Removido completamente el sistema obsoleto de actualización automática de `index.html` desde GitHub (`checkForIndexUpdate()` y `updateFileFromURL()`), incluyendo las variables globales asociadas (`host`, `url`, `etagFilePath`, `indexURL`). La interfaz web se embebe en el firmware desde el binario (PROGMEM) desde la v4.3.9, por lo que este mecanismo era dead code que consumía recursos y generaba ruido de notificaciones.
+- **Optimizado:** El canal Beta (Modo Prueba) ahora consulta la API de GitHub con `?per_page=1` (`/releases?per_page=1`) tanto en `getFirmwareURL()` como en `checkForUpdates()`, reduciendo la respuesta JSON y el tiempo de las llamadas OTA.
+- **Cambiado:** El Modo Prueba (canal Beta/Estable) se carga de `Preferences` al inicio de `setup()`, registrando en el log el canal seleccionado para facilitar el diagnóstico de bucles de actualización.
+
 ## v4.3.10-MQTT - 2026-08-07
 
 - **Corregido:** Fuga de memoria (`ESP_ERR_NO_MEM` / error 257) durante la reconexión Wi-Fi agregando desconexión limpia (`WiFi.disconnect(true); delay(100);`) antes de cada reintento, límite global de rondas (3 rondas completas), y reinicio controlado (`ESP.restart()`) en caso de fallo crítico para liberar memoria RAM.

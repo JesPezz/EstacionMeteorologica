@@ -125,6 +125,11 @@ if (!testFile) {
   }
   
   loadConfig();
+  
+  // Cargar Modo Prueba (Canal Beta) al iniciar el sistema
+  bool modoPruebaActivo = getTestMode();
+  Serial.printf("⚙️ Canal de actualización cargado: %s\n", modoPruebaActivo ? "BETA (Pre-releases)" : "ESTABLE (Latest)");
+
   setupMQTT();
    // Inicializar control de cheques de actualización
   lastUpdateCheck = millis();
@@ -194,7 +199,6 @@ syncClock();
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForIndexUpdate();
   checkForUpdates();
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
@@ -237,7 +241,6 @@ void loop() {
   if (config.updateOta >= 3600000 && (millis() - lastUpdateCheck >= config.updateOta)) {
       stateUpdateCounter = 0;
       updateState();
-      checkForIndexUpdate();
       checkForUpdates();
       loadState();
       lastUpdateCheck = millis();
