@@ -210,7 +210,8 @@ void downloadAndUpdate() {
     sendTelegramMessage("📥 Descargando firmware desde GitHub...", config);
 
     WiFiClientSecure client;
-    client.setInsecure();
+    client.setInsecure(); // Omitir validación estricta de certificados y ahorrar memoria RAM SSL
+    client.setTimeout(30); // Timeout del socket a 30s para descargas grandes
     
     HTTPClient http;
     http.begin(client, firmwareURL);
@@ -242,6 +243,10 @@ void downloadAndUpdate() {
         size_t written = 0;
 
         while (written < contentLength) {
+            // 🔄 Alimentar el Watchdog y dar tiempo a MbedTLS para evitar cierres de socket durante la descarga
+            yield();
+            vTaskDelay(1);
+
             int availableBytes = stream->available();
             if (availableBytes > 0) {
                 int toRead = min(availableBytes, (int)sizeof(buffer));

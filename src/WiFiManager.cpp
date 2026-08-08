@@ -105,11 +105,7 @@ void WiFiManager::scanNetworks(std::vector<WiFiNetwork>& networks) {
 
 bool WiFiManager::saveNetwork(const WiFiNetwork& network) {
 
-    // Use config.savedNetworks as source of truth
-    // Load current config (best-effort)
-    if (!loadConfig()) {
-        Serial.println("⚠️ No se pudo cargar config.json antes de guardar la red");
-    }
+    // Use config.savedNetworks as source of truth (cargado UNA VEZ en setup() desde SPIFFS)
 
     // Update existing entry or add
     bool found = false;
@@ -139,11 +135,8 @@ bool WiFiManager::saveNetwork(const WiFiNetwork& network) {
 
 bool WiFiManager::loadSavedNetworks(std::vector<WiFiNetwork>& outNetworks) {
     outNetworks.clear();
-    // Ensure config is loaded
-    if (!loadConfig()) {
-        Serial.println("⚠️ No se pudo cargar config.json para leer redes guardadas");
-    }
-
+    // 🔄 Las redes ya están cargadas en RAM desde setup() (config.savedNetworks).
+    // NO releer config.json desde SPIFFS durante el loop()/reconexiones.
     for (const auto& wn : config.savedNetworks) {
         outNetworks.push_back(wn);
     }
@@ -151,11 +144,8 @@ bool WiFiManager::loadSavedNetworks(std::vector<WiFiNetwork>& outNetworks) {
 }
 
 void printWiFiNetwork() {
-    if (!loadConfig()) {
-        Serial.println("⚠️ No se pudo cargar config.json para imprimir redes");
-        return;
-    }
-    Serial.println("📜 Configuración de redes WiFi (config.json):");
+    // 🔄 Las redes ya están en RAM (cargadas en setup()). No releer SPIFFS aquí.
+    Serial.println("📜 Configuración de redes WiFi (RAM):");
     for (const auto& wn : config.savedNetworks) {
         Serial.printf(" - SSID: %s\n", wn.ssid);
     }

@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.1-MQTT - 2026-08-08
+
+- **Corregido:** Error de descarga SSL en OTA: el cliente HTTPS (`WiFiClientSecure`) de `downloadAndUpdate()` ahora usa `client.setInsecure()` (omite validación estricta de certificados y ahorra RAM SSL) y aumenta el timeout del socket a 30 segundos (`client.setTimeout(30)`) en `src/ota_update.cpp`.
+- **Corregido:** Durante el bucle de descarga del firmware se añaden llamadas periódicas `yield()`/`vTaskDelay(1)` para alimentar el Watchdog y evitar cierres de socket MbedTLS durante la escritura a flash.
+- **Optimizado:** Eliminadas las lecturas repetitivas de `config.json` desde SPIFFS durante `loop()` y reintentos de reconexión. `loadSavedNetworks()` y `printWiFiNetwork()` (en `src/WiFiManager.cpp`) ahora usan la configuración y redes Wi-Fi ya cargadas en RAM desde `setup()`; `loadConfig()` solo se ejecuta una vez al arrancar.
+
 ## v5.0-MQTT - 2026-08-08
 
 - **Agregado:** Mecanismo de Auto-Rollback OTA (Fail-Safe) para recuperación automática ante fallos tras una actualización:
