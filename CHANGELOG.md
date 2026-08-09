@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.10-MQTT - 2026-08-08
+
+- **Corregido:** Panic/Crash al descargar el log desde la interfaz web (`/downloadLog` y `/logview`).
+  - El acceso concurrente a SPIFFS desde la tarea del loop (`writeLog()` cada ~30 s, más SSE/exención) mientras el servidor AsyncWebServer leía el mismo `/error.log` podía corromper la FS interna y provocar el panic.
+  - Añadido `spiffsMutex` global (`SemaphoreHandle_t`) en `src/config.cpp` que serializa todo acceso a SPIFFS.
+  - `writeLog()`, `handleDownloadLog()` y `/logview` ahora toman el mutex antes de abrir/leer/escribir y lo liberan al terminar.
+  - Invés de `request->send(SPIFFS, ...)` (streaming asíncrono que reabre el archivo fuera del mutex), `/downloadLog` lee el archivo completo →String bajo el mutex y lo envía como respuesta en memoria (el log está limitado a `MAX_LOG_SIZE=10 KB`).
+
 ## v5.0.9-MQTT - 2026-08-08
 
 - **Corregido:** Panic de stack (`Stack canary watchpoint triggered (loopTask)`) durante la OTA al arrancar, que entraba en bucle infinito (OTA → crash → reboot). El algoritmo de descarga anidaba hasta 4 objetos `WiFiClientSecure`+`HTTPClient`+JSON en el stack del loopTask.

@@ -74,6 +74,7 @@ extern bool shouldRestart;
 // RTOS Handles
 extern SemaphoreHandle_t sensorMutex; 
 extern TimerHandle_t sseTimer;        
+extern SemaphoreHandle_t spiffsMutex; // Serializa acceso a SPIFFS (evita panics por acceso concurrente)        
 
 // Funciones
 void writeLog(const String &message);

@@ -16,7 +16,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v5.0.9-MQTT";
+const char* version = "v5.0.10-MQTT";
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
@@ -25,6 +25,7 @@ unsigned long lastUpdateCheck = 0;
 // Variables RTOS
 TimerHandle_t sseTimer = nullptr; 
 SemaphoreHandle_t sensorMutex = NULL; 
+SemaphoreHandle_t spiffsMutex = NULL; // Serializa acceso a SPIFFS (evita panics por acceso concurrente)
 bool otaInProgress = false; 
 bool shouldRestart = false;
 
@@ -48,19 +49,34 @@ String getDateTimeString() {
 }
 
 void writeLog(const String &message) {
-    if (!SPIFFS.begin(true)) return;
+    if (spiffsMutex == NULL) spiffsMutex = xSemaphoreCreateMutex();
+    bool locked = (xSemaphoreTake(spiffsMutex, pdMS_TO_TICKS(2000)) == pdTRUE);
+
+    if (!SPIFFS.begin(false)) {
+        if (locked) xSemaphoreGive(spiffsMutex);
+        return;
+    }
     File logFile = SPIFFS.open(LOG_FILE, "a");
-    if (!logFile) return;
+    if (!logFile) {
+        if (locked) xSemaphoreGive(spiffsMutex);
+        return;
+    }
     if (logFile.size() > MAX_LOG_SIZE) {
         logFile.close();
         SPIFFS.remove(LOG_FILE);
         logFile = SPIFFS.open(LOG_FILE, "a");
+        if (!logFile) {
+            if (locked) xSemaphoreGive(spiffsMutex);
+            return;
+        }
     }
     logFile.print("[" + getDateTimeString() + "] " + message + "\n");
     logFile.close();
+    if (locked) xSemaphoreGive(spiffsMutex);
 }
 
 void initSPIFFS() {
+    if (spiffsMutex == NULL) spiffsMutex = xSemaphoreCreateMutex();
     if (!SPIFFS.begin(true)) Serial.println("❌ Error SPIFFS");
     else Serial.println("✅ SPIFFS OK");
 }

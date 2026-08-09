@@ -38,25 +38,35 @@ void handleDownloadLog(AsyncWebServerRequest *request) {
         return request->requestAuthentication();
     }
 
+    if (spiffsMutex == NULL) spiffsMutex = xSemaphoreCreateMutex();
+    bool locked = (xSemaphoreTake(spiffsMutex, pdMS_TO_TICKS(1000)) == pdTRUE);
+
     if (!SPIFFS.exists(LOG_FILE)) {
+        if (locked) xSemaphoreGive(spiffsMutex);
         request->send(404, "text/plain", "Archivo error.log no encontrado");
         return;
     }
 
     File file = SPIFFS.open(LOG_FILE, "r");
     if (!file || file.isDirectory()) {
+        if (locked) xSemaphoreGive(spiffsMutex);
         request->send(500, "text/plain", "Error al abrir el archivo");
         return;
     }
 
-    // Configurar los headers correctamente y forzar descarga
+    String content = file.readString();
+    file.close();
+    if (locked) xSemaphoreGive(spiffsMutex);
+
+    // Enviar el log leído como String: evita abrir/leer el archivo de forma asíncrona
+    // mientras writeLog() (task de loop/sensor) intenta appendear simultáneamente.
     AsyncWebServerResponse *response = request->beginResponse(
-        SPIFFS,
-        LOG_FILE,
+        200,
         "text/plain",
-        true
+        content
     );
 
+    response->addHeader("Content-Disposition", "attachment; filename=\"error.log\"");
     response->addHeader("Cache-Control", "no-cache");
     request->send(response);
 }
@@ -701,11 +711,20 @@ void startWebServer() {
         request->send(200, "application/json", response);
     });
 server.on("/logview", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (spiffsMutex == NULL) spiffsMutex = xSemaphoreCreateMutex();
+    bool locked = (xSemaphoreTake(spiffsMutex, pdMS_TO_TICKS(1000)) == pdTRUE);
+    String content;
     if(SPIFFS.exists(LOG_FILE)) {
-        request->send(SPIFFS, LOG_FILE, "text/plain");
+        File f = SPIFFS.open(LOG_FILE, "r");
+        if (f) {
+            content = f.readString();
+            f.close();
+        }
     } else {
-        request->send(200, "text/plain", "El archivo de log no existe");
+        content = "El archivo de log no existe";
     }
+    if (locked) xSemaphoreGive(spiffsMutex);
+    request->send(200, "text/plain", content);
 });
     server.on("/getConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
