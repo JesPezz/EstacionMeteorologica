@@ -3,6 +3,7 @@
 #include "SensorManager.h" // Para acceder a los datos del sensor
 #include "BME_Sensor.h"    // Para acceder a iaqSensor
 #include "led_task.h"
+#include "MQTTCommands.h"  // Comandos MQTT dual (individual + broadcast) y LWT
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 
@@ -31,7 +32,8 @@ void connectToMqtt() {
 
 void onMqttConnect(bool sessionPresent) {
   Serial.println("✅ Conectado al Broker MQTT.");
-  // Aquí podrías suscribirte a temas si quisieras recibir comandos en el futuro
+  // Suscribirse a comandos duales (individual + broadcast)
+  subscribeMQTTCommands(mqttClient);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
@@ -43,6 +45,12 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   }
 }
 
+// 🔹 Callback de mensajes MQTT entrantes -> despachar a comandos
+void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties,
+                   size_t len, size_t index, size_t total) {
+  handleMqttMessage(topic, payload, properties, len, index, total);
+}
+
 void setupMQTT() {
   if (config.mqttServer == "") {
       Serial.println("⚠️ MQTT no configurado (Falta Servidor)");
@@ -51,6 +59,7 @@ void setupMQTT() {
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
+  mqttClient.onMessage(onMqttMessage);
   
   mqttClient.setServer(config.mqttServer.c_str(), config.mqttPort);
   
@@ -58,6 +67,9 @@ void setupMQTT() {
   if (config.mqttUser.length() > 0) {
       mqttClient.setCredentials(config.mqttUser.c_str(), config.mqttPassword.c_str());
   }
+
+  // Last Will: marcar offline en estacion/reporte/<ubicacion> si el dispositivo cae
+  setupMQTTWill(mqttClient);
 
   // Timer para reconexión automática sin bloquear (crear solo una vez)
   if (mqttReconnectTimer == nullptr) {

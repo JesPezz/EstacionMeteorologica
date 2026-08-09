@@ -23,6 +23,7 @@
 #include "web_server.h"
 #include <freertos/timers.h>
 #include "MQTTManager.h"
+#include "MQTTCommands.h"
 #include "led_task.h"
 #include "OfflineManager.h"
 #include "VoltageMonitor.h"
@@ -235,6 +236,9 @@ syncClock();
 void loop() {
   // 1. MANTENIMIENTO DEL SISTEMA
   checkWiFiConnection(); 
+
+  // ⚙️ Procesar acciones pendientes de comandos MQTT (reiniciar / OTA) no bloqueantes
+  processPendingMqttActions(); 
 
   // 🔄 Detectar transición WiFi off→online y reconstruir el cliente MQTT:
   // el AsyncClient interno de AsyncMqttClient queda con estado corrupto tras

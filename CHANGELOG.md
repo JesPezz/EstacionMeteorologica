@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.11-MQTT - 2026-08-08
+
+- **Agregado:** Comandos MQTT duales para operar la estación de forma remota (individual + broadcast), con respuestas JSON por MQTT.
+  - Nuevos `include/MQTTCommands.h` y `src/MQTTCommands.cpp`:
+    - `getLocationTag()` normaliza la ubicación (`config.location`) a minúsculas y guiones bajos para usar como tag en tópicos.
+    - Suscripción dual en `subscribeMQTTCommands()`: `estacion/<ubicacion>/comando` (individual) y `estacion/all/comando` (broadcast).
+    - `handleMqttMessage()` reconstruye payloads fragmentados y despacha al manejador.
+    - Comandos soportados: `ip`, `estado`, `clima`, `metricas`, `reiniciar` (reinicio no bloqueante tras 1s) y `actualizar` (programa la OTA con jitter aleatorio de 1–10 s en broadcast; 1 s en individual).
+    - `publishReport()` envía la respuesta JSON en `estacion/reporte/<location>`.
+  - LWT (Last Will) configurado en `setupMQTTWill()`: al caer el dispositivo publica `{"ubicacion":..., "status":"offline"}` con retain en el tópico de reporte, de modo que cualquier suscriptor (p.ej. Node-RED) detecta la desconexión al instante.
+  - Integración en `src/MQTTManager.cpp`: `onMqttConnect()` suscribe los comandos y `onMessage` registrado; `setupMQTT()` configura el Will.
+  - `src/main.cpp`: `processPendingMqttActions()` en el `loop()` procesa reinicios/OTAs programados sin bloquear.
+  - Consolidado con el flujo Node-RED (agregación de respuestas en ventana de 3 s y alertas por Telegram).
+
 ## v5.0.10-MQTT - 2026-08-08
 
 - **Corregido:** Panic/Crash al descargar el log desde la interfaz web (`/downloadLog` y `/logview`).
