@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.0.9-MQTT - 2026-08-08
+
+- **Corregido:** Panic de stack (`Stack canary watchpoint triggered (loopTask)`) durante la OTA al arrancar, que entraba en bucle infinito (OTA → crash → reboot). El algoritmo de descarga anidaba hasta 4 objetos `WiFiClientSecure`+`HTTPClient`+JSON en el stack del loopTask.
+  - `checkForUpdates()` ahora **retorna** la URL de descarga (`String`) y cierra su HTTP antes de liberar el stack, eliminando las funciones redundantes `getFirmwareURL()` y `getFinalURL()`.
+  - `downloadAndUpdate(const String &firmwareURL)` recibe la URL directamente y gestiona el redirect 302 de GitHub con `setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS)`.
+  - El búfer de descarga se movió al heap (`malloc(2048)` en lugar de stack) para no consumir stack del loop `loopTask`.
+  - Stack del loop aumentado de 16384 a 32768 bytes (`platformio.ini`).
+
 ## v5.0.8-MQTT - 2026-08-08
 
 - **Corregido:** El MQTT ya no queda incapaz de reconectarse tras una caída/reconexión WiFi. El `AsyncClient` TCP interno de `AsyncMqttClient` queda con estado corrupto después de una desconexión WiFi y `connect()` repetido (guard de 15s) reintentaba infinitamente con motivo `TCP_DISCONNECTED`.

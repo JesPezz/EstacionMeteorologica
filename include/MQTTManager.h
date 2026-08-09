@@ -12,6 +12,7 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
 // Funciones principales
 void setupMQTT();
 void connectToMqtt();
+void resetMQTTClient(); // Reconstruye AsyncMqttClient tras caída WiFi (limpiar estado TCP corrupto)
 void publishSensorData(); // Esta es la función clave
 
 // Variables externas

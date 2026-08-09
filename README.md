@@ -1,7 +1,7 @@
-# 🌦️ Estación Meteorológica IoT v5.0.8-MQTT (MQTT + Edge Computing)
+# 🌦️ Estación Meteorológica IoT v5.0.9-MQTT (MQTT + Edge Computing)
 
 ![Status](https://img.shields.io/badge/Estado-Producción-green)
-![Version](https://img.shields.io/badge/Versión-v5.0.8--MQTT-blue)
+![Version](https://img.shields.io/badge/Versión-v5.0.9--MQTT-blue)
 ![Stack](https://img.shields.io/badge/Stack-ESP32%20%7C%20Node--RED%20%7C%20InfluxDB%20%7C%20Grafana-orange)
 ![PlatformIO](https://img.shields.io/badge/PlatformIO-Ready-brightgreen)
 ![License](https://img.shields.io/badge/License-AGPL--3.0-yellow)

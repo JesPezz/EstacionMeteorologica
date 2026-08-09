@@ -6,8 +6,8 @@
 
 void disableWatchdog(); // Desactiva el Watchdog y suspende la tarea
 void enableWatchdog(); // Reactiva el Watchdog y reanuda la tarea 
-void checkForUpdates();
-void downloadAndUpdate();
+String checkForUpdates(); // Retorna la URL de descarga si hay nueva versión, o "" si no
+void downloadAndUpdate(const String &firmwareURL);
 
 // 🔹 Manejo de la subida de firmware desde la interfaz web
 void handleOTA(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final);

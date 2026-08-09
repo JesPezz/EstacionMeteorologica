@@ -31,38 +31,37 @@ void enableWatchdog() {
     sendTelegramMessage("✅ OTA finalizada: Reactivando procesos y Watchdog.", config);
 }
 
-// 🔹 Obtener la URL del firmware desde la API de GitHub
-String getFirmwareURL() {
-    // Verificar conectividad WiFi antes de intentar HTTP
+// 🔹 Verificar nueva versión en GitHub Releases y devolver la URL de descarga
+String checkForUpdates() {
+    Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
+
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("❌ No hay conexión WiFi. Abortando petición a GitHub.");
-        writeLog("❌ No hay conexión WiFi. Abortando petición a GitHub.");
+        Serial.println("❌ WiFi no conectado. Omitiendo verificación de Releases.");
+        writeLog("❌ WiFi no conectado. Omitiendo verificación de Releases.");
         return "";
     }
 
     WiFiClientSecure client;
-    client.setInsecure(); // Nota: preferible usar setCACert() en producción si se dispone del CA
-    client.setTimeout(10); // timeout en segundos para operaciones de cliente TLS
+    client.setInsecure(); // Preferible usar certificados CA en producción
+    client.setTimeout(10);
 
     HTTPClient http;
-    http.setTimeout(10000); // Timeout explícito en ms (10s)
-    
-    String apiURL = getTestMode() 
-        ? "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases?per_page=1" 
+    http.setTimeout(10000);
+    String apiURL = getTestMode()
+        ? "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases?per_page=1"
         : githubAPIURL;
     http.begin(client, apiURL);
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
-        String payload = http.getString();
-        Serial.println("📜 Respuesta JSON: " + payload);
+        String jsonResponse = http.getString();
 
         JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, payload);
-        
+        DeserializationError error = deserializeJson(doc, jsonResponse);
+
         if (error) {
-            Serial.println("❌ Error al parsear JSON");
-            Serial.println("Error: " + String(error.c_str()));
+            Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
+            writeLog("❌ Error al parsear JSON: " + String(error.c_str()));
             http.end();
             return "";
         }
@@ -80,121 +79,33 @@ String getFirmwareURL() {
             json = doc.as<JsonObject>();
         }
 
-        if (!json["assets"].isNull() && json["assets"].size() > 0) {
-            String firmwareURL = json["assets"][0]["browser_download_url"].as<String>();
-            
-            Serial.println("📥 URL del firmware: " + firmwareURL);
-            http.end();
-            return firmwareURL;
-        }
-    } else {
-        Serial.printf("❌ Error HTTP al obtener URL del firmware. Código: %d\n", httpCode);
-        writeLog("❌ Error HTTP al obtener URL del firmware. Código: " + String(httpCode));
-        http.end();
-        
-    }
-    return "";
-}
-
-// 🔹 Seguir redirecciones para obtener la URL final del firmware
-String getFinalURL(String initialURL) {
-    WiFiClientSecure client;
-    client.setInsecure();
-
-    HTTPClient http;
-    http.begin(client, initialURL);
-    
-    int httpCode = http.GET();
-    if (httpCode == 302) { // Si hay redirección
-        String newURL = http.getLocation();
-        http.end();
-        return newURL;
-    }
-
-    http.end();
-    return initialURL; // Si no hay redirección, usa la original
-}
-
-void checkForUpdates() {
-    Serial.println("🔍 Verificando nueva versión en GitHub Releases...");
-
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("❌ WiFi no conectado. Omitiendo verificación de Releases.");
-        writeLog("❌ WiFi no conectado. Omitiendo verificación de Releases.");
-        return;
-    }
-
-    WiFiClientSecure client;
-    client.setInsecure(); // Preferible usar certificados CA en producción
-    client.setTimeout(10);
-
-    HTTPClient http;
-    http.setTimeout(10000);
-    String apiURL = getTestMode() 
-        ? "https://api.github.com/repos/JesPezz/EstacionMeteorologica/releases?per_page=1" 
-        : githubAPIURL;
-    http.begin(client, apiURL);
-    int httpCode = http.GET();
-
-    if (httpCode == 200) {
-        String jsonResponse = http.getString();
-        
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, jsonResponse);
-        
-        if (error) {
-            Serial.println("❌ Error al parsear JSON: " + String(error.c_str()));
-            writeLog("❌ Error al parsear JSON: " + String(error.c_str()));
-            http.end();
-            return;
-        }
-
-        JsonObject json;
-        if (getTestMode()) {
-            JsonArray arr = doc.as<JsonArray>();
-            if (arr.size() > 0) {
-                json = arr[0].as<JsonObject>();
-            } else {
-                http.end();
-                return;
-            }
-        } else {
-            json = doc.as<JsonObject>();
-        }
-
         String newVersion = json["tag_name"];
         String downloadURL = json["assets"][0]["browser_download_url"];
 
         Serial.printf("📌 Última versión en GitHub: %s\n", newVersion.c_str());
         Serial.printf("📥 URL del firmware: %s\n", downloadURL.c_str());
-        
+
+        http.end();
+
         if (newVersion == version) {
             Serial.println("✅ El ESP32 ya está actualizado.");
-            http.end();
-            return;
-         } else {
-            Serial.println("🚀 Nueva versión detectada. Iniciando OTA...");
-            Serial.printf("📦 Espacio libre para OTA: %u bytes\n", ESP.getFreeSketchSpace());
-            sendTelegramMessage("🚀 Nueva versión detectada. Iniciando OTA...", config);
-            
-            // Liberar algo de memoria si es posible antes de empezar
-            heap_caps_free(heap_caps_malloc(1, MALLOC_CAP_8BIT));
+            return "";
+        }
 
-            http.end();
-            downloadAndUpdate();
-         }
-        
-    } else {
-           Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
-           writeLog("❌ Error HTTP: " + String(httpCode) + " al obtener información de Releases.");
-           http.end();
+        Serial.println("🚀 Nueva versión detectada.");
+        Serial.printf("📦 Espacio libre para OTA: %u bytes\n", ESP.getFreeSketchSpace());
+        return downloadURL;
     }
+
+    Serial.printf("❌ Error HTTP: %d al obtener información de Releases.\n", httpCode);
+    writeLog("❌ Error HTTP: " + String(httpCode) + " al obtener información de Releases.");
+    http.end();
+    return "";
 }
 
-void downloadAndUpdate() {
+void downloadAndUpdate(const String &firmwareURL) {
     disableWatchdog();
 
-    String firmwareURL = getFirmwareURL();
     if (firmwareURL == "") {
         Serial.println("❌ No se pudo obtener la URL del firmware.");
         sendTelegramMessage("❌ No se pudo obtener la URL del firmware.", config);
@@ -202,12 +113,10 @@ void downloadAndUpdate() {
         return;
     }
 
-    firmwareURL = getFinalURL(firmwareURL);
-    Serial.println("🔗 URL final del firmware: " + firmwareURL);
+Serial.println("🔗 URL del firmware: " + firmwareURL);
 
     Serial.printf("📦 Espacio libre para OTA: %u bytes\n", ESP.getFreeSketchSpace());
-    Serial.println("📥 Descargando firmware...");
-    sendTelegramMessage("📥 Descargando firmware desde GitHub...", config);
+    sendTelegramMessage("🚀 Nueva versión detectada. Iniciando OTA...", config);
 
     const int MAX_ATTEMPTS = 3;
     const unsigned long STALL_TIMEOUT_MS = 30000;
@@ -224,6 +133,7 @@ void downloadAndUpdate() {
 
         HTTPClient http;
         http.setTimeout(30000);
+        http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // Manejar el redirect 302 de GitHub internamente
         http.begin(client, firmwareURL);
         int httpCode = http.GET();
 
@@ -252,7 +162,14 @@ void downloadAndUpdate() {
         }
 
         WiFiClient *stream = http.getStreamPtr();
-        uint8_t buffer[2048];
+        // Búfer en heap para no consumir stack del loopTask durante la descarga
+        const size_t BUFFER_SIZE = 2048;
+        uint8_t *buffer = (uint8_t*)malloc(BUFFER_SIZE);
+        if (buffer == nullptr) {
+            Serial.println("❌ Out of memory al reservar búfer de descarga.");
+            http.end();
+            continue;
+        }
         size_t written = 0;
         unsigned long lastDataAt = millis();
 
@@ -264,7 +181,7 @@ void downloadAndUpdate() {
             int availableBytes = stream->available();
             if (availableBytes > 0) {
                 lastDataAt = millis();
-                int toRead = min(availableBytes, (int)sizeof(buffer));
+                int toRead = min(availableBytes, (int)BUFFER_SIZE);
                 int bytesRead = stream->readBytes(buffer, toRead);
                 if (bytesRead > 0) {
                     if (Update.write(buffer, bytesRead) != bytesRead) {
@@ -281,6 +198,7 @@ void downloadAndUpdate() {
             }
         }
 
+        free(buffer);
         http.end();
 
         if (written == contentLength) {

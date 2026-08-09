@@ -199,7 +199,8 @@ syncClock();
   
   iaqSensor.updateSubscription(sensorList, 13, BSEC_SAMPLE_RATE_LP);
   checkIaqSensorStatus();
-  checkForUpdates();
+  String fwURL = checkForUpdates();
+  if (fwURL.length() > 0) downloadAndUpdate(fwURL);
   Serial.println("📜 ARCHIVOS DEL SISTEMA");
   listSPIFFS();
   Serial.println();
@@ -269,7 +270,8 @@ void loop() {
   if (config.updateOta >= 3600000 && (millis() - lastUpdateCheck >= config.updateOta)) {
       stateUpdateCounter = 0;
       updateState();
-      checkForUpdates();
+      String fwURL = checkForUpdates();
+      if (fwURL.length() > 0) downloadAndUpdate(fwURL);
       loadState();
       lastUpdateCheck = millis();
   }
