@@ -274,6 +274,17 @@ void loop() {
           Serial.printf("⚠️ HEAP BAJO: %u bytes libres\n", ESP.getFreeHeap());
       }
   }
+
+  // 🛡️ Watchdog de heap: si cae bajo el umbral crítico, el WiFi ya no puede reinicializarse
+  // (esp_wifi_init falla con ESP_ERR_NO_MEM) y el dispositivo quedaría atrapado sin red.
+  // Reinicio preventivo para recuperar memoria antes del punto de no retorno.
+  const size_t HEAP_CRITICAL_THRESHOLD = 45000;
+  if (ESP.getFreeHeap() < HEAP_CRITICAL_THRESHOLD) {
+      Serial.printf("🛡️ HEAP CRÍTICO (%u bytes). Reiniciando para recuperar memoria...\n", ESP.getFreeHeap());
+      writeLog("🛡️ HEAP CRÍTICO: " + String(ESP.getFreeHeap()) + " bytes. Reiniciando dispositivo.");
+      delay(1000);
+      ESP.restart();
+  }
   
   if (otaInProgress) {
       yield(); 

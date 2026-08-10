@@ -110,7 +110,10 @@ void publishSensorData() {
     Serial.printf("🧠 Heap DESPUÉS de armado MQTT: %u bytes\n", ESP.getFreeHeap());
 
     if (n > 0) {
-        mqttClient.publish(config.mqttTopic.c_str(), 1, false, payloadBuffer);
+        // 🛡️ QoS 0 en tiempo real: telemetría cada 3s tolera pérdida puntual, y evita los
+        // PUBACK entrantes del broker que disparaban una fuga de memoria en AsyncTCP-esphome
+        // (~184B por publicación, heap agotado en horas -> esp_wifi_init falla con NO_MEM).
+        mqttClient.publish(config.mqttTopic.c_str(), 0, false, payloadBuffer);
         Serial.printf("📤 Publicando MQTT Completo [%s]: %s\n", config.mqttTopic.c_str(), payloadBuffer);
         signalLed(LED_SUCCESS); 
     } else {

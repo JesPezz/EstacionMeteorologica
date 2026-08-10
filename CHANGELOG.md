@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.2.1-MQTT - 2026-08-10
+
+- **Corregido:** Fuga de memoria en la capa de red MQTT que agotaba el heap tras horas de operación y dejaba el dispositivo sin red (WiFi no podía reinicializar: `esp_wifi_init` → `ESP_ERR_NO_MEM`).
+  - `src/MQTTManager.cpp`: las publicaciones de telemetría en tiempo real (`publishSensorData()`) pasan de QoS 1 a **QoS 0**. Cada mensaje QoS 1 generaba un PUBACK entrante del broker que el flujo RX de `AsyncTCP-esphome` retenía (~184 B por publicación, liberados solo al caer la conexión TCP). Al publicar cada 3 s, la fuga era de ~220 KB/hora. Con QoS 0 desaparecen los PUBACK entrantes; es apropiado para telemetría periódica donde la pérdida puntual de un dato es tolerable.
+  - `src/main.cpp`: añadido **watchdog de heap** como red de seguridad: si el heap libre baja de 45 KB, se registra en `/error.log` y el dispositivo se reinicia para recuperar memoria antes del punto de no retorno.
+
 ## v5.2-MQTT - 2026-08-10
 
 - **Corregido:** `processBacklog()` publicaba en el broker cualquier línea del archivo de respaldo, incluyendo registros corruptos/basura (p.ej. `{}` residuales de sesiones v5.0.x), contaminando MQTT, Node-RED e InfluxDB con datos vacíos.
