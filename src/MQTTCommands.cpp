@@ -42,8 +42,8 @@ static bool otaIsBroadcast = false;
 // LWT (Last Will)
 // ─────────────────────────────────────────────────────────────────────────────
 
-void setupMQTTWill(AsyncMqttClient& client) {
-    // Buffers estáticos: AsyncMqttClient guarda los punteros, así que deben persistir.
+void setupMQTTWill(espMqttClient& client) {
+    // Buffers estáticos: espMqttClient guarda los punteros, así que deben persistir.
     static char willTopic[96];
     static char willPayload[128];
 
@@ -56,10 +56,10 @@ void setupMQTTWill(AsyncMqttClient& client) {
     size_t n = serializeJson(doc, willPayload, sizeof(willPayload));
 
     // Retain para que, al reconectar el broker, cualquier suscriptor conozca el estado.
-    client.setWill(willTopic, 1, true, willPayload, n);
+    client.setWill(willTopic, 1, true, reinterpret_cast<const uint8_t*>(willPayload), n);
 }
 
-void subscribeMQTTCommands(AsyncMqttClient& client) {
+void subscribeMQTTCommands(espMqttClient& client) {
     String cmdTopic = getCommandTopic();
     client.subscribe(cmdTopic.c_str(), 1);
     client.subscribe(COMMAND_TOPIC_BROADCAST, 1);
@@ -78,7 +78,7 @@ static void publishReport(JsonDocument& doc) {
         return;
     }
     String reportTopic = getReportTopic();
-    mqttClient.publish(reportTopic.c_str(), 1, false, buffer, n);
+    mqttClient.publish(reportTopic.c_str(), 1, false, reinterpret_cast<const uint8_t*>(buffer), n);
     Serial.printf("📤 Respuesta MQTT [%s]: %s\n", reportTopic.c_str(), buffer);
 }
 
@@ -166,8 +166,9 @@ static void handleCommand(const String& command, bool isBroadcast) {
 static char incomingPayload[1024];
 static bool payloadInProgress = false;
 
-void handleMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties,
+void handleMqttMessage(const char* topic, char* payload, const espMqttClientTypes::MessageProperties& properties,
                        size_t len, size_t index, size_t total) {
+    (void)properties;
     if (index == 0) {
         payloadInProgress = true;
     }

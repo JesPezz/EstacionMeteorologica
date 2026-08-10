@@ -251,9 +251,8 @@ void loop() {
   // ⚙️ Procesar acciones pendientes de comandos MQTT (reiniciar / OTA) no bloqueantes
   processPendingMqttActions(); 
 
-  // 🔄 Detectar transición WiFi off→online y reconstruir el cliente MQTT:
-  // el AsyncClient interno de AsyncMqttClient queda con estado corrupto tras
-  // una caída de WiFi y connect() repetido nunca vuelve a conectar (TCP_DISCONNECTED).
+  // 🔄 Detectar transición WiFi off→online y resetear el cliente MQTT:
+  // tras una caída de WiFi conviene vaciar la cola y reconectar desde un estado limpio.
   static bool wifiWasConnected = (WiFi.status() == WL_CONNECTED);
   bool wifiNowConnected = (WiFi.status() == WL_CONNECTED);
   if (wifiNowConnected && !wifiWasConnected) {
@@ -327,10 +326,13 @@ void loop() {
           }
       }
 
-      // A2. Recuperación de Backlog (con espera aleatoria)
-      if (SPIFFS.exists(BACKLOG_FILE)) {
+      // A2. Recuperación de Backlog (por lotes, hasta vaciarlo por completo)
+      // Se dispara si hay un /backlog.txt nuevo (post-caída) o un lote pendiente
+      // sin terminar en /backlog_proc.txt (resto de una llamada anterior).
+      if (SPIFFS.exists(BACKLOG_FILE) || SPIFFS.exists(BACKLOG_PROC_FILE)) {
+          // Espera aleatoria solo la primera vez tras detectar el backlog
           if (!backlogReady && backlogWaitTime == 0) {
-              long wait = random(5000, 20000); 
+              long wait = random(5000, 20000);
               backlogWaitTime = millis() + wait;
               Serial.printf("⏳ Backlog detectado. Esperando %d ms...\n", wait);
               backlogReady = true;
@@ -338,9 +340,17 @@ void loop() {
 
           if (backlogReady && millis() > backlogWaitTime) {
               writeLog("🚀 Iniciando recuperación de Backlog. Conexión restablecida.");
-              processBacklog(); 
-              backlogWaitTime = 0; 
-              backlogReady = false; 
+              processBacklog();
+              // Si quedó un lote pendiente (resto en /backlog_proc.txt), reprogramar la
+              // próxima llamada en 2 s para seguir drenando el backlog hasta vaciarlo.
+              // Al terminar, processBacklog() borra /backlog_proc.txt y se resetea.
+              if (SPIFFS.exists(BACKLOG_PROC_FILE)) {
+                  backlogWaitTime = millis() + 2000;
+                  backlogReady = true;
+              } else {
+                  backlogWaitTime = 0;
+                  backlogReady = false;
+              }
           }
       }
   } 
@@ -353,10 +363,8 @@ void loop() {
       }
 
       // B1. Guardar Respaldo
-      // 🔴 MODO PRUEBAS: guardar cada 30 segundos (30000 ms) para generar múltiples registros
-      // rápidamente durante una simulación de desconexión Wi-Fi. En producción se puede
-      // volver a 3600000 (1 hora).
-      const unsigned long OFFLINE_SAVE_INTERVAL_MS = 30000; // 30s
+      // 🏭 PRODUCCIÓN: guardar cada 1 hora (3600000 ms) para no saturar la memoria SPIFFS.
+      const unsigned long OFFLINE_SAVE_INTERVAL_MS = 3600000; // 1h
       static unsigned long lastOfflineSave = 0;
 
       if (nuevosDatos && (millis() - lastOfflineSave >= OFFLINE_SAVE_INTERVAL_MS)) {

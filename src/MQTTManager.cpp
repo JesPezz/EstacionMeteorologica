@@ -4,7 +4,7 @@
 #include "BME_Sensor.h"    // Para acceder a iaqSensor
 #include "led_task.h"
 #include "MQTTCommands.h"  // Comandos MQTT dual (individual + broadcast) y LWT
-AsyncMqttClient mqttClient;
+espMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 
 // 🕒 Control de reintentos MQTT no bloqueante: último instante de intento de conexión
@@ -36,7 +36,7 @@ void onMqttConnect(bool sessionPresent) {
   subscribeMQTTCommands(mqttClient);
 }
 
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+void onMqttDisconnect(espMqttClientTypes::DisconnectReason reason) {
   Serial.println("⚠️ Desconectado de MQTT.");
   
   if (WiFi.isConnected()) {
@@ -46,9 +46,11 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
 }
 
 // 🔹 Callback de mensajes MQTT entrantes -> despachar a comandos
-void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties,
+void onMqttMessage(const espMqttClientTypes::MessageProperties& properties,
+                   const char* topic, const uint8_t* payload,
                    size_t len, size_t index, size_t total) {
-  handleMqttMessage(topic, payload, properties, len, index, total);
+  handleMqttMessage(topic, const_cast<char*>(reinterpret_cast<const char*>(payload)),
+                    properties, len, index, total);
 }
 
 void setupMQTT() {
@@ -79,13 +81,14 @@ void setupMQTT() {
   }
 }
 
-// 🔄 Reconstruir el cliente MQTT para eliminar el estado TCP corrupto tras una caída de WiFi.
-// AsyncMqttClient::connect() reutiliza el mismo AsyncClient interno que queda inválido
-// tras una desconexión, provocando reintentos infinitos con motivo TCP_DISCONNECTED.
+// 🔄 Reset del cliente MQTT tras una caída de WiFi.
+// espMqttClient (síncrono con WiFiClient) no sufre el estado TCP corrupto del
+// AsyncClient de AsyncMqttClient, pero conviene forzar una desconexión limpia y
+// vaciar la cola para que la reconexión arranque desde un estado conocido.
 void resetMQTTClient() {
-  Serial.println("🔄 Reconstruyendo cliente MQTT (reset AsyncClient interno)...");
-  mqttClient.~AsyncMqttClient();
-  new (&mqttClient) AsyncMqttClient();
+  Serial.println("🔄 Reiniciando cliente MQTT (reset cola + reconexión)...");
+  mqttClient.disconnect(true);
+  mqttClient.clearQueue();
   lastMqttRetry = 0; // Permitir reconexión inmediata
   setupMQTT();
   connectToMqtt();

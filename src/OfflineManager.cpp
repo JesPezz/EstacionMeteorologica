@@ -93,7 +93,7 @@ void processBacklog() {
 
                 Serial.printf("📤 Reenviando dato histórico (%d/%d): %s\n", sentCount, MAX_BATCH, lineBuffer);
 
-                // Pequeña pausa para no saturar la cola en RAM de AsyncMqttClient
+                // Pequeña pausa para no saturar la cola en RAM del cliente MQTT
                 delay(100);
                 yield();
             } else {

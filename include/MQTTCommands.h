@@ -2,16 +2,17 @@
 #define MQTT_COMMANDS_H
 
 #include <Arduino.h>
-#include <AsyncMqttClient.h>
+#include <espMqttClient.h>
 
 // Configura el Last Will (LWT) offline en: estacion/reporte/<ubicacion>
-void setupMQTTWill(AsyncMqttClient& client);
+void setupMQTTWill(espMqttClient& client);
 
 // Suscribe a los topics de comandos (individual y broadcast)
-void subscribeMQTTCommands(AsyncMqttClient& client);
+void subscribeMQTTCommands(espMqttClient& client);
 
 // Despachador de mensajes MQTT entrantes (llamado desde onMessageCallback)
-void handleMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties,
+void handleMqttMessage(const char* topic, char* payload,
+                       const espMqttClientTypes::MessageProperties& properties,
                        size_t len, size_t index, size_t total);
 
 // Procesa acciones pendientes no bloqueantes (reiniciar / actualizar) desde loop()

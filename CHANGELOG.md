@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.2.2-MQTT - 2026-08-10
+
+- **Cambiado:** Migración de la capa MQTT de `AsyncMqttClient` (con su pila `AsyncTCP-esphome`) a **`espMqttClient`** (v1.7.3, síncrono sobre `WiFiClient`), eliminando la fuga de memoria de fondo que persistía incluso con QoS 0 (~230 B/s ≈ ~700 B por publicación cada 3 s, acumulables a ~220 KB/hora con QoS 1).
+  - `lib/espMqttClient/`: librería vendida en el repositorio (patrón del proyecto), sin dependencias (`library.json`) para evitar traer `ESP32Async/AsyncTCP` v3.x, API-incompatible con `AsyncTCP-esphome`.
+  - `AsyncTCP-esphome@^2.1.3` se mantiene únicamente para `ESPAsyncWebServer-esphome` (servidor web); el camino MQTT ya no usa AsyncTCP.
+  - `src/MQTTManager.cpp` / `include/MQTTManager.h`: `espMqttClient mqttClient;`, callbacks adaptados (`onConnect(bool)`, `onDisconnect(espMqttClientTypes::DisconnectReason)`, `onMessage(...)` con `const uint8_t*`); `resetMQTTClient()` ya no usa *placement new*: `disconnect(true)` + `clearQueue()` + `setupMQTT()` + `connectToMqtt()`.
+  - `src/MQTTCommands.cpp` / `include/MQTTCommands.h`: `setupMQTTWill`, `subscribeMQTTCommands` y `handleMqttMessage` adaptados a la nueva API; publicaciones y Will con `const uint8_t*` + longitud.
+  - `src/main.cpp` y `src/OfflineManager.cpp`: comentarios de integración actualizados (sin cambios funcionales).
+- **Corregido:** El bucle de procesamiento del backlog en `src/main.cpp` (envío por lotes con `MAX_BATCH=5`) se disparaba con demasiada frecuencia al reanudar la conexión MQTT.
+  - Se reduce la carga procesando el backlog por lotes cada `OFFLINE_SAVE_INTERVAL_MS` (1 hora) en lugar de hacerlo continuamente, preservando memoria durante la recuperación.
+- `src/config.cpp`: versión sincronizada a `v5.2.2-MQTT` (precaución OTA: el módulo compara `version` con el `tag_name` del release).
+
 ## v5.2.1-MQTT - 2026-08-10
 
 - **Corregido:** Fuga de memoria en la capa de red MQTT que agotaba el heap tras horas de operación y dejaba el dispositivo sin red (WiFi no podía reinicializar: `esp_wifi_init` → `ESP_ERR_NO_MEM`).
