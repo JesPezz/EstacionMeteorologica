@@ -58,6 +58,9 @@ void processBacklog() {
     int sentCount = 0;
     bool hasMore = false;
 
+    // JsonDocument estático reusable para validar cada registro antes de publicarlo.
+    static JsonDocument validateDoc;
+
     while (file.available()) {
         // Leer línea por línea sobre búfer estático
         len = file.readBytesUntil('\n', lineBuffer, sizeof(lineBuffer) - 1);
@@ -69,6 +72,21 @@ void processBacklog() {
         }
 
         if (len > 0) {
+            // 🔍 Validar que el registro sea un JSON real con los campos esperados.
+            // Descartar líneas corruptas/basura (p.ej. "{}" residuales de sesiones v5.0.x):
+            // publicar un {} al broker contaminaría Node-RED/InfluxDB con datos vacíos.
+            validateDoc.clear();
+            DeserializationError vErr = deserializeJson(validateDoc, lineBuffer);
+            bool valid = (vErr == DeserializationError::Ok) &&
+                         validateDoc["location"].is<const char*>() &&
+                         validateDoc["fechaHora"].is<const char*>() &&
+                         validateDoc["temperature"].is<float>();
+            if (!valid) {
+                Serial.printf("⚠️ Descartando registro corrupto de backlog: %s\n", lineBuffer);
+                writeLog("⚠️ Descartando registro corrupto de backlog");
+                continue;
+            }
+
             if (sentCount < MAX_BATCH) {
                 mqttClient.publish(config.mqttTopic.c_str(), 1, false, lineBuffer);
                 sentCount++;
