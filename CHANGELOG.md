@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.2-MQTT - 2026-08-10
+
+- **Corregido:** `processBacklog()` publicaba en el broker cualquier línea del archivo de respaldo, incluyendo registros corruptos/basura (p.ej. `{}` residuales de sesiones v5.0.x), contaminando MQTT, Node-RED e InfluxDB con datos vacíos.
+  - `src/OfflineManager.cpp`: cada registro se valida con `deserializeJson()` antes de publicarlo, exigiendo los campos `location`, `fechaHora` y `temperature` (todo registro legítimo generado por `populateSensorJson()` los incluye).
+  - Los registros inválidos se descartan (no cuentan en el lote `MAX_BATCH`), se registran en `/error.log` y quedan eliminados del archivo, evitando que se reenvíen en llamadas posteriores.
+
 ## v5.1-MQTT - 2026-08-10
 
 - **Corregido:** El Auto-Rollback OTA se disparaba también durante caídas de WiFi en tiempo de ejecución: al agotar los reintentos de conexión, `connectToBestWiFi()` marcaba la imagen como inválida (`esp_ota_mark_app_invalid_rollback_and_reboot()`) y el dispositivo arrancaba con la versión anterior en lugar de ejecutar la lógica de backlog.
