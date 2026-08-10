@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.1-MQTT - 2026-08-10
+
+- **Corregido:** El Auto-Rollback OTA se disparaba también durante caídas de WiFi en tiempo de ejecución: al agotar los reintentos de conexión, `connectToBestWiFi()` marcaba la imagen como inválida (`esp_ota_mark_app_invalid_rollback_and_reboot()`) y el dispositivo arrancaba con la versión anterior en lugar de ejecutar la lógica de backlog.
+  - `src/WiFiManager.cpp`: `connectToBestWiFi()` ya no ejecuta rollback ni reinicio al agotar los reintentos; devuelve `false` y se activa el modo AP, manteniendo la lógica offline/backlog.
+  - `src/main.cpp`: el rollback de OTA ahora solo se evalúa al arrancar para imágenes recién instaladas, comprobando el estado `ESP_OTA_IMG_PENDING_VERIFY` de la partición en ejecución mediante `esp_ota_get_state_partition()`:
+    - Si la imagen nueva arranca con WiFi conectado → `esp_ota_mark_app_valid_cancel_rollback()` (se confirma la actualización).
+    - Si la imagen nueva arranca sin WiFi → rollback a la partición anterior (fail-safe OTA real).
+    - Si la imagen ya fue confirmada (no `PENDING_VERIFY`), **nunca** se hace rollback, solo modo AP/backlog.
+
 ## v5.0.11-MQTT - 2026-08-08
 
 - **Agregado:** Comandos MQTT duales para operar la estación de forma remota (individual + broadcast), con respuestas JSON por MQTT.
