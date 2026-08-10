@@ -208,11 +208,22 @@ syncClock();
   sendTelegramMessage("ℹ️ Estado del ESP32", config);
   Serial.println();
   
-  // ✅ Auto-Rollback OTA (Fail-Safe): confirmar la app como válida y cancelar rollback pendiente
-  if (WiFi.status() == WL_CONNECTED) {
-      esp_ota_mark_app_valid_cancel_rollback();
-      Serial.println("✅ Firmware verificado y confirmado como válido. Auto-rollback cancelado.");
-      writeLog("✅ Firmware verificado y confirmado como válido. Auto-rollback cancelado.");
+  // ✅ Auto-Rollback OTA (Fail-Safe): SOLO para imágenes recién instaladas por OTA
+  // (estado PENDING_VERIFY). Si no hay WiFi al arrancar la imagen nueva, se deshace;
+  // si la imagen ya fue confirmada, NUNCA se hace rollback, solo modo AP/backlog.
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  esp_ota_img_states_t otaState;
+  if (esp_ota_get_state_partition(running, &otaState) == ESP_OK && otaState == ESP_OTA_IMG_PENDING_VERIFY) {
+      if (WiFi.status() == WL_CONNECTED) {
+          esp_ota_mark_app_valid_cancel_rollback();
+          Serial.println("✅ Firmware verificado y confirmado como válido. Auto-rollback cancelado.");
+          writeLog("✅ Firmware verificado y confirmado como válido. Auto-rollback cancelado.");
+      } else {
+          Serial.println("❌ Imagen OTA nueva sin confirmar sin WiFi. Ejecutando rollback a la partición anterior...");
+          writeLog("❌ Imagen OTA nueva sin confirmar sin WiFi. Ejecutando rollback a la partición anterior...");
+          delay(1000);
+          esp_ota_mark_app_invalid_rollback_and_reboot();
+      }
   }
   Serial.println();
   // Imprimir el encabezado

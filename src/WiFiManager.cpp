@@ -206,15 +206,8 @@ bool connectToBestWiFi() {
         }
     }
 
-    Serial.println("❌ Fallo crítico tras actualización. Ejecutando Rollback...");
-    writeLog("❌ Fallo crítico tras actualización. Ejecutando Rollback...");
-    delay(1000);
-    esp_ota_mark_app_invalid_rollback_and_reboot();
-    // Si el rollback no es posible (arranque normal sin OTA previa), reiniciar el sistema normalmente
-    Serial.println("⚠️ Rollback no disponible (arranque normal). Reiniciando sistema...");
-    writeLog("⚠️ Rollback no disponible (arranque normal). Reiniciando sistema...");
-    delay(1000);
-    ESP.restart();
+    Serial.println("❌ No se pudo conectar a ninguna red WiFi. Activando modo AP...");
+    writeLog("❌ No se pudo conectar a ninguna red WiFi. Activando modo AP...");
     return false;
 }
 

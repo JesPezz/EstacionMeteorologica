@@ -12,9 +12,13 @@
   - Comando de compilación: `pio run -e esp32doit-devkit-v1`
   - Binario generado: `.pio/build/esp32doit-devkit-v1/firmware.bin`
 - **Web UI & SPIFFS:** 
-  - La interfaz web vive en `Data/index.html` y se incrusta en el binario mediante `board_build.embed_txtfiles`.
-  - Modificar el frontend requiere compilar el firmware **y** generar/subir la imagen SPIFFS (`pio run -t buildfs` / `pio run -t uploadfs`).
+  - La interfaz web vive en `data/index.html` (minúsculas) y se incrusta en el binario mediante `board_build.embed_txtfiles`.
+  - Modificar el frontend requiere compilar el firmware **y** generar/subir la imagen SPIFFS (`pio run -t buildfs` / `pio run -t uploadfs`). Ojo: `/config.json` y `/error.log` se generan en el dispositivo, no viven en `data/`.
   - El sistema de ficheros es **SPIFFS** (no LittleFS). Archivos clave: `/config.json` (migra automáticamente desde `/wifi.json` en arranque) y `/error.log`.
+- **Particiones y flags de compilación (`platformio.ini`):**
+  - `partitions.csv` define doble partición OTA (`app0`/`app1` + `otadata`) y `spiffs`; habilita el Auto-Rollback OTA Fail-Safe.
+  - `build_flags` fijos: `-DASYNC_TCP_STACK_SIZE=8192 -DCONFIG_ARDUINO_LOOP_STACK_SIZE=32768`. NO los reduzcas ni elimines: solos previenen los stack overflows en OTA/MQTT (varias releases históricas los corrigen).
+  - `monitor_filters = esp32_exception_decoder` decodifica pánicos en el monitor serie (`pio device monitor`).
 - **Librerías y Dependencias:**
   - `lib_archive = no` en `platformio.ini` es **OBLIGATORIO** para que la librería BSEC de Bosch compile correctamente.
   - Librerías privadas/vendidas en `lib/` (BSEC-Arduino-library, ESP-Mail-Client-master).
@@ -31,7 +35,7 @@ Cuando el usuario pida realizar un release (ej. *"haz el release"* o *"publica l
    - **Ubicación exacta de la versión:** `src/config.cpp` (en la línea `const char* version = "...";`). No existe `#define VERSION` en este proyecto.
 
 2. **Determinar la nueva versión:**
-   - **Modo Automático:** Si el usuario NO especificó una versión, incrementa el consecutivo del número parche/subversión manteniendo el formato exacto, prefijos y sufijos (ejemplo: de `v4.3.4-MQTT` a `v4.3.5-MQTT`).
+   - **Modo Automático:** Si el usuario NO especificó una versión, incrementa el consecutivo del número parche/subversión manteniendo el formato exacto, prefijos y sufijos (ejemplo: de `v5.0.11-MQTT` a `v5.0.12-MQTT`).
    - **Modo Personalizado:** Si el usuario indicó una versión explícita (ej. *"haz la v5.0.0"*), usa exactamente esa versión.
 
 3. **Sincronizar el Código Fuente y Docs:**
@@ -91,4 +95,4 @@ Cuando el usuario pida realizar un release (ej. *"haz el release"* o *"publica l
 ---
 
 ## Referencia a otras instrucciones
-- El archivo `.github/instructions/copilot-instructions.md.instructions.md` está **obsoleto** y contiene conflictos de merge sin resolver. Ignóralo por completo; este `AGENTS.md` es la única fuente de verdad para agentes en este repositorio.
+- No existen otros archivos de instrucciones (`opencode.json`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`). Este `AGENTS.md` y `/root/.config/opencode/AGENTS.md` (reglas globales) son las únicas fuentes de verdad.
