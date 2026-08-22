@@ -389,9 +389,9 @@ void loop() {
       }
 
       // B1. Guardar Respaldo
-      // 🏭 Cadencia de respaldo cada 10 min (antes 1h) para reducir la pérdida de datos
-      // cuando el broker cae; la primera escritura es inmediata al entrar en offline.
-      const unsigned long OFFLINE_SAVE_INTERVAL_MS = 600000; // 10 min
+      // 🏭 Cadencia de respaldo de 1 hora para no saturar la memoria SPIFFS; la primera
+      // escritura se realiza inmediatamente al entrar en offline.
+      const unsigned long OFFLINE_SAVE_INTERVAL_MS = 3600000; // 1h
       static unsigned long lastOfflineSave = 0;
 
       if (nuevosDatos && ((lastOfflineSave == 0) || (millis() - lastOfflineSave >= OFFLINE_SAVE_INTERVAL_MS))) {

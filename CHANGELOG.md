@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file.
 - **Agregado:** Watchdog de broker MQTT en `src/main.cpp` que detecta la caída del broker (Raspberry/Mosquitto) aunque el WiFi siga operativo — reconfiguración de red, cambio de IP del broker o Mosquitto detenido:
   - Si hay WiFi pero MQTT no logra mantener la conexión durante 15 s, se registra en el log, se notifica por Telegram una única vez por evento y se activa el backlog.
   - Diferencia explícitamente "caída del broker" de "caída del WiFi", cerrando el hueco donde los datos se perdían sin respaldo.
-- **Cambiado:** Cadencia de respaldo offline (`OFFLINE_SAVE_INTERVAL_MS`) de 1 hora a **10 minutos** en `src/main.cpp`, con primera escritura **inmediata** al entrar en el modo offline, reduciendo la ventana de datos perdidos ante un fallo del broker.
+- **Cambiado:** Intervalo de respaldo offline mantenido en **1 hora** (`OFFLINE_SAVE_INTERVAL_MS = 3600000`) en `src/main.cpp` para no saturar la memoria SPIFFS; la primera escritura al entrar en el modo offline es **inmediata**, evitando perder datos al inicio de una caída del broker.
 - **Corregido:** `publishSensorData()` en `src/MQTTManager.cpp` ahora respalda a backlog inmediatamente cuando `mqttClient.connected()` es `false` (broker inaccesible aunque el WiFi esté OK), en lugar de descartar los datos durante la ventana previa a la desconexión TCP.
 - `src/config.cpp`: versión sincronizada a `v5.2.3-MQTT` (precaución OTA: el módulo compara `version` con el `tag_name` del release).
 
