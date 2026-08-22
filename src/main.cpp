@@ -313,8 +313,16 @@ void loop() {
 
   // 3. LÓGICA PRINCIPAL
   
+  // 🔍 Watchdog de Broker: detecta fallo del broker (Raspberry/Mosquitto) con WiFi OK.
+  // No confunde la caída del broker con la caída del WiFi: aquí interesa el caso en que
+  // el WiFi sigue arriba pero MQTT no logra mantener la conexión → se activa el backlog.
+  static unsigned long brokerDownSince = 0;
+  static bool brokerDownAlerted = false;
+
   // CASO A: ONLINE (WiFi + MQTT) ✅
   if (WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
+      // Broker vivo: reiniciar el contador del watchdog de broker
+      brokerDownSince = 0;
       
       // A1. Envío en Tiempo Real
       if (nuevosDatos) {
@@ -362,16 +370,35 @@ void loop() {
           connectToMqtt();
       }
 
+      // 🚨 Watchdog de broker (no depende del WiFi): si hay WiFi pero MQTT no responde,
+      // el problema es del broker (Raspberry/Mosquitto caído, IP cambiada, etc.). Se
+      // detecta la caída explícitamente, se notifica y se garantiza el backlog.
+      if (WiFi.status() == WL_CONNECTED) {
+          if (brokerDownSince == 0) {
+              brokerDownSince = millis();
+              brokerDownAlerted = false;
+          }
+          if (!brokerDownAlerted && (millis() - brokerDownSince >= 15000)) {
+              brokerDownAlerted = true;
+              Serial.println("🚨 Broker MQTT inaccesible con WiFi OK. Activando backlog.");
+              writeLog("🚨 Broker MQTT inaccesible con WiFi OK. Activando backlog.");
+              sendTelegramMessage("🚨 Broker MQTT inaccesible (WiFi OK). Backlog activo.", config);
+          }
+      } else {
+          brokerDownSince = 0; // Sin WiFi: el problema es del WiFi, no del broker
+      }
+
       // B1. Guardar Respaldo
-      // 🏭 PRODUCCIÓN: guardar cada 1 hora (3600000 ms) para no saturar la memoria SPIFFS.
-      const unsigned long OFFLINE_SAVE_INTERVAL_MS = 3600000; // 1h
+      // 🏭 Cadencia de respaldo cada 10 min (antes 1h) para reducir la pérdida de datos
+      // cuando el broker cae; la primera escritura es inmediata al entrar en offline.
+      const unsigned long OFFLINE_SAVE_INTERVAL_MS = 600000; // 10 min
       static unsigned long lastOfflineSave = 0;
 
-      if (nuevosDatos && (millis() - lastOfflineSave >= OFFLINE_SAVE_INTERVAL_MS)) {
+      if (nuevosDatos && ((lastOfflineSave == 0) || (millis() - lastOfflineSave >= OFFLINE_SAVE_INTERVAL_MS))) {
           lastOfflineSave = millis();
 
-          Serial.println("⏱️ Intervalo offline (30s) cumplido. Guardando respaldo...");
-          writeLog("⚠️ Offline: Guardando respaldo en SPIFFS cada 30s. Hora: " + getFormattedDateTime());
+          Serial.println("⏱️ Intervalo offline cumplido. Guardando respaldo...");
+          writeLog("⚠️ Offline: Guardando respaldo en SPIFFS. Hora: " + getFormattedDateTime());
 
           JsonDocument doc; 
           populateSensorJson(doc); 

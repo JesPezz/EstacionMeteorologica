@@ -4,6 +4,7 @@
 #include "BME_Sensor.h"    // Para acceder a iaqSensor
 #include "led_task.h"
 #include "MQTTCommands.h"  // Comandos MQTT dual (individual + broadcast) y LWT
+#include "OfflineManager.h" // saveToBacklog() para respaldar cuando el broker está caído
 espMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 
@@ -95,7 +96,21 @@ void resetMQTTClient() {
 }
 
 void publishSensorData() {
-    if (!mqttClient.connected()) return;
+    // 🔍 Broker no disponible (aunque el WiFi pueda estar OK): en lugar de perder los
+    // datos, respaldarlos en backlog inmediatamente para recuperarlos al reconectar.
+    if (!mqttClient.connected()) {
+        static unsigned long lastBrokerBackup = 0;
+        if (millis() - lastBrokerBackup >= 60000) { // máx. 1 respaldo/min en la ventana de caída
+            lastBrokerBackup = millis();
+            static JsonDocument doc;
+            doc.clear();
+            populateSensorJson(doc);
+            saveToBacklog(doc);
+            writeLog("⚠️ Broker no disponible: dato respaldado en backlog.");
+            Serial.println("⚠️ Broker no disponible: dato respaldado en backlog.");
+        }
+        return;
+    }
 
     // 🧠 DIAGNÓSTICO: Heap antes de armar/armar payload
     Serial.printf("🧠 Heap ANTES de armado MQTT: %u bytes\n", ESP.getFreeHeap());
