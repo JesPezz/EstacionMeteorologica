@@ -77,12 +77,18 @@ Cuando el usuario pida realizar un release (ej. *"haz el release"* o *"publica l
 
 ## Reglas para la creación de Releases en GitHub
 
-- Toda creación de un nuevo Release debe realizarse marcándolo **obligatoriamente como Pre-release** (Lanzamiento anticipado) para no afectar a los dispositivos en producción.
-- Al utilizar la herramienta GitHub CLI (`gh release create`), debes incluir siempre el parámetro `--prerelease`.
-- Ejemplo de comando a ejecutar:
+- Toda creación de un nuevo Release se realiza **inicialmente como Pre-release** (`gh release create ... --prerelease`), como lanzamiento anticipado para no afectar a los dispositivos en producción.
+- **Promoción a Release (regla clave):** cuando el usuario diga **"lanza el prerelease/release"**, **"despliega el firmware"** o pida publicar/desplegar la nueva versión, se debe **convertir el prerelease existente en Release** marcándolo como NO prerelease, de modo que todos los ESP32 (canal ESTABLE, que consultan `releases/latest`) lo tomen por OTA:
+  ```bash
+  gh release edit vX.Y.Z-MQTT --prerelease=false
+  ```
+  - Al promover, verifica primero que el `firmware.bin` adjunto corresponde al binario de producción correcto (compilado con `pio run`) y, si no, re-subirlo con `gh release upload ... --clobber`.
+  - Actualiza también las notas del release si procede.
+- Ejemplo de creación inicial del prerelease:
   ```bash
   gh release create v1.x.x .pio/build/esp32doit-devkit-v1/firmware.bin --title "Título de la Release" --notes "Notas del cambio" --prerelease
   ```
+- **Precaución canal BETA:** si un dispositivo tiene el canal BETA activo, consulta `releases?per_page=1` (incluye prereleases); el canal ESTABLE consulta `releases/latest` (solo releases no-prerelease). Al promover a release, ambos canales convergen a la nueva versión.
 
 ---
 
