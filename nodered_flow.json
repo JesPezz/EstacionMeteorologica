@@ -282,7 +282,7 @@
         "type": "function",
         "z": "tab_clima",
         "name": "Limitador por Dispositivo",
-        "func": "// Usamos el contexto del flujo para recordar cuándo pasó cada dispositivo\nvar lastSent = flow.get('ts_last_sent') || {};\n\n// Identificamos el dispositivo (por ubicación o ID)\nvar deviceKey = msg.payload.location || \"unknown\";\nvar now = Date.now();\n\n// Tiempo de espera en milisegundos (20 segundos)\nvar cooldown = 20000; \n\n// Verificamos si este dispositivo específico puede pasar\nif (!lastSent[deviceKey] || (now - lastSent[deviceKey] > cooldown)) {\n    \n    // ¡Luz Verde! Actualizamos su última hora de paso\n    lastSent[deviceKey] = now;\n    flow.set('ts_last_sent', lastSent);\n    \n    return msg; // Dejar pasar el mensaje\n}\n\n// ¡Luz Roja! Aún no han pasado 20s para ESTE dispositivo\nreturn null; // Bloquear mensaje",
+        "func": "// Usamos el contexto del flujo para recordar cuándo pasó cada dispositivo\nvar lastSent = flow.get('ts_last_sent') || {};\n\n// Identificamos el dispositivo (por ubicación o ID)\nvar deviceKey = msg.payload.location || \"unknown\";\nvar now = Date.now();\n\n// Tiempo de espera en milisegundos (5 minutos)\nvar cooldown = 300000; \n\n// Verificamos si este dispositivo específico puede pasar\nif (!lastSent[deviceKey] || (now - lastSent[deviceKey] > cooldown)) {\n    \n    // ¡Luz Verde! Actualizamos su última hora de paso\n    lastSent[deviceKey] = now;\n    flow.set('ts_last_sent', lastSent);\n    \n    return msg; // Dejar pasar el mensaje\n}\n\n// ¡Luz Roja! Aún no han pasado 20s para ESTE dispositivo\nreturn null; // Bloquear mensaje",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
