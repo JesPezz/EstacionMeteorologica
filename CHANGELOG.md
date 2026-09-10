@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased - 2026-09-06
+
+- **Cambiado:** Cooldown del envío a **ThingSpeak** en Node-RED (`nodered_flow.json`, nodo «Limitador por Dispositivo») de **20 s a 5 min (300000 ms)** para no agotar la cuota gratuita (3M mensajes/año) antes de su renovación (2027-02-06). Con 4 dispositivos el consumo proyectado baja de ~12.000 a **~1.150 msgs/día** (~176K hasta la renovación, frente a ~539K disponibles).
+  - Se despliega editando `~/.node-red/flows.json` en el servidor (192.168.1.107) y reiniciando `nodered.service`; respaldo en `flows.json.bak`.
+- **Agregado:** Automatización para recuperar resolución tras la renovación: script idempotente `/usr/local/bin/thingspeak_bajar_a_60s.py` + cron `0 3 6 2 *` que el 2027-02-06 baja el cooldown a **60 s** (cubre el año con margen con 4 dispositivos: ~2,1M/3M).
+- **Documentado:** Límites de la cuenta gratuita de ThingSpeak (FAQ oficial): **3M mensajes/año**, **4 canales** máximo, intervalo mínimo de actualización de **15 s**. Un 5º dispositivo requiere plan de pago (Home: 33M msgs/año y 10 canales).
+- **Nota histórica (por qué no se agotaba antes):** hasta 2025-11 el ESP32 publicaba por MQTT cada 60 s; `src/main.cpp` pasó a 3 s (commit `34f215a`) y se añadió el modo multi-dispositivo con limitador de 20 s por dispositivo (commit `a7d9952`), disparando el consumo a ~11-12K msgs/día en el ciclo actual.
+
+## v5.2.4-MQTT - 2026-09-10
+
+- **Corregido:** Timeouts de keepalive en MQTT: los ESP32 conectaban al broker pero Mosquitto los expulsaba con `has exceeded timeout, disconnecting` (se quedaban mudos por el *modem sleep* del WiFi, que retrasaba los PINGREQ de la tarea síncrona de espMqttClient).
+  - `src/MQTTManager.cpp`: `WiFi.setSleep(false)` añadido en `setupMQTT()` para desactivar el ahorro de energía del modem Wi-Fi y mantener el flujo de PINGREQ dentro del keepalive de 15 s.
+  - Elimina las falsas alertas «🚨 Broker MQTT inaccesible (WiFi OK)» del watchdog de broker.
+- `src/config.cpp`: versión sincronizada a `v5.2.4-MQTT` (precaución OTA: el módulo compara `version` con el `tag_name` del release).
+
 ## v5.2.3-MQTT - 2026-08-21
 
 - **Agregado:** Watchdog de broker MQTT en `src/main.cpp` que detecta la caída del broker (Raspberry/Mosquitto) aunque el WiFi siga operativo — reconfiguración de red, cambio de IP del broker o Mosquitto detenido:

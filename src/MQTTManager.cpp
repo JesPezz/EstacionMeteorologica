@@ -60,6 +60,11 @@ void setupMQTT() {
       return;
   }
 
+  // Desactivar modem sleep del WiFi para evitar timeouts de keepalive MQTT:
+  // con la tarea síncrona de espMqttClient, el ahorro de energía del modem retrasa
+  // los PINGREQ y Mosquitto expulsa al dispositivo ("exceeded timeout").
+  WiFi.setSleep(false);
+
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onMessage(onMqttMessage);

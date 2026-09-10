@@ -16,7 +16,7 @@ String githubAPIURL = "https://api.github.com/repos/JesPezz/EstacionMeteorologic
 
 String webUsername = "admin";
 String webPassword = "admin123";
-const char* version = "v5.2.3-MQTT";
+const char* version = "v5.2.4-MQTT";
 
 unsigned long lastScanTime = 0;
 const int scanInterval = 15000;
