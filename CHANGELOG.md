@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## v5.2.6-MQTT - 2026-09-11
+
+- **Corregido:** Rollback OTA descartaba imágenes buenas (v5.2.4/v5.2.5) en todas las unidades al reiniciar. La confirmación de la imagen (`PENDING_VERIFY`) estaba después de llamadas de red colgables (`sendTelegramMessage` HTTPS, `checkForUpdates`, `syncClock`) en `setup()`; si la imagen sin confirmar se colgaba ahí, el bootloader la revertía a v5.2.3. Ahora la imagen se confirma de inmediato al inicio de `setup()`, justo tras `loadConfig()` y ANTES de cualquier llamada de red/sensor (`esp_ota_mark_app_valid_cancel_rollback` incondicional cuando el estado es PENDING). El failsafe del bootloader por crash repetido queda intacto.
+
+## v5.2.5-MQTT - 2026-09-11
+
+- **Corregido:** Auto-rollback OTA descartaba imágenes buenas en unidades con asociación WiFi lenta (repetidores INFINITUM de plantabaja/exterior). El check `PENDING_VERIFY` de `setup()` ejecutaba rollback si el WiFi no estaba conectado en ese instante del arranque. Ahora NO se hace rollback por falta de WiFi al boot: la imagen se confirma en `loop()` (`esp_ota_mark_app_valid_cancel_rollback`) en cuanto WiFi conecta. El failsafe del bootloader por crash repetido queda intacto.
+- **Corregido:** Versión sincronizada (`src/config.cpp`, `README.md`) tras el despliegue de v5.2.4-MQTT.
+
+## v5.2.7-MQTT - 2026-09-23
+
+- **Corregido:** Conexión WiFi con repetidores INFINITUM (PlantaBaja/Exterior). `connectToBestWiFi()` ahora escanea redes por RSSI y prioriza la mejor señal; salta redes con RSSI < -85 dBm; `WiFi.setSleep(false)` desactiva modem sleep para evitar desconexiones; monitoreo proactivo de RSSI cada 60s con reconexión automática si señal < -70 dBm. Timeout de conexión aumentado a 15s y 5 intentos. Endpoint `/esp_status` y `/sensor_data` incluyen `rssi` para diagnóstico remoto. Timeout del monitoreo aumentado a 15s.
+
 ## Unreleased - 2026-09-06
 
 - **Cambiado:** Cooldown del envío a **ThingSpeak** en Node-RED (`nodered_flow.json`, nodo «Limitador por Dispositivo») de **20 s a 5 min (300000 ms)** para no agotar la cuota gratuita (3M mensajes/año) antes de su renovación (2027-02-06). Con 4 dispositivos el consumo proyectado baja de ~12.000 a **~1.150 msgs/día** (~176K hasta la renovación, frente a ~539K disponibles).

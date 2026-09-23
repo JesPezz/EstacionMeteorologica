@@ -7,18 +7,25 @@
 #include "SPIFFS.h"
 #include <ArduinoJson.h>
 #include "esp_ota_ops.h"
+#include <algorithm>
 
 bool APmode = false;
 unsigned long lastConnectionAttempt = 0;
-const int maxConnectionAttempts = 3;  // 5 intentos (antes: 1)
-const int connectionAttemptDelay = 10000; // 10 segundos entre intentos
+const int maxConnectionAttempts = 5;  // 5 intentos
+const int connectionAttemptDelay = 15000; // 15 segundos entre intentos
 const int apModeTimeout = 180000; // 3 minutos (para salir del modo AP)
+const int MIN_RSSI = -70; // dBm mínimo para considerar conexión estable
+const int RSSI_MONITOR_INTERVAL_MS = 60000; // Revisar RSSI cada 60s
 
 
 // 🔹 Función mejorada para conectar a WiFi con múltiples intentos
 bool connectWithRetries(const char* ssid, const char* password) {
+    WiFi.setSleep(false); // Desactivar modem sleep para evitar desconexiones con repetidores
     for (int i = 0; i < maxConnectionAttempts; i++) {
         Serial.printf("📡 Intento %d/%d para conectar a %s...\n", i + 1, maxConnectionAttempts, ssid);
+        WiFi.disconnect(true);
+        delay(100);
+        WiFi.mode(WIFI_STA);
         WiFi.begin(ssid, password);
         
         unsigned long startTime = millis();
@@ -29,7 +36,7 @@ bool connectWithRetries(const char* ssid, const char* password) {
         }
 
         if (WiFi.status() == WL_CONNECTED) {
-            Serial.printf("\n✅ ¡Conectado a %s!\nIP: %s\n", ssid, WiFi.localIP().toString().c_str());
+            Serial.printf("\n✅ ¡Conectado a %s!\nIP: %s\nRSSI: %d dBm\n", ssid, WiFi.localIP().toString().c_str(), WiFi.RSSI());
             return true;
         }
     }
@@ -164,6 +171,7 @@ std::vector<WiFiNetwork> getAvailableNetworks() {
     return networks;
 }
 
+// 🔹 Función mejorada para seleccionar y conectar a la mejor red por RSSI
 bool connectToBestWiFi() {
     std::vector<WiFiNetwork> savedNetworks;
     WiFiManager::loadSavedNetworks(savedNetworks);
@@ -173,36 +181,73 @@ bool connectToBestWiFi() {
         return false;
     }
 
+    // Escanear redes disponibles para obtener RSSI actual
+    std::vector<WiFiNetwork> availableNetworks;
+    WiFiManager::scanNetworks(availableNetworks);
+
+    // Emparejar redes guardadas con RSSI actual
+    std::vector<WiFiNetwork> prioritizedNetworks;
+    for (const auto& saved : savedNetworks) {
+        for (const auto& available : availableNetworks) {
+            if (strcmp(saved.ssid, available.ssid) == 0) {
+                WiFiNetwork prioritized = saved;
+                prioritized.rssi = available.rssi;
+                prioritizedNetworks.push_back(prioritized);
+                break;
+            }
+        }
+        // Si no se encontró en el escaneo, usar la red guardada con RSSI 0
+        bool found = false;
+        for (const auto& net : availableNetworks) {
+            if (strcmp(saved.ssid, net.ssid) == 0) { found = true; break; }
+        }
+        if (!found) {
+            prioritizedNetworks.push_back(saved);
+        }
+    }
+
+    // Ordenar de mayor a menor RSSI
+    std::sort(prioritizedNetworks.begin(), prioritizedNetworks.end(),
+        [](const WiFiNetwork& a, const WiFiNetwork& b) { return a.rssi > b.rssi; });
+
+    Serial.println("📶 Redes ordenadas por señal:");
+    for (const auto& net : prioritizedNetworks) {
+        Serial.printf("  %s: %d dBm\n", net.ssid, net.rssi);
+    }
+
     const int maxGlobalRounds = 3;
     for (int round = 1; round <= maxGlobalRounds; round++) {
-        Serial.printf("🔄 Iniciando ronda de conexión %d/%d (Modo Directo)...\n", round, maxGlobalRounds);
+        Serial.printf("🔄 Ronda de conexión %d/%d\n", round, maxGlobalRounds);
 
-        // Iteramos sobre las redes guardadas e intentamos conectar una por una
-        for (const auto& network : savedNetworks) {
-            Serial.printf("🔗 Intentando conectar a: %s\n", network.ssid);
-            
-            // ⚡ Desconexión limpia para prevenir fugas de memoria (ESP_ERR_NO_MEM)
-            WiFi.disconnect(true);
-            delay(100);
-            WiFi.mode(WIFI_STA);
-            WiFi.begin(network.ssid, network.password);
-
-            // Esperamos hasta 10 segundos por red
-            unsigned long startAttempt = millis();
-            while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 10000) {
-                delay(500);
-                Serial.print(".");
-                yield(); // Alimentar al perro guardián
+        for (const auto& network : prioritizedNetworks) {
+            // Saltar redes con señal muy débil (menos de -80 dBm)
+            if (network.rssi < -85) {
+                Serial.printf("⏭️ Saltando %s (RSSI %d dBm demasiado débil)\n", network.ssid, network.rssi);
+                continue;
             }
 
-            if (WiFi.status() == WL_CONNECTED) {
+            Serial.printf("🔗 Intentando conectar a: %s (%d dBm)\n", network.ssid, network.rssi);
+
+            if (connectWithRetries(network.ssid, network.password)) {
+                // Verificar que la señal sea aceptable
+                if (WiFi.RSSI() < MIN_RSSI) {
+                    Serial.printf("⚠️ Señal débil (%d dBm < %d dBm). Reconectando...\n", WiFi.RSSI(), MIN_RSSI);
+                    WiFi.disconnect(true);
+                    continue;
+                }
                 Serial.println("\n✅ ¡Conexión Exitosa!");
                 Serial.print("📡 IP: ");
                 Serial.println(WiFi.localIP());
-                return true; // ¡Éxito! Salimos de la función
-            } else {
-                Serial.println("\n❌ No se pudo conectar. Probando siguiente (si hay)...");
+                return true;
             }
+        }
+    }
+
+    // Último intento: conectar a cualquier red guardada sin filtro RSSI
+    Serial.println("⚠️ Último intento sin filtro RSSI...");
+    for (const auto& network : savedNetworks) {
+        if (connectWithRetries(network.ssid, network.password)) {
+            return true;
         }
     }
 
@@ -212,54 +257,11 @@ bool connectToBestWiFi() {
 }
 
 
-// 🔹 Función mejorada para seleccionar y conectar a la mejor red
-/* bool connectToBestWiFi() {
-    std::vector<WiFiNetwork> savedNetworks;
-    WiFiManager::loadSavedNetworks(savedNetworks);
-
-    if (savedNetworks.empty()) {
-        Serial.println("⚠️ No hay redes WiFi guardadas");
-        return false;
-    }
-
-    // 1. Escanear redes disponibles y emparejarlas con las guardadas
-    std::vector<WiFiNetwork> availableNetworks;
-    WiFiManager::scanNetworks(availableNetworks);
-
-    // 2. Ordenar las redes guardadas por mejor señal (RSSI)
-    std::vector<WiFiNetwork> prioritizedNetworks;
-    for (const auto& saved : savedNetworks) {
-        for (const auto& available : availableNetworks) {
-            if (strcmp(saved.ssid, available.ssid) == 0) {
-                WiFiNetwork prioritized = saved;
-                prioritized.rssi = available.rssi; // Actualizar RSSI del escaneo
-                prioritizedNetworks.push_back(prioritized);
-                break;
-            }
-        }
-    }
-
-    // 3. Ordenar de mayor a menor RSSI
-    std::sort(prioritizedNetworks.begin(), prioritizedNetworks.end(), 
-        [](const WiFiNetwork& a, const WiFiNetwork& b) { return a.rssi > b.rssi; });
-
-    // 4. Intentar conexión con cada red guardada (en orden de prioridad)
-    for (const auto& net : prioritizedNetworks) {
-        Serial.printf("\n🔁 Intentando conectar a %s (%d dBm)...\n", net.ssid, net.rssi);
-        if (connectWithRetries(net.ssid, net.password)) {
-            return true; // ¡Éxito!
-        }
-    }
-
-    // 5. Si todas fallan, retornar false (activará modo AP)
-    return false;
-} */
-
-
 // 🔹 Función mejorada para iniciar el modo AP
 void startAPMode() {
     WiFi.disconnect(true);
     delay(100);
+    WiFi.setSleep(false); // Desactivar modem sleep para repetidores
 
     // 1. Verificar si hay redes guardadas
     std::vector<WiFiNetwork> savedNetworks;
@@ -301,7 +303,25 @@ void checkWiFiConnection() {
     WiFiManager::loadSavedNetworks(savedNetworks);
     if (savedNetworks.empty()) return;
 
-    // 2. Lógica normal para reconexión
+    // 2. Monitoreo de RSSI: si WiFi está conectado pero señal débil, reconectar
+    if (WiFi.status() == WL_CONNECTED) {
+        static unsigned long lastRssiCheck = 0;
+        if (millis() - lastRssiCheck >= RSSI_MONITOR_INTERVAL_MS) {
+            lastRssiCheck = millis();
+            int rssi = WiFi.RSSI();
+            if (rssi < MIN_RSSI) {
+                Serial.printf("⚠️ Señal WiFi débil: %d dBm < umbral %d dBm. Reconectando...\n", rssi, MIN_RSSI);
+                writeLog("⚠️ Señal WiFi débil. Reconectando...");
+                WiFi.disconnect(true);
+                APmode = false;
+                lastConnectionAttempt = millis();
+                startAPMode();
+                return;
+            }
+        }
+    }
+
+    // 3. Lógica normal para reconexión
     if (WiFi.status() != WL_CONNECTED && !APmode) {
         startAPMode();
     }

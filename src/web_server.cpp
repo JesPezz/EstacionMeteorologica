@@ -407,6 +407,7 @@ void handleESPStatus(AsyncWebServerRequest *request) {
     doc["ip"] = WiFi.localIP().toString();
     doc["wifi"] = WiFi.status() == WL_CONNECTED ? "Conectado" : "Desconectado";
     doc["ssid"] = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "Desconectado";
+    if (WiFi.status() == WL_CONNECTED) doc["rssi"] = WiFi.RSSI();
     doc["cpu"] = ESP.getCpuFreqMHz();
     doc["memory"] = ESP.getFreeHeap() / 1024;
 
@@ -906,6 +907,7 @@ void handleSensorData(AsyncWebServerRequest *request) {
     }
     doc["battery_voltage"] = v;
     doc["battery_status"] = status; // "absent", "undervoltage", "ok", "unknown"
+    if (WiFi.status() == WL_CONNECTED) doc["rssi"] = WiFi.RSSI();
 
     String json;
     serializeJson(doc, json); // Serializa a String
